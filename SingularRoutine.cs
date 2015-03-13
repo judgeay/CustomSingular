@@ -316,7 +316,7 @@ namespace Singular
 
         public static string GetSingularRoutineName()
         {
-            return "Singular v" + GetSingularVersion();
+            return "CustomSingular v" + GetSingularVersion();
         }
 
         public static string GetSingularSourcePath()
