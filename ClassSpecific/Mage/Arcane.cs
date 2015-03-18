@@ -5,8 +5,11 @@ using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
 using Styx;
+
 using Styx.CommonBot;
 using Styx.Helpers;
+
+
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
@@ -18,234 +21,316 @@ namespace Singular.ClassSpecific.Mage
 {
     public class Arcane
     {
-        #region Fields
+        private static LocalPlayer Me { get { return StyxWoW.Me; } }
+        private static MageSettings MageSettings { get { return SingularSettings.Instance.Mage(); } }
 
-        private static CombatScenario scenario;
+        #region Normal Rotation
 
-        #endregion
+        private static bool useArcaneNow;
 
-        #region Properties
-
-        private static double mana_pct
-        {
-            get { return Me.ManaPercent; }
-        }
-
-        private static double spell_haste
-        {
-            get { return 0; }
-        }
-
-        private static MageSettings MageSettings
-        {
-            get { return SingularSettings.Instance.Mage(); }
-        }
-
-        private static LocalPlayer Me
-        {
-            get { return StyxWoW.Me; }
-        }
-
-        private static int active_enemies
-        {
-            get { return scenario.Mobs.Count; }
-        }
-
-        private static double rune_of_power_cast_time
-        {
-            get { return Spell.GetSpellCastTime("Rune of Power").TotalSeconds; }
-        }
-
-        #endregion
-
-        #region Public Methods
-
-        [Behavior(BehaviorType.Pull, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.All, 99)]
-        [Behavior(BehaviorType.Heal, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.All, 99)]
-        public static Composite CreateMageArcaneDiagnostic(string state = null)
-        {
-            return CreateMageArcaneInstanceSimCCombat();
-        }
-
-        [Behavior(BehaviorType.Initialize, WoWClass.Mage, WoWSpec.MageArcane, priority: 9999)]
-        public static Composite CreateMageArcaneInitialize()
-        {
-            scenario = new CombatScenario(40, 1.5f);
-
-            return null;
-        }
-
-        [Behavior(BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Instances)]
-        public static Composite CreateMageArcaneInstanceSimCCombat()
+        [Behavior(BehaviorType.Pull, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Normal)]
+        public static Composite CreateMageArcaneNormalPull()
         {
             return new PrioritySelector(
+                Safers.EnsureTarget(),
+                Common.CreateStayAwayFromFrozenTargetsBehavior(),
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+
+                Spell.WaitForCastOrChannel(),
+
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
-                        SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
-                        SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
+
+                        CreateArcaneDiagnosticOutputBehavior(),
+
                         Helpers.Common.CreateInterruptBehavior(),
+
+                        Common.CreateMagePullBuffs(),
+                        Spell.BuffSelf("Arcane Power"),
+
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
 
-                        //# Executed every time the actor is available.
-                        //actions=counterspell,if=target.debuff.casting.react
-                        //actions+=/blink,if=movement.distance>10
-                        //actions+=/blazing_speed,if=movement.remains>0
-                        //actions+=/cold_snap,if=health.pct<30
-                        //actions+=/time_warp,if=target.health.pct<25|time>5
-                        //Spell.BuffSelf("Time Warp", req => target.health_pct < 25),
-                        //actions+=/ice_floes,if=buff.ice_floes.down&(raid_event.movement.distance>0|raid_event.movement.in<action.arcane_missiles.cast_time)
-                        //actions+=/rune_of_power,if=buff.rune_of_power.remains<cast_time
-                        Spell.CastOnGround("Rune of Power", on => Me,
-                            req => buff.rune_of_power_remains < rune_of_power_cast_time, false),
-                        //actions+=/mirror_image
-                        Spell.BuffSelf("Mirror Image"),
-                        //actions+=/cold_snap,if=buff.presence_of_mind.down&cooldown.presence_of_mind.remains>75
-                        //actions+=/call_action_list,name=aoe,if=active_enemies>=5
-                        new Decorator(req => active_enemies >= 5, CreateAoeActionList()),
-                        //actions+=/call_action_list,name=init_crystal,if=talent.prismatic_crystal.enabled&cooldown.prismatic_crystal.up
-                        //actions+=/call_action_list,name=crystal_sequence,if=talent.prismatic_crystal.enabled&pet.prismatic_crystal.active
-                        //actions+=/call_action_list,name=burn,if=time_to_die<mana.pct*0.35*spell_haste|cooldown.evocation.remains<=(mana.pct-30)*0.3*spell_haste|(buff.arcane_power.up&cooldown.evocation.remains<=(mana.pct-30)*0.4*spell_haste)
+                        new Action(r =>
+                        {
+                            useArcaneNow = false;
+                            uint ac = Me.GetAuraStacks("Arcane Charge");
+                            if (ac >= 4)
+                                useArcaneNow = true;
+                            else
+                            {
+                                long ttd = Me.CurrentTarget.TimeToDeath();
+                                if (ttd > 6)
+                                    useArcaneNow = ac >= 2;
+                                else if (ttd > 3)
+                                    useArcaneNow = ac >= 1;
+                                else
+                                    useArcaneNow = ttd >= 0;
+                            }
+                            return RunStatus.Failure;
+                        }),
+
+                        Spell.Cast("Arcane Missiles", ret => useArcaneNow && Me.HasAura("Arcane Missiles!")),
+                        Spell.Cast("Arcane Barrage", ret => useArcaneNow),
+
+                        // grinding or questing, if target meets these cast Flame Shock if possible
+                        // 1. mob is less than 12 yds, so no benefit from delay in Lightning Bolt missile arrival
+                        // 2. area has another player competing for mobs (we want to tag the mob quickly)
                         new Decorator(
-                            req =>
-                                target.time_to_die < mana_pct*0.35*spell_haste ||
-                                cooldown.evocation_remains <= (mana_pct - 30)*0.3*spell_haste |
-                                (buff.arcane_power_up & cooldown.evocation_remains <= (mana_pct - 30)*0.4*spell_haste),
-                            CreateBurnActionList()),
-                        //actions+=/call_action_list,name=conserve
-                        new Decorator(CreateConserveActionList()),
-                        new ActionAlwaysFail()
+                            ret => StyxWoW.Me.CurrentTarget.Distance < 12
+                                || ObjectManager.GetObjectsOfType<WoWPlayer>(true, false).Any(p => p.Location.DistanceSqr(StyxWoW.Me.CurrentTarget.Location) <= 40 * 40),
+                            new PrioritySelector(
+                                Spell.Cast("Fire Blast"),
+                                Spell.Cast("Arcane Barrage")
+                                )
+                            ),
+
+                        Spell.Cast("Arcane Blast"),
+
+                        Spell.Cast("Frostfire Bolt", ret => !SpellManager.HasSpell("Arcane Blast"))
+                        )
+                    ),
+
+                Movement.CreateMoveToUnitBehavior(on => StyxWoW.Me.CurrentTarget, 39f, 34f)
+                );
+        }
+
+        [Behavior(BehaviorType.Heal, WoWClass.Mage, WoWSpec.MageArcane)]
+        public static Composite CreateMageArcaneHeal()
+        {
+            return new PrioritySelector(
+                CreateArcaneDiagnosticOutputBehavior("Combat")
+                );
+        }
+
+        [Behavior(BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Normal )]
+        public static Composite CreateMageArcaneNormalCombat()
+        {
+            return new PrioritySelector(
+                Safers.EnsureTarget(),
+                Common.CreateStayAwayFromFrozenTargetsBehavior(),
+                Helpers.Common.EnsureReadyToAttackFromLongRange(),
+
+                Spell.WaitForCastOrChannel(),
+
+                new Decorator( 
+                    ret => !Spell.IsGlobalCooldown(),
+                    new PrioritySelector(
+
+                        Common.CreateMageAvoidanceBehavior(),
+
+                        Helpers.Common.CreateInterruptBehavior(),
+
+                        Spell.BuffSelf("Arcane Power"),
+
+                        Movement.WaitForFacing(),
+                        Movement.WaitForLineOfSpellSight(),
+
+                        // AoE comes first
+                        new Decorator(
+                            ret => Spell.UseAOE && Unit.UnfriendlyUnitsNearTarget(10f).Count() >= 3,
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Barrage", ret => Me.HasAura("Arcane Charge", 4)),
+                                Spell.Cast(
+                                    "Cone of Cold",
+                                    req => Clusters.GetClusterCount(Me.CurrentTarget, Unit.UnfriendlyUnitsNearTarget(12f), ClusterType.Cone, 12) >= 3
+                                    ),
+                                Spell.Cast(
+                                    "Arcane Explosion",
+                                    req => Unit.UnfriendlyUnits(8).Count() >= 3
+                                    )
+                                )
+                            ),
+
+                        new Decorator(
+                            req => Me.HasAura("Arcane Power"),
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Missiles"),
+                                Spell.Cast("Arcane Blast")
+                                )
+                            ),
+
+                        Spell.Cast("Arcane Missiles", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Barrage", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Blast"),
+
+                        // shouldnt be needed, but keep as a stop-safe filler
+                        Spell.Cast("Frostfire Bolt", ret => !SpellManager.HasSpell("Arcane Blast"))
                         )
                     )
                 );
         }
 
-        [Behavior(BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Normal)]
-        public static Composite CreateMageArcaneNormalCombat()
-        {
-            return CreateMageArcaneInstanceSimCCombat();
-        }
+        #endregion
 
-        [Behavior(BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Battlegrounds)]
-        public static Composite CreateMageArcanePvPCombat()
+        #region Battleground Rotation
+        [Behavior(BehaviorType.Pull|BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Battlegrounds)]
+        public static Composite CreateArcaneMagePvPPullAndCombat()
         {
-            return CreateMageArcaneInstanceSimCCombat();
+            return new PrioritySelector(
+                Safers.EnsureTarget(),
+                Common.CreateStayAwayFromFrozenTargetsBehavior(),
+                Helpers.Common.EnsureReadyToAttackFromLongRange(),
+
+                Spell.WaitForCastOrChannel(),
+
+                new Decorator( 
+                    ret => !Spell.IsGlobalCooldown(),
+                    new PrioritySelector(
+       
+                        Common.CreateMageAvoidanceBehavior(),
+
+                        Common.CreateMagePullBuffs(),
+
+                        // Defensive stuff
+                        Spell.BuffSelf("Ice Block", ret => Me.HealthPercent < 10 && !Me.ActiveAuras.ContainsKey("Hypothermia")),
+                        Spell.BuffSelf("Frost Nova", ret => Unit.NearbyUnfriendlyUnits.Any(u => u.Distance <= 11 && !u.TreatAsFrozen())),
+                        Common.CreateMagePolymorphOnAddBehavior(),
+
+                        Movement.WaitForFacing(),
+                        Movement.WaitForLineOfSpellSight(),
+
+                        Spell.BuffSelf("Arcane Power"),
+                        Spell.BuffSelf("Mirror Image"),
+
+                        // AoE comes first
+                        new Decorator(
+                            ret => Spell.UseAOE && Unit.UnfriendlyUnitsNearTarget(10f).Count() >= 3,
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Barrage", ret => Me.HasAura("Arcane Charge", 4)),
+                                Spell.Cast(
+                                    "Cone of Cold",
+                                    req => Clusters.GetClusterCount(Me.CurrentTarget, Unit.UnfriendlyUnitsNearTarget(12f), ClusterType.Cone, 12) >= 3
+                                    ),
+                                Spell.Cast(
+                                    "Arcane Explosion",
+                                    req => Unit.UnfriendlyUnits(8).Count() >= 3
+                                    )
+                                )
+                            ),
+
+                        new Decorator(
+                            req => Me.HasAura("Arcane Power"),
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Missiles"),
+                                Spell.Cast("Arcane Blast")
+                                )
+                            ),
+
+                        Spell.Cast("Arcane Missiles", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Barrage", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Blast"),
+
+                        // shouldnt be needed, but keep as a stop-safe filler
+                        Spell.Cast("Frostfire Bolt", ret => !SpellManager.HasSpell("Arcane Blast"))
+                        )
+                    )
+                );
         }
+        
 
         #endregion
 
-        #region Private Methods
+        #region Instance Rotation
 
-        private static Composite CreateAoeActionList()
+        [Behavior(BehaviorType.Pull | BehaviorType.Combat, WoWClass.Mage, WoWSpec.MageArcane, WoWContext.Instances)]
+        public static Composite CreateMageArcaneInstancePullAndCombat()
         {
             return new PrioritySelector(
-                //actions.aoe=call_action_list,name=cooldowns
-                //actions.aoe+=/nether_tempest,cycle_targets=1,if=buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<3.6))
-                //actions.aoe+=/supernova
-                //actions.aoe+=/arcane_orb,if=buff.arcane_charge.stack<4
-                //actions.aoe+=/arcane_explosion,if=prev_gcd.evocation
-                //actions.aoe+=/evocation,interrupt_if=mana.pct>96,if=mana.pct<85-2.5*buff.arcane_charge.stack
-                //actions.aoe+=/arcane_missiles,if=set_bonus.tier17_4pc&active_enemies<10&buff.arcane_charge.stack=4&buff.arcane_instability.react
-                //actions.aoe+=/nether_tempest,cycle_targets=1,if=talent.arcane_orb.enabled&buff.arcane_charge.stack=4&ticking&remains<cooldown.arcane_orb.remains
-                //actions.aoe+=/arcane_barrage,if=buff.arcane_charge.stack=4
-                //actions.aoe+=/cone_of_cold,if=glyph.cone_of_cold.enabled
-                //actions.aoe+=/arcane_explosion
-                new ActionAlwaysFail()
+                Helpers.Common.EnsureReadyToAttackFromLongRange(),
+
+                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+
+                new Decorator( 
+                    ret => !Spell.IsGlobalCooldown(),
+                    new PrioritySelector(
+
+                        Helpers.Common.CreateInterruptBehavior(),
+
+                        Common.CreateMagePullBuffs(),
+                        Spell.BuffSelf("Arcane Power"),
+
+                        Movement.WaitForFacing(),
+                        Movement.WaitForLineOfSpellSight(),
+
+                        // AoE comes first
+                        new Decorator(
+                            ret => Spell.UseAOE && Unit.UnfriendlyUnitsNearTarget(10f).Count() >= 3,
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Barrage", ret => Me.HasAura( "Arcane Charge", 4)),
+                                Spell.Cast(
+                                    "Cone of Cold", 
+                                    req => Clusters.GetClusterCount( Me.CurrentTarget, Unit.UnfriendlyUnitsNearTarget(12f), ClusterType.Cone, 12) >= 3
+                                    ),
+                                Spell.Cast(
+                                    "Arcane Explosion", 
+                                    req => Unit.UnfriendlyUnits(8).Count() >= 3
+                                    )                                   
+                                )
+                            ),
+
+                        new Decorator(
+                            req => Me.HasAura("Arcane Power"),
+                            new PrioritySelector(
+                                Spell.Cast("Arcane Missiles"),
+                                Spell.Cast("Arcane Blast")
+                                )
+                            ),
+
+                        Spell.Cast("Arcane Missiles", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Barrage", ret => Me.GetAuraStacks("Arcane Charge") >= 4),
+                        Spell.Cast("Arcane Blast"),
+
+                        // shouldnt be needed, but keep as a stop-safe filler
+                        Spell.Cast("Frostfire Bolt", ret => !SpellManager.HasSpell("Arcane Blast"))
+                        )
+                    ),
+
+                Movement.CreateMoveToUnitBehavior( on => StyxWoW.Me.CurrentTarget, 39f, 34f)
                 );
         }
 
-        private static Composite CreateBurnActionList()
+        #endregion
+
+        #region Diagnostics
+
+        private static Composite CreateArcaneDiagnosticOutputBehavior(string state = null)
         {
-            return new PrioritySelector(
-                //actions.burn=call_action_list,name=cooldowns
-                //actions.burn+=/arcane_missiles,if=buff.arcane_missiles.react=3
-                //actions.burn+=/arcane_missiles,if=set_bonus.tier17_4pc&buff.arcane_instability.react&buff.arcane_instability.remains<action.arcane_blast.execute_time
-                //actions.burn+=/supernova,if=time_to_die<8|charges=2
-                //actions.burn+=/nether_tempest,cycle_targets=1,if=target!=prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<3.6))
-                //actions.burn+=/arcane_orb,if=buff.arcane_charge.stack<4
-                //actions.burn+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd|prev_gcd.arcane_orb)
-                //actions.burn+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
-                //actions.burn+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
-                //actions.burn+=/arcane_missiles,if=buff.arcane_charge.stack=4&(mana.pct>70|!cooldown.evocation.up)
-                //actions.burn+=/supernova,if=mana.pct>70&mana.pct<96
-                //actions.burn+=/call_action_list,name=conserve,if=prev_gcd.evocation
-                //actions.burn+=/evocation,interrupt_if=mana.pct>92,if=time_to_die>10&mana.pct<30+2.5*active_enemies*(9-active_enemies)
-                //actions.burn+=/presence_of_mind,if=!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up
-                //actions.burn+=/arcane_blast
-                new ActionAlwaysFail()
+            if (!SingularSettings.Debug)
+                return new ActionAlwaysFail();
+
+            return new ThrottlePasses(1, 1,
+                new Action(ret =>
+                {
+                    string line = string.Format(".... [{0}] h={1:F1}%/m={2:F1}%, moving={3}, arcchg={4} {5:F0} ms, arcmiss={6} {7:F0} ms",
+                        state ?? Dynamics.CompositeBuilder.CurrentBehaviorType.ToString(),
+                        Me.HealthPercent,
+                        Me.ManaPercent,
+                        Me.IsMoving,
+                        Me.GetAuraStacks("Arcane Charge"),
+                        Me.GetAuraTimeLeft("Arcane Charge").TotalMilliseconds,
+                        Me.GetAuraStacks("Arcane Missiles!"),
+                        Me.GetAuraTimeLeft("Arcane Missiles!").TotalMilliseconds
+                        );
+
+                    WoWUnit target = Me.CurrentTarget;
+                    if (target == null)
+                        line += ", target=(null)";
+                    else
+                        line += string.Format(", target={0} @ {1:F1} yds, h={2:F1}%, face={3}, loss={4}, livbomb={5:F0} ms",
+                            target.SafeName(),
+                            target.Distance,
+                            target.HealthPercent,
+                            Me.IsSafelyFacing(target),
+                            target.InLineOfSpellSight,
+                            target.GetAuraTimeLeft("Living Bomb").TotalMilliseconds 
+                            );
+
+                    Logger.WriteDebug(Color.Wheat, line);
+                    return RunStatus.Failure;
+                })
                 );
-        }
-
-        private static Composite CreateConserveActionList()
-        {
-            return new PrioritySelector(
-                //actions.conserve=call_action_list,name=cooldowns,if=time_to_die<30|(buff.arcane_charge.stack=4&(!talent.prismatic_crystal.enabled|cooldown.prismatic_crystal.remains>15))
-                //actions.conserve+=/arcane_missiles,if=buff.arcane_missiles.react=3|(talent.overpowered.enabled&buff.arcane_power.up&buff.arcane_power.remains<action.arcane_blast.execute_time)
-                //actions.conserve+=/arcane_missiles,if=set_bonus.tier17_4pc&buff.arcane_instability.react&buff.arcane_instability.remains<action.arcane_blast.execute_time
-                //actions.conserve+=/nether_tempest,cycle_targets=1,if=target!=prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<3.6))
-                //actions.conserve+=/supernova,if=time_to_die<8|(charges=2&(buff.arcane_power.up|!cooldown.arcane_power.up)&(!talent.prismatic_crystal.enabled|cooldown.prismatic_crystal.remains>8))
-                //actions.conserve+=/arcane_orb,if=buff.arcane_charge.stack<2
-                //actions.conserve+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
-                //actions.conserve+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
-                //actions.conserve+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd|prev_gcd.arcane_orb)
-                //actions.conserve+=/arcane_missiles,if=buff.arcane_charge.stack=4&(!talent.overpowered.enabled|cooldown.arcane_power.remains>10*spell_haste)
-                //actions.conserve+=/supernova,if=mana.pct<96&(buff.arcane_missiles.stack<2|buff.arcane_charge.stack=4)&(buff.arcane_power.up|(charges=1&cooldown.arcane_power.remains>recharge_time))&(!talent.prismatic_crystal.enabled|current_target=prismatic_crystal|(charges=1&cooldown.prismatic_crystal.remains>recharge_time+8))
-                //actions.conserve+=/nether_tempest,cycle_targets=1,if=target!=prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<(10-3*talent.arcane_orb.enabled)*spell_haste))
-                //actions.conserve+=/arcane_barrage,if=buff.arcane_charge.stack=4
-                //actions.conserve+=/presence_of_mind,if=buff.arcane_charge.stack<2&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
-                //actions.conserve+=/arcane_blast
-                //actions.conserve+=/arcane_barrage,moving=1
-                new ActionAlwaysFail()
-                );
-        }
-
-        #endregion
-    }
-
-    public static class cooldown
-    {
-        #region Properties
-
-        public static double evocation_remains
-        {
-            get { return Spell.GetSpellCooldown("Evocation").TotalSeconds; }
-        }
-
-        #endregion
-    }
-
-    public static class buff
-    {
-        #region Properties
-
-        public static bool arcane_power_up
-        {
-            get { return StyxWoW.Me.GetAuraTimeLeft("Arcane Power").TotalSeconds > 0; }
-        }
-
-        public static double rune_of_power_remains
-        {
-            get { return StyxWoW.Me.GetAuraTimeLeft("Rune of Power").TotalSeconds; }
-        }
-
-        #endregion
-    }
-
-    public static class target
-    {
-        #region Properties
-
-        public static double health_pct
-        {
-            get { return StyxWoW.Me.CurrentTarget.HealthPercent; }
-        }
-
-        public static long time_to_die
-        {
-            get { return StyxWoW.Me.CurrentTarget.TimeToDeath(); }
         }
 
         #endregion
