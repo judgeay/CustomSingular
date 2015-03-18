@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 
 using Singular.Dynamics;
 using Singular.Helpers;
@@ -9,18 +8,13 @@ using Singular.Settings;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Helpers;
-
-
 using Styx.WoWInternals;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
-using Singular.Lists;
 using Styx.WoWInternals.WoWObjects;
 using Rest = Singular.Helpers.Rest;
 using System.Drawing;
 using CommonBehaviors.Actions;
-using Styx.CommonBot.POI;
 
 namespace Singular.ClassSpecific.Shaman
 {

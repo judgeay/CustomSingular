@@ -6,12 +6,10 @@ using Styx;
 
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
-using Styx.CommonBot;
 using Styx.TreeSharp;
 using Singular.Settings;
 
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 using CommonBehaviors.Actions;
 using Styx.CommonBot.Routines;
 

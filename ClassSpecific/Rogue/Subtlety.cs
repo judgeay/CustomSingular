@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using Singular.Dynamics;
+﻿using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
 using Singular.Settings;
@@ -9,11 +7,9 @@ using Styx;
 
 using Styx.CommonBot;
 using Styx.TreeSharp;
-using CommonBehaviors.Actions;
 using Styx.WoWInternals.WoWObjects;
 
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 using System.Drawing;
 
 namespace Singular.ClassSpecific.Rogue

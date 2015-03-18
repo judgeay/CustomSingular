@@ -20,8 +20,6 @@ using Singular.Settings;
 using Singular.Managers;
 using Styx.Helpers;
 using System.Drawing;
-using Styx.Patchables;
-using Styx.Common;
 
 namespace Singular.Helpers
 {

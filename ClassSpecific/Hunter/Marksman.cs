@@ -1,15 +1,10 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
+﻿using System.Linq;
 using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
 using Singular.Settings;
 using Styx;
-using Styx.Common;
 using Styx.CommonBot;
-using Styx.Helpers;
-
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;

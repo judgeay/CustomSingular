@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
@@ -14,7 +13,6 @@ using Styx.WoWInternals.WoWObjects;
 
 using System.Drawing;
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 
 
 namespace Singular.ClassSpecific.Rogue

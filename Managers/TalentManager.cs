@@ -5,7 +5,6 @@ using System.Linq;
 
 using Styx;
 using Styx.WoWInternals;
-using System.Drawing;
 using Styx.CommonBot;
 using Styx.Common.Helpers;
 using Styx.CommonBot.Routines;

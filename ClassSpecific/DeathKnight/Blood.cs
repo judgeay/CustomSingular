@@ -11,7 +11,6 @@ using Styx;
 
 using Styx.Common.Helpers;
 using Styx.CommonBot;
-using Styx.Pathing;
 using Styx.TreeSharp;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;

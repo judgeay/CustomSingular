@@ -1,6 +1,5 @@
 ﻿using Singular.Dynamics;
 using Singular.Helpers;
-using Singular.Managers;
 using Styx;
 
 using Styx.CommonBot;

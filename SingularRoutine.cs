@@ -20,7 +20,6 @@ using Singular.Settings;
 
 using Styx.Common.Helpers;
 using Styx.CommonBot.POI;
-using System.Text;
 using Styx.WoWInternals.DBC;
 
 namespace Singular

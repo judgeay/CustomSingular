@@ -7,8 +7,6 @@ using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
-
 using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Settings;

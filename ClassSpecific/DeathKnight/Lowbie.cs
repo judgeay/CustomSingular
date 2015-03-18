@@ -1,11 +1,7 @@
 ﻿using System.Linq;
-using CommonBehaviors.Actions;
 using Singular.Dynamics;
 using Singular.Helpers;
-using Singular.Managers;
 using Styx;
-
-using Styx.Pathing;
 using Styx.TreeSharp;
 using Styx.WoWInternals.WoWObjects;
 using Singular.Settings;

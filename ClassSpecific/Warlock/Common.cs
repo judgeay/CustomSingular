@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using System.Collections.Generic;
 using Singular.Dynamics;
 using Singular.Helpers;
@@ -15,7 +14,6 @@ using Styx.TreeSharp;
 using CommonBehaviors.Actions;
 using Action = Styx.TreeSharp.Action;
 using Rest = Singular.Helpers.Rest;
-using Styx.CommonBot.POI;
 using System.Drawing;
 using Styx.WoWInternals.DBC;
 using Styx.Patchables;

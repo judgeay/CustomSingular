@@ -1,14 +1,8 @@
-﻿
-using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
-using Singular.ClassSpecific.Paladin;
-
 using Styx.Helpers;
 
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
-using Styx.CommonBot;
-using Styx;
 
 namespace Singular.Settings
 {

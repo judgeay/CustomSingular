@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using CommonBehaviors.Actions;
 using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
@@ -9,8 +8,6 @@ using Styx.CommonBot;
 using Styx.TreeSharp;
 using Styx.WoWInternals.WoWObjects;
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
-
 using Singular.Settings;
 using Styx.WoWInternals;
 using Styx.Common.Helpers;

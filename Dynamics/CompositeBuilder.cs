@@ -1,16 +1,11 @@
-﻿
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-
-using Singular.Managers;
 using Singular.Settings;
 using Styx;
 
 
 using Styx.TreeSharp;
-using System.Drawing;
 using Singular.ClassSpecific;
 
 namespace Singular.Dynamics

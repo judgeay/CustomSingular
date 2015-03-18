@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Styx.WoWInternals;
+﻿using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using System;
 using Singular.Settings;

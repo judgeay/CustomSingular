@@ -9,7 +9,6 @@ using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
 using System;
 using System.Linq;
-using Styx.WoWInternals.World;
 using Styx.WoWInternals.WoWObjects;
 using Singular.Utilities;
 using Styx.CommonBot.POI;
@@ -17,14 +16,12 @@ using CommonBehaviors.Actions;
 using System.Diagnostics;
 using Singular.Managers;
 using System.Drawing;
-using Styx.CommonBot;
 using System.Reflection;
 using Styx.WoWInternals;
 using Tripper.Navigation;
 using Tripper.MeshMisc;
 using Tripper.RecastManaged.Detour;
 using Tripper.Tools.Math;
-using Styx.CommonBot.Routines;
 
 namespace Singular.Helpers
 {

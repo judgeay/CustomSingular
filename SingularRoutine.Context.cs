@@ -1,22 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Styx;
 using Styx.CommonBot;
-using Styx.CommonBot.Routines;
 using Styx.WoWInternals.DBC;
 using System.Drawing;
 using Singular.Helpers;
-using Singular.Settings;
 using Styx.WoWInternals.WoWObjects;
 using Styx.WoWInternals;
 using Styx.Common;
 using Styx.Plugins;
 using System.Dynamic;
 using Singular.Managers;
-using Styx.TreeSharp;
-using Action = Styx.TreeSharp.Action;
 
 namespace Singular
 {

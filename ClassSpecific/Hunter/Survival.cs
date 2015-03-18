@@ -1,10 +1,8 @@
 ﻿using System.Linq;
 using Singular.Dynamics;
 using Singular.Helpers;
-using Singular.Managers;
 using Singular.Settings;
 using Styx;
-using Styx.Common;
 using Styx.CommonBot;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;

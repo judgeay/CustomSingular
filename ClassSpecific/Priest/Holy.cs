@@ -12,12 +12,10 @@ using Styx.CommonBot;
 using Styx.Helpers;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
-using Styx.WoWInternals.World;
 using Action = Styx.TreeSharp.Action;
 using Rest = Singular.Helpers.Rest;
 using Styx.WoWInternals;
 using CommonBehaviors.Actions;
-using System.Collections.Generic;
 using System.Drawing;
 
 namespace Singular.ClassSpecific.Priest

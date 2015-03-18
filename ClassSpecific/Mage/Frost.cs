@@ -7,16 +7,12 @@ using Singular.Settings;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Helpers;
-
-
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
 using System;
 using System.Drawing;
-using System.Collections.Generic;
 
 namespace Singular.ClassSpecific.Mage
 {

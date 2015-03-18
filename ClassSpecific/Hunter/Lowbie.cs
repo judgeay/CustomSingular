@@ -1,11 +1,8 @@
 ﻿using Singular.Dynamics;
 using Singular.Helpers;
-using Singular.Managers;
-using Singular.Settings;
 using Styx;
 
 using Styx.TreeSharp;
-using Styx.WoWInternals;
 
 namespace Singular.ClassSpecific.Hunter
 {

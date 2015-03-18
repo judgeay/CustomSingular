@@ -1,11 +1,9 @@
 ﻿
 using System.ComponentModel;
 using System.IO;
-using Singular.ClassSpecific.Rogue;
 using Styx.Helpers;
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
 using Styx;
-using System.Drawing;
 
 namespace Singular.Settings
 {

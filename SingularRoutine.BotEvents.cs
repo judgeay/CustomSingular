@@ -1,13 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Styx;
 using Styx.CommonBot;
 using Styx.CommonBot.Routines;
-using Styx.WoWInternals.DBC;
-using System.Drawing;
-using Singular.Helpers;
 
 namespace Singular
 {

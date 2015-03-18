@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using CommonBehaviors.Actions;
 using Singular.Dynamics;
 using Singular.Helpers;

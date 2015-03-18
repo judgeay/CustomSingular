@@ -1,6 +1,5 @@
 ﻿#region
 
-using System;
 using System.Linq;
 using Singular.Dynamics;
 using Singular.Helpers;
@@ -11,7 +10,6 @@ using Styx.CommonBot;
 using Styx.TreeSharp;
 using Styx.WoWInternals.WoWObjects;
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 using System.Collections.Generic;
 using CommonBehaviors.Actions;
 using Styx.WoWInternals;

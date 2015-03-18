@@ -15,7 +15,6 @@ using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
 using Singular.Managers;
 using Action = Styx.TreeSharp.Action;
-using Styx.Helpers;
 using System;
 using Styx.Common.Helpers;
 using Singular.Utilities;

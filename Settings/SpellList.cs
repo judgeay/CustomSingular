@@ -1,17 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Xml.Serialization;
 using System.IO;
-using System.Reflection;
-
 using System.ComponentModel;
-using Styx;
-using Styx.Helpers;
-
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
-using Singular.Managers;
 using Styx.WoWInternals;
 
 namespace Singular.Settings

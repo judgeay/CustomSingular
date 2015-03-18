@@ -6,7 +6,6 @@ using Styx;
 
 using Styx.CommonBot;
 using Styx.CommonBot.Inventory;
-using Styx.Pathing;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 
@@ -14,10 +13,7 @@ using Styx.TreeSharp;
 using System;
 
 using Action = Styx.TreeSharp.Action;
-using System.Drawing;
 using Singular.Managers;
-using Singular.Utilities;
-using Styx.CommonBot.Routines;
 
 namespace Singular.Helpers
 {

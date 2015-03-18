@@ -2,11 +2,8 @@
 using System.ComponentModel;
 using System.IO;
 using Styx.Helpers;
-using Styx.WoWInternals.WoWObjects;
-
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
 using Styx;
-using System.Drawing;
 using System;
 
 namespace Singular.Settings

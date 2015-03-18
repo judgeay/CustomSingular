@@ -2,19 +2,14 @@
 #define HONORBUDDY_SUPPORTS_HOTKEYS_WITHOUT_REQUIRING_A_MODIFIER
 
 using Styx;
-using Styx.CommonBot;
 using Styx.WoWInternals;
 using System;
-using System.Linq;
 using Singular.Settings;
 using System.Drawing;
-using Styx.Common.Helpers;
 using System.Collections.Generic;
 using Singular.Helpers;
 using Styx.Common;
-using Styx.TreeSharp;
 using System.Windows.Forms;
-using Styx.Pathing;
 using System.Runtime.InteropServices;
 
 namespace Singular.Managers

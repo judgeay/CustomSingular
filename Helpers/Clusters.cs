@@ -4,7 +4,6 @@ using System.Linq;
 using Styx;
 using Styx.WoWInternals.WoWObjects;
 using Bots.DungeonBuddy.Helpers;
-using Styx.WoWInternals;
 
 namespace Singular.Helpers
 {

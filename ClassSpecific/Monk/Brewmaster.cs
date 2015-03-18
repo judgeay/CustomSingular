@@ -7,7 +7,6 @@ using Singular.Settings;
 using Styx;
 using Styx.Common.Helpers;
 using Styx.TreeSharp;
-using System.Collections.Generic;
 using Styx.CommonBot;
 using Action = Styx.TreeSharp.Action;
 using Styx.WoWInternals.WoWObjects;

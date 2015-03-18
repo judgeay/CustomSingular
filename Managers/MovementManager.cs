@@ -1,14 +1,7 @@
 ﻿using Bots.DungeonBuddy.Helpers;
 using Styx;
-using Styx.CommonBot;
 using Styx.WoWInternals;
-using System;
-using System.Linq;
 using Singular.Settings;
-using System.Drawing;
-using Styx.Common.Helpers;
-using System.Collections.Generic;
-using Singular.Helpers;
 using Styx.Pathing;
 
 namespace Singular.Managers

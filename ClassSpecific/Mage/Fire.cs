@@ -6,9 +6,6 @@ using Singular.Managers;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Helpers;
-
-
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;

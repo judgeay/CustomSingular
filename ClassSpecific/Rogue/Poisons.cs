@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Singular.Settings;
+﻿using Singular.Settings;
 using Singular.Helpers;
 using Styx;
 using Styx.CommonBot;

@@ -1,7 +1,6 @@
 ﻿//#define USE_ISFLEEING
 #define USE_MECHANIC
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 

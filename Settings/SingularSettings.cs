@@ -9,7 +9,6 @@ using DefaultValue = Styx.Helpers.DefaultValueAttribute;
 using Singular.Managers;
 using System.Reflection;
 using System;
-using System.Collections.Generic;
 using Singular.Helpers;
 using Styx.CommonBot;
 using Styx.WoWInternals;

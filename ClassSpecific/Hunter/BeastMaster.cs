@@ -1,16 +1,11 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using CommonBehaviors.Actions;
 using Singular.Dynamics;
 using Singular.Helpers;
 using Singular.Managers;
 using Singular.Settings;
 using Styx;
-
-using Styx.Common;
 using Styx.CommonBot;
-using Styx.Helpers;
-using Styx.Pathing;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
 using Styx.WoWInternals.WoWObjects;

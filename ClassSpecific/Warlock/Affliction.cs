@@ -8,15 +8,11 @@ using Singular.Managers;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
 using Singular.Settings;
 
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
-using Styx.Common;
-using System.Collections.Generic;
 using CommonBehaviors.Actions;
 using System.Drawing;
 

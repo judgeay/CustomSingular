@@ -3,11 +3,6 @@ using CommonBehaviors.Actions;
 
 using Singular.Settings;
 using Styx;
-using Singular.Helpers;
-
-using Styx.CommonBot;
-using Styx.CommonBot.Inventory;
-using Styx.Pathing;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 

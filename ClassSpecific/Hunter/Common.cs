@@ -9,18 +9,14 @@ using Styx;
 
 using Styx.CommonBot;
 using Styx.Helpers;
-using Styx.Pathing;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 using System.Drawing;
 using Styx.CommonBot.POI;
 using Styx.Common.Helpers;
 using System.Collections.Generic;
-using Styx.CommonBot.Routines;
-
 using LocationRetriever = Singular.Helpers.SimpleLocationRetriever;
 // using LocationRetriever = Styx.CommonBot.LocationRetriever;
 

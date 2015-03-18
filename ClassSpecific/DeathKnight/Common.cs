@@ -8,7 +8,6 @@ using Singular.Settings;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Pathing;
 using Styx.TreeSharp;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
@@ -177,11 +176,11 @@ namespace Singular.ClassSpecific.DeathKnight
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
 
-                        CreateDarkSuccorBehavior(),
-                        Common.CreateGetOverHereBehavior(),
-                        Spell.Cast("Outbreak"),
-                        Spell.Cast("Howling Blast"),
-                        Spell.Buff("Icy Touch")
+                        //CreateDarkSuccorBehavior(),
+                        Common.CreateGetOverHereBehavior()
+                        //Spell.Cast("Outbreak"),
+                        //Spell.Cast("Howling Blast"),
+                        //Spell.Buff("Icy Touch")
                         )
                     ),
 
@@ -191,7 +190,7 @@ namespace Singular.ClassSpecific.DeathKnight
 
         // Non-blood DKs shouldn't be using Death Grip in instances. Only tanks should!
         // You also shouldn't be a blood DK if you're DPSing. Thats just silly. (Like taking a prot war as DPS... you just don't do it)
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Instances)]
+        //[Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Instances)]
         [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Instances)]
         public static Composite CreateDeathKnightFrostAndUnholyInstancePull()
         {
@@ -220,14 +219,14 @@ namespace Singular.ClassSpecific.DeathKnight
         public static Composite CreateDeathKnightPreCombatBuffs()
         {
             return new PrioritySelector(
-                CreateDeathKnightPresenceBehavior(),
+                //CreateDeathKnightPresenceBehavior(),
 
-                // limit PoF to once every ten seconds in case there is some
-                // .. oddness here
-                new Throttle(10, Spell.BuffSelf("Path of Frost", req => Settings.UsePathOfFrost)),
+                //// limit PoF to once every ten seconds in case there is some
+                //// .. oddness here
+                //new Throttle(10, Spell.BuffSelf("Path of Frost", req => Settings.UsePathOfFrost)),
 
-                // Bone Shield has 1 min cd and 5 min duration, so cast out of combat if possible
-                Spell.BuffSelf( "Bone Shield", req => Me.IsInInstance || Battlegrounds.IsInsideBattleground),
+                //// Bone Shield has 1 min cd and 5 min duration, so cast out of combat if possible
+                //Spell.BuffSelf( "Bone Shield", req => Me.IsInInstance || Battlegrounds.IsInsideBattleground),
 
                 // Attack Power Buff
                 Spell.BuffSelf("Horn of Winter", req => !Me.HasPartyBuff(PartyBuffType.AttackPower))
@@ -242,7 +241,7 @@ namespace Singular.ClassSpecific.DeathKnight
         public static Composite CreateDeathKnightPullBuffs()
         {
             return new PrioritySelector(
-                CreateDeathKnightPresenceBehavior(),
+                //CreateDeathKnightPresenceBehavior(),
 
                 // Attack Power Buff
                 Spell.BuffSelf("Horn of Winter", req => !Me.HasPartyBuff(PartyBuffType.AttackPower))
@@ -253,134 +252,134 @@ namespace Singular.ClassSpecific.DeathKnight
 
         #region Loss of Control 
 
-        [Behavior(BehaviorType.LossOfControl, WoWClass.DeathKnight)]
-        public static Composite CreateDeathKnightLossOfControlBehavior()
-        {
-            return new Decorator(
-                req => !Spell.IsGlobalCooldown() && !Spell.IsCastingOrChannelling(),
-                new PrioritySelector(
+        //[Behavior(BehaviorType.LossOfControl, WoWClass.DeathKnight)]
+        //public static Composite CreateDeathKnightLossOfControlBehavior()
+        //{
+        //    return new Decorator(
+        //        req => !Spell.IsGlobalCooldown() && !Spell.IsCastingOrChannelling(),
+        //        new PrioritySelector(
 
-                    new PrioritySelector(
-                        new Decorator(req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Ice Block"), new Action(r => Me.CancelAura("Ice Block"))),
+        //            new PrioritySelector(
+        //                new Decorator(req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Ice Block"), new Action(r => Me.CancelAura("Ice Block"))),
 
-                        new Sequence(
-                            Spell.BuffSelf("Hand of Protection", req => Me.HasAura("Touch of Karma") || Me.IsCrowdControlled()),
-                            new Wait( 1, until => Me.HasAura("Hand of Protection") && Me.HealthPercent > 10, new ActionAlwaysFail())
-                            ),
-                        new Decorator( req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Hand of Protection") && Me.HealthPercent > 10, new Action( r => Me.CancelAura("Hand of Protection"))),
+        //                new Sequence(
+        //                    Spell.BuffSelf("Hand of Protection", req => Me.HasAura("Touch of Karma") || Me.IsCrowdControlled()),
+        //                    new Wait( 1, until => Me.HasAura("Hand of Protection") && Me.HealthPercent > 10, new ActionAlwaysFail())
+        //                    ),
+        //                new Decorator( req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Hand of Protection") && Me.HealthPercent > 10, new Action( r => Me.CancelAura("Hand of Protection"))),
 
-                        new Sequence(
-                            Spell.BuffSelf("Divine Shield", req => Me.HasAura("Touch of Karma") || Me.IsCrowdControlled()),
-                            new Wait( 1, until => Me.HasAura("Divine Shield") && Me.HealthPercent > 10, new ActionAlwaysSucceed())
-                            ),
-                        new Decorator( req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Divine Shield") && Me.HealthPercent > 10, new Action( r => Me.CancelAura("Divine Shield")))
-                        ),
+        //                new Sequence(
+        //                    Spell.BuffSelf("Divine Shield", req => Me.HasAura("Touch of Karma") || Me.IsCrowdControlled()),
+        //                    new Wait( 1, until => Me.HasAura("Divine Shield") && Me.HealthPercent > 10, new ActionAlwaysSucceed())
+        //                    ),
+        //                new Decorator( req => Settings.AutoClearAuraWithDarkSimulacrum && Me.HasMyAura("Divine Shield") && Me.HealthPercent > 10, new Action( r => Me.CancelAura("Divine Shield")))
+        //                ),
 
-                    Spell.BuffSelf("Icebound Fortitude", req => Me.HealthPercent < Settings.IceboundFortitudePercent),
+        //            Spell.BuffSelf("Icebound Fortitude", req => Me.HealthPercent < Settings.IceboundFortitudePercent),
 
-                    Spell.BuffSelf("Lichborne", req => Me.HasAuraWithEffect( WoWApplyAuraType.ModFear) || Me.Fleeing )
+        //            Spell.BuffSelf("Lichborne", req => Me.HasAuraWithEffect( WoWApplyAuraType.ModFear) || Me.Fleeing )
 
-                    )
-                );
-        }
+        //            )
+        //        );
+        //}
 
         #endregion 
 
         #region Heal
 
-        [Behavior(BehaviorType.Heal, WoWClass.DeathKnight)]
-        public static Composite CreateDeathKnightHeals()
-        {
-            return new Decorator(
-                req => !Spell.IsGlobalCooldown() && !Spell.IsCastingOrChannelling(),
-                new PrioritySelector(
+        //[Behavior(BehaviorType.Heal, WoWClass.DeathKnight)]
+        //public static Composite CreateDeathKnightHeals()
+        //{
+        //    return new Decorator(
+        //        req => !Spell.IsGlobalCooldown() && !Spell.IsCastingOrChannelling(),
+        //        new PrioritySelector(
 
-                    Spell.Cast("Death Coil", on => Me, req => Me.HasAura("Lichborne") && Me.HealthPercent < Settings.LichbornePercent),
+        //            Spell.Cast("Death Coil", on => Me, req => Me.HasAura("Lichborne") && Me.HealthPercent < Settings.LichbornePercent),
 
-                    Spell.BuffSelf("Death Pact", req => Me.HealthPercent < Settings.DeathPactPercent ),
+        //            Spell.BuffSelf("Death Pact", req => Me.HealthPercent < Settings.DeathPactPercent ),
 
-                    Spell.Cast("Death Siphon",
-                        req => Common.HasTalent( DeathKnightTalents.DeathSiphon) 
-                            && Me.GotTarget() && Me.CurrentTarget.InLineOfSpellSight && Me.IsSafelyFacing(Me.CurrentTarget)
-                            && Me.HealthPercent < Settings.DeathSiphonPercent),
+        //            Spell.Cast("Death Siphon",
+        //                req => Common.HasTalent( DeathKnightTalents.DeathSiphon) 
+        //                    && Me.GotTarget() && Me.CurrentTarget.InLineOfSpellSight && Me.IsSafelyFacing(Me.CurrentTarget)
+        //                    && Me.HealthPercent < Settings.DeathSiphonPercent),
 
-                    Spell.BuffSelf("Conversion",
-                        req => Common.HasTalent( DeathKnightTalents.Conversion) 
-                            && Me.HealthPercent < Settings.ConversionPercent 
-                            && Me.RunicPowerPercent >= Settings.MinimumConversionRunicPowerPrecent),
+        //            Spell.BuffSelf("Conversion",
+        //                req => Common.HasTalent( DeathKnightTalents.Conversion) 
+        //                    && Me.HealthPercent < Settings.ConversionPercent 
+        //                    && Me.RunicPowerPercent >= Settings.MinimumConversionRunicPowerPrecent),
 
-                    new Decorator(
-                        req => TalentManager.CurrentSpec == WoWSpec.DeathKnightBlood,
-                        Spell.HandleOffGCD(
-                            new Sequence(
-                                Spell.BuffSelf("Rune Tap", req => Me.HealthPercent < Settings.RuneTapPercent),
-                                new Wait( TimeSpan.FromMilliseconds(500), until => Me.HasAura("Rune Tap"), new ActionAlwaysSucceed())
-                                )
-                            )
-                        ),
+        //            new Decorator(
+        //                req => TalentManager.CurrentSpec == WoWSpec.DeathKnightBlood,
+        //                Spell.HandleOffGCD(
+        //                    new Sequence(
+        //                        Spell.BuffSelf("Rune Tap", req => Me.HealthPercent < Settings.RuneTapPercent),
+        //                        new Wait( TimeSpan.FromMilliseconds(500), until => Me.HasAura("Rune Tap"), new ActionAlwaysSucceed())
+        //                        )
+        //                    )
+        //                ),
 
-                    // **** Defensive Cooldowns *** 
+        //            // **** Defensive Cooldowns *** 
 
-                    // following for DPS only -- let Blood fall through in instances
-                    Spell.Cast("Death Strike",
-                        req => (TalentManager.CurrentSpec != WoWSpec.DeathKnightBlood || SingularRoutine.CurrentWoWContext != WoWContext.Instances)
-                            && Me.GotTarget() && Me.CurrentTarget.InLineOfSpellSight && Me.IsSafelyFacing(Me.CurrentTarget)
-                            && Me.HealthPercent < Settings.DeathStrikeEmergencyPercent),
+        //            // following for DPS only -- let Blood fall through in instances
+        //            Spell.Cast("Death Strike",
+        //                req => (TalentManager.CurrentSpec != WoWSpec.DeathKnightBlood || SingularRoutine.CurrentWoWContext != WoWContext.Instances)
+        //                    && Me.GotTarget() && Me.CurrentTarget.InLineOfSpellSight && Me.IsSafelyFacing(Me.CurrentTarget)
+        //                    && Me.HealthPercent < Settings.DeathStrikeEmergencyPercent),
 
-                    // use it to heal with deathcoils.
-                    Spell.BuffSelf("Lichborne",
-                        req => Me.HealthPercent < Settings.LichbornePercent 
-                            && Me.CurrentRunicPower >= 60
-                            && (!Settings.LichborneExclusive || !Me.HasAnyAura( "Bone Shield", "Vampiric Blood", "Dancing Rune Weapon", "Icebound Fortitude"))),
+        //            // use it to heal with deathcoils.
+        //            Spell.BuffSelf("Lichborne",
+        //                req => Me.HealthPercent < Settings.LichbornePercent 
+        //                    && Me.CurrentRunicPower >= 60
+        //                    && (!Settings.LichborneExclusive || !Me.HasAnyAura( "Bone Shield", "Vampiric Blood", "Dancing Rune Weapon", "Icebound Fortitude"))),
 
-                    // *** Dark Simulacrum saved abilities ***
-                    new Decorator(
-                        req => Spell.CanCastHack("Ice Block") && Me.HasAuraWithEffect(WoWApplyAuraType.PeriodicDamage, WoWApplyAuraType.PeriodicDamagePercent),
-                        new Sequence(
-                            Spell.BuffSelf("Ice Block"),
-                            new Action(r => Logger.Write(Color.DodgerBlue, "^Ice Block"))
-                            )
-                        ),
+        //            // *** Dark Simulacrum saved abilities ***
+        //            new Decorator(
+        //                req => Spell.CanCastHack("Ice Block") && Me.HasAuraWithEffect(WoWApplyAuraType.PeriodicDamage, WoWApplyAuraType.PeriodicDamagePercent),
+        //                new Sequence(
+        //                    Spell.BuffSelf("Ice Block"),
+        //                    new Action(r => Logger.Write(Color.DodgerBlue, "^Ice Block"))
+        //                    )
+        //                ),
 
-                    Spell.BuffSelf("Hand of Freedom", req => Me.IsRooted() || Me.IsSlowed(30)),
+        //            Spell.BuffSelf("Hand of Freedom", req => Me.IsRooted() || Me.IsSlowed(30)),
 
-                    // *** Defensive Cooldowns ***
-                    // Anti-magic shell - no cost and doesnt trigger GCD 
-                        Spell.BuffSelf(
-                            "Anti-Magic Shell",
-                            req => Unit.NearbyUnfriendlyUnits.Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == Me.Guid)
-                            ),
+        //            // *** Defensive Cooldowns ***
+        //            // Anti-magic shell - no cost and doesnt trigger GCD 
+        //                Spell.BuffSelf(
+        //                    "Anti-Magic Shell",
+        //                    req => Unit.NearbyUnfriendlyUnits.Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == Me.Guid)
+        //                    ),
 
-                    // we want to make sure our primary target is within melee range so we don't run outside of anti-magic zone.
-                        Spell.CastOnGround(
-                            "Anti-Magic Zone",
-                            on => Me,
-                            req => Common.HasTalent(DeathKnightTalents.AntiMagicZone)
-                                && !Me.HasAura("Anti-Magic Shell")
-                                && Unit.NearbyUnfriendlyUnits
-                                    .Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == Me.Guid)
-                                && Targeting.Instance.FirstUnit != null
-                                && Targeting.Instance.FirstUnit.IsWithinMeleeRange
-                            ),
+        //            // we want to make sure our primary target is within melee range so we don't run outside of anti-magic zone.
+        //                Spell.CastOnGround(
+        //                    "Anti-Magic Zone",
+        //                    on => Me,
+        //                    req => Common.HasTalent(DeathKnightTalents.AntiMagicZone)
+        //                        && !Me.HasAura("Anti-Magic Shell")
+        //                        && Unit.NearbyUnfriendlyUnits
+        //                            .Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == Me.Guid)
+        //                        && Targeting.Instance.FirstUnit != null
+        //                        && Targeting.Instance.FirstUnit.IsWithinMeleeRange
+        //                    ),
 
-                        Spell.BuffSelf("Icebound Fortitude", req => Me.HealthPercent < Settings.IceboundFortitudePercent),
+        //                Spell.BuffSelf("Icebound Fortitude", req => Me.HealthPercent < Settings.IceboundFortitudePercent),
 
-                        Spell.BuffSelf("Lichborne", req => Me.IsCrowdControlled()),
+        //                Spell.BuffSelf("Lichborne", req => Me.IsCrowdControlled()),
 
-                        Spell.BuffSelf("Desecrated Ground", req => Common.HasTalent(DeathKnightTalents.DesecratedGround) && Me.IsCrowdControlled()),
+        //                Spell.BuffSelf("Desecrated Ground", req => Common.HasTalent(DeathKnightTalents.DesecratedGround) && Me.IsCrowdControlled()),
 
-                        Helpers.Common.CreateCombatRezBehavior("Raise Ally", req => ((WoWUnit)req).SpellDistance() < 40 && ((WoWUnit)req).InLineOfSpellSight)
+        //                Helpers.Common.CreateCombatRezBehavior("Raise Ally", req => ((WoWUnit)req).SpellDistance() < 40 && ((WoWUnit)req).InLineOfSpellSight)
 
-                    )
-                );
-        }
+        //            )
+        //        );
+        //}
 
         #endregion
 
         #region CombatBuffs
 
-        [Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Normal)]
-        [Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Battlegrounds)]
+        //[Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Normal)]
+        //[Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Battlegrounds)]
         [Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Normal)]
         [Behavior(BehaviorType.CombatBuffs, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Battlegrounds)]
         public static Composite CreateDeathKnightCombatBuffs()

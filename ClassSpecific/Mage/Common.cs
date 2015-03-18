@@ -6,18 +6,14 @@ using Singular.Managers;
 using Singular.Settings;
 
 using Styx.CommonBot;
-using Styx.Helpers;
-using Styx.Pathing;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
 using Styx;
-using Styx.Common;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using Styx.CommonBot.Routines;
 
 namespace Singular.ClassSpecific.Mage
 {

@@ -1,13 +1,8 @@
-﻿
-using System;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using Styx.Helpers;
 
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
-using Styx;
-using Styx.CommonBot;
-using Singular.Managers;
 
 
 namespace Singular.Settings

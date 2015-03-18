@@ -3,8 +3,6 @@ using System.Linq;
 
 using Singular.Managers;
 using Styx;
-using Styx.Common;
-using Styx.Common.Helpers;
 using Styx.CommonBot;
 using Styx.Helpers;
 using Styx.TreeSharp;
@@ -12,11 +10,7 @@ using Action = Styx.TreeSharp.Action;
 using Styx.WoWInternals;
 using CommonBehaviors.Actions;
 using Singular.Settings;
-using Singular.ClassSpecific;
 using Styx.WoWInternals.WoWObjects;
-using Singular.ClassSpecific.Warlock;
-using System.Drawing;
-using Styx.CommonBot.POI;
 using Styx.CommonBot.Routines;
 
 namespace Singular.Helpers

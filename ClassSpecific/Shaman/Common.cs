@@ -1,6 +1,5 @@
 ﻿
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Drawing;
 
@@ -20,7 +19,6 @@ using Styx.TreeSharp;
 using Action = Styx.TreeSharp.Action;
 using Styx.CommonBot.POI;
 using Singular.Dynamics;
-using Singular.Utilities;
 
 namespace Singular.ClassSpecific.Shaman
 {

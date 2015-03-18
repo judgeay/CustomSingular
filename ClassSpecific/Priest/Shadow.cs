@@ -8,7 +8,6 @@ using Singular.Settings;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Helpers;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
@@ -16,8 +15,6 @@ using Action = Styx.TreeSharp.Action;
 using Rest = Singular.Helpers.Rest;
 using System.Collections.Generic;
 using System.Drawing;
-using Singular.Utilities;
-using Styx.CommonBot.Profiles;
 
 namespace Singular.ClassSpecific.Priest
 {

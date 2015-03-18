@@ -1,5 +1,4 @@
 ﻿using System.Linq;
-using System.Threading;
 using CommonBehaviors.Actions;
 using Singular.Dynamics;
 using Singular.Helpers;
@@ -7,7 +6,6 @@ using Singular.Managers;
 using Styx;
 
 using Styx.CommonBot;
-using Styx.Pathing;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
@@ -19,7 +17,6 @@ using Styx.CommonBot.POI;
 using System.Collections.Generic;
 using Styx.Helpers;
 using System.Drawing;
-using Styx.Common;
 using Singular.Utilities;
 
 namespace Singular.ClassSpecific.Rogue

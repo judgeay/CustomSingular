@@ -12,7 +12,6 @@ using System.Linq;
 using Singular.Settings;
 
 using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
 using System.Drawing;
 using CommonBehaviors.Actions;
 using Styx.Common.Helpers;

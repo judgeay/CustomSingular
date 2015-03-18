@@ -1,9 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Styx.Common.Helpers;
-using Styx.Helpers;
 using Styx.TreeSharp;
 using Singular.Helpers;
 using Singular.Settings;
@@ -13,8 +9,6 @@ using Singular.Managers;
 using Singular.Dynamics;
 using Styx.CommonBot;
 using CommonBehaviors.Actions;
-using System.Drawing;
-using Styx.Pathing;
 using Action = Styx.TreeSharp.Action;
 using Styx.WoWInternals;
 using Singular.Utilities;
