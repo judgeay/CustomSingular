@@ -56,13 +56,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ClassSpecific\DeathKnight\Blood.cs" />
-    <Compile Include="ClassSpecific\BuffBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight\Common.cs" />
-    <Compile Include="ClassSpecific\CommonBase.cs" />
-    <Compile Include="ClassSpecific\DeathKnight\DeathKnightBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight\Frost.cs" />
     <Compile Include="ClassSpecific\DeathKnight\Lowbie.cs" />
-    <Compile Include="ClassSpecific\PetBuffBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight\Unholy.cs" />
     <Compile Include="ClassSpecific\Druid\Balance.cs" />
     <Compile Include="ClassSpecific\Druid\Common.cs" />
