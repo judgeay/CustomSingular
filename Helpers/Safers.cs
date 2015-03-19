@@ -5,6 +5,7 @@
 using System.Drawing;
 using System.Linq;
 using CommonBehaviors.Actions;
+using Singular.Dynamics;
 using Singular.Settings;
 
 using Styx;
@@ -473,7 +474,7 @@ namespace Singular.Helpers
                             {
                                 if (_lastTargetMessageGuid != Me.CurrentTargetGuid || _nextTargetMessageTimer.IsFinished)
                                 {
-                                    Logger.Write(targetColor, "EnsureTarget: no valid target set by " + SingularRoutine.GetBotName() + " -- skipping " + Dynamics.CompositeBuilder.CurrentBehaviorType.ToString() + " spell priority");
+                                    Logger.Write(targetColor, "EnsureTarget: no valid target set by " + SingularRoutine.GetBotName() + " -- skipping " + CompositeBuilder.CurrentBehaviorType.ToString() + " spell priority");
                                     _nextTargetMessageTimer.Reset();
                                 }
 

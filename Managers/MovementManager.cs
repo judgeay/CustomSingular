@@ -1,5 +1,7 @@
-﻿using Bots.DungeonBuddy.Helpers;
+﻿using System.Diagnostics.CodeAnalysis;
+using Bots.DungeonBuddy.Helpers;
 using Styx;
+using Styx.CommonBot.Routines;
 using Styx.WoWInternals;
 using Singular.Settings;
 using Styx.Pathing;
@@ -20,7 +22,7 @@ namespace Singular.Managers
                 if (IsBotMovementDisabled)
                     return true;
 
-                if (!SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.Movement))
+                if (!SingularRoutine.IsAllowed(CapabilityFlags.Movement))
                     return true;
 
                 if (SingularSettings.Instance.AllowMovement == AllowMovementType.Auto)
@@ -42,7 +44,7 @@ namespace Singular.Managers
                 if (IsBotMovementDisabled)
                     return true;
 
-                if (!SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.Facing))
+                if (!SingularRoutine.IsAllowed(CapabilityFlags.Facing))
                     return true;
 
                 if (SingularSettings.Instance.AllowMovement == AllowMovementType.Auto)
@@ -79,8 +81,8 @@ namespace Singular.Managers
                 if (IsBotMovementDisabled)
                     return false;
 
-                if (!SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.Movement)
-                    || !SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.GapCloser))
+                if (!SingularRoutine.IsAllowed(CapabilityFlags.Movement)
+                    || !SingularRoutine.IsAllowed(CapabilityFlags.GapCloser))
                     return false;
 
                 if (SingularSettings.Instance.AllowMovement == AllowMovementType.Auto)
@@ -97,8 +99,8 @@ namespace Singular.Managers
                 if (IsBotMovementDisabled)
                     return false;
 
-                if (!SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.Movement)
-                    || !SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.MoveBehind))
+                if (!SingularRoutine.IsAllowed(CapabilityFlags.Movement)
+                    || !SingularRoutine.IsAllowed(CapabilityFlags.MoveBehind))
                     return false;
 
                 if (SingularSettings.Instance.AllowMovement == AllowMovementType.Auto)
@@ -131,11 +133,11 @@ namespace Singular.Managers
             {
                 IsManualMovementBotActive = SingularRoutine.IsBotInUse("LazyRaider", "Raid Bot", "Tyrael", "Enyo");
                 if (arg.Event == SingularBotEvent.BotStarted)
-                    MovementManager.Start();
+                    Start();
                 else if (arg.Event == SingularBotEvent.BotStopped)
-                    MovementManager.Stop();
+                    Stop();
                 else if (arg.Event == SingularBotEvent.BotChanged)
-                    MovementManager.Change();
+                    Change();
             };
         }
 
@@ -228,7 +230,7 @@ namespace Singular.Managers
 
         class NoNavigation : NavigationProvider
         {
-            [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
+            [SuppressMessage("Microsoft.Usage", "CA2214:DoNotCallOverridableMethodsInConstructors")]
             public NoNavigation()
 	        {
 		        StuckHandler = new ScriptHelpers.NoUnstuck();

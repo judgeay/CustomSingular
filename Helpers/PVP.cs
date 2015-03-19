@@ -1,4 +1,6 @@
-﻿using Styx.WoWInternals;
+﻿using Styx;
+using Styx.WoWInternals;
+using Styx.WoWInternals.DBC;
 using Styx.WoWInternals.WoWObjects;
 using System;
 using Singular.Settings;
@@ -86,12 +88,12 @@ namespace Singular.Helpers
 
             int slowedCompare = -(int)slowedPct;
             WoWAura foundAura = null;
-            Styx.WoWInternals.DBC.SpellEffect foundSE = null;
+            SpellEffect foundSE = null;
             int foundSpellId = 0;
 
             foreach (WoWAura aura in unit.GetAllAuras())
             {
-                foreach (Styx.WoWInternals.DBC.SpellEffect se in aura.Spell.SpellEffects)
+                foreach (SpellEffect se in aura.Spell.SpellEffects)
                 {
                     if (se != null && se.AuraType == WoWApplyAuraType.ModDecreaseSpeed && se.BasePoints <= slowedCompare)
                     {
@@ -167,7 +169,7 @@ namespace Singular.Helpers
 
             if (e.PreviousContext == WoWContext.Battlegrounds)
             {
-                StopMoving.AsSoonAsPossible(when => Styx.StyxWoW.IsInGame );
+                StopMoving.AsSoonAsPossible(when => StyxWoW.IsInGame );
             }
         }
 

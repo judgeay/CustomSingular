@@ -2,12 +2,15 @@
 using System.Reflection;
 using System.Linq;
 using System.Windows.Forms;
+using Bots.Grind;
 using Singular.GUI;
 using Singular.Helpers;
+using Singular.Lists;
 using Singular.Managers;
 using Singular.Utilities;
 using Styx;
 using Styx.CommonBot;
+using Styx.CommonBot.AreaManagement;
 using Styx.CommonBot.Routines;
 using Styx.Helpers;
 using Styx.WoWInternals.WoWObjects;
@@ -17,7 +20,6 @@ using System.IO;
 using System.Collections.Generic;
 using Styx.Common;
 using Singular.Settings;
-
 using Styx.Common.Helpers;
 using Styx.CommonBot.POI;
 using Styx.WoWInternals.DBC;
@@ -26,35 +28,36 @@ namespace Singular
 {
     public partial class SingularRoutine : CombatRoutine
     {
+        #region Fields
+
+        private static readonly WaitTimer WaitForLatencyCheck = new WaitTimer(TimeSpan.FromSeconds(5));
+        private static readonly WaitTimer _pollInterval = new WaitTimer(TimeSpan.FromSeconds(10));
+        private static readonly WaitTimer _waitForEnemiesCheck = new WaitTimer(TimeSpan.FromMilliseconds(500));
+
+        private static WoWGuid _lastCheckCurrTargetGuid;
+        private static WoWGuid _lastCheckPetsTargetGuid;
+        private static bool _lastCombatDisabledState;
+        private static uint _lastFPS;
+        private static bool _lastIsCasting;
+        private static bool _lastIsChanneling;
+        private static bool _lastIsGCD;
+        private static bool _lastIsInCinematic;
+        private static bool _lastIsInVehicle;
+        private static bool _lastIsSpellPending;
         private static LogLevel _lastLogLevel = LogLevel.None;
+        private static bool _lastPetAlive;
+        private static WoWGuid _lastPetGuid = WoWGuid.Empty;
+        private static string _lastSpellPending = string.Empty;
+        private static DateTime _nextAbcWarning = DateTime.MinValue;
+        private static DateTime _nextNoCallMsgAllowed = DateTime.MinValue;
+        private static int _pulsePhase;
+        private static int countRentrancyStopBot;
+        private DateTime NextAuraCheck = DateTime.MinValue;
+        private ConfigurationForm _configForm;
 
-        public static uint Latency { get; set; }
-        private static WaitTimer WaitForLatencyCheck = new WaitTimer( TimeSpan.FromSeconds(5));
-       
-        public static SingularRoutine Instance { get; private set; }
+        #endregion
 
-        public override string Name { get { return GetSingularRoutineName(); } }
-
-        public override WoWClass Class { get { return StyxWoW.Me.Class; } }
-
-        public override bool WantButton { get { return true; } }
-
-        private static LocalPlayer Me { get { return StyxWoW.Me; } }
-
-        public override CapabilityFlags SupportedCapabilities
-        {
-            get
-            {
-                return CapabilityFlags.All;
-            }
-        }
-
-        public static bool IsAllowed( CapabilityFlags flags)
-        {
-            return RoutineManager.GetCapabilityState(flags) == CapabilityState.DontCare;
-        }
-
-        delegate void OnTargetChange(WoWUnit unit);
+        #region Constructors
 
         public SingularRoutine()
         {
@@ -62,206 +65,116 @@ namespace Singular
             TrainingDummyBehaviors = WoWContext.Instances;
         }
 
-        public override void Initialize()
+        #endregion
+
+        #region Properties
+
+        public static SingularRoutine Instance { get; private set; }
+        public static uint Latency { get; set; }
+
+        public static bool WeAreTheCurrentCombatRoutine
         {
-            DateTime timeStart = DateTime.Now;
-
-            Logger.WriteFile("Initialize: started");    // cannot call method which references SingularSettings
-
-            TalentManager.Init();           // initializes CurrentSpec which is referenced everywhere
-            SingularSettings.Initialize();  // loads Singular global and spec-specific settings (must determine spec first)
-
-            DetermineCurrentWoWContext();
-
-            WriteSupportInfo();
-
-            _lastLogLevel = GlobalSettings.Instance.LogLevel;
-
-            // When we actually need to use it, we will.
-            Spell.Init();
-            Spell.GcdInitialize();
-
-            EventHandlers.Init();
-            MountManager.Init();
-            HotkeyDirector.Init();
-            MovementManager.Init();
-             // SoulstoneManager.Init();   // switch to using Death behavior
-            Dispelling.Init();
-            PartyBuff.Init();
-            Singular.Lists.BossList.Init();
-
-            Targeting.Instance.WeighTargetsFilter += PullMoreWeighTargetsFilter;
-
-            //Logger.Write("Combat log event handler started.");
-            // Do this now, so we ensure we update our context when needed.
-            BotEvents.Player.OnMapChanged += e =>
-            {
-                // Don't run this handler if we're not the current routine!
-                if (!WeAreTheCurrentCombatRoutine)
-                    return;
-
-                // Only ever update the context. All our internal handlers will use the context changed event
-                // so we're not reliant on anything outside of ourselves for updates.
-                UpdateContext();
-            };
-
-            TreeHooks.Instance.HooksCleared += () =>
-            {
-                // Don't run this handler if we're not the current routine!
-                if (!WeAreTheCurrentCombatRoutine)
-                    return;
-
-                Logger.Write( LogColor.Hilite, "Hooks cleared, re-creating behaviors");
-                RebuildBehaviors(silent: true);
-                Spell.GcdInitialize();   // probably not needed, but quick
-            };
-
-            GlobalSettings.Instance.PropertyChanged += (sender, e) =>
-            {
-                // Don't run this handler if we're not the current routine!
-                if (!WeAreTheCurrentCombatRoutine)
-                    return;
-
-                // only LogLevel change will impact our behav trees
-                // .. as we conditionally include/omit some diagnostic nodes if debugging
-                // also need to keep a cached copy of prior value as the event
-                // .. fires on the settor, not when the value is different
-                if (e.PropertyName == "LogLevel" && _lastLogLevel != GlobalSettings.Instance.LogLevel)
-                {
-                    _lastLogLevel = GlobalSettings.Instance.LogLevel;
-                    Logger.Write( LogColor.Hilite, "HonorBuddy {0} setting changed to {1}, re-creating behaviors", e.PropertyName, _lastLogLevel.ToString());
-                    RebuildBehaviors();
-                    Spell.GcdInitialize();   // probably not needed, but quick
-                }
-            };
-
-            // install botevent handler so we can consolidate validation on whether 
-            // .. local botevent handlers should be called or not
-            SingularBotEventInitialize();
-
-            Logger.Write("Determining talent spec.");
-            try
-            {
-                TalentManager.Update();
-            }
-            catch (Exception e)
-            {
-                StopBot(e.ToString());
-            }
-            Logger.Write("Current spec is " + SpecName());
-
-            // write current settings to log file... only written at startup and when Save press in Settings UI
-            SingularSettings.Instance.LogSettings();
-
-            // Update the current WoWContext, and fire an event for the change.
-            UpdateContext();
-
-            // NOTE: Hook these events AFTER the context update.
-            OnWoWContextChanged += (orig, ne) =>
-                {
-                    Logger.Write( LogColor.Hilite, "Context changed, re-creating behaviors");
-                    SingularRoutine.DescribeContext();
-                    RebuildBehaviors();
-                    Spell.GcdInitialize();
-                    Singular.Lists.BossList.Init();
-                };
-            RoutineManager.Reloaded += (s, e) =>
-                {
-                    Logger.Write( LogColor.Hilite, "Routines were reloaded, re-creating behaviors");
-                    RebuildBehaviors(silent:true);
-                    Spell.GcdInitialize();
-                };
-
-
-            // create silently since Start button will create a context change (at least first Start)
-            // .. which will build behaviors again
-            if (!Instance.RebuildBehaviors())
-            {
-                return;
-            }
-
-            //
-            if (IsPluginEnabled("DrinkPotions"))
-            {
-                Logger.Write( LogColor.Hilite, "info: disabling DrinkPotions plugin, conflicts with Singular potion support");
-                SetPluginEnabled("DrinkPotions", false);
-            }
-
-            Logger.WriteDebug(Color.White, "Verified behaviors can be created!");
-            Logger.Write("Initialization complete!");
-            Logger.WriteDiagnostic(Color.White, "Initialize: completed taking {0:F2} seconds", (DateTime.Now - timeStart).TotalSeconds);
+            get { return RoutineManager.Current.Name == Instance.Name; }
         }
 
-        private void PullMoreWeighTargetsFilter(List<Targeting.TargetPriority> units)
+        public override WoWClass Class
         {
-            // Singular setting botpoi so if set increase that targets weight
-            if (SingularRoutine.IsPullMoreActive && Me.Combat)
-            {
-                foreach (Styx.CommonBot.Targeting.TargetPriority p in units)
-                {
-                    WoWUnit u = p.Object.ToUnit();
-                    if (BotPoi.Current != null && BotPoi.Current.Guid == u.Guid && !u.IsPlayer && !u.IsTagged)
-                        p.Score += 500;
-                }
-            }
+            get { return StyxWoW.Me.Class; }
         }
 
-        private static void WriteSupportInfo()
+        public override string Name
         {
-            string singularName = GetSingularRoutineName();  // "Singular v" + GetSingularVersion();
-            Logger.Write( LogColor.Hilite, "Starting " + singularName);
+            get { return GetSingularRoutineName(); }
+        }
 
-            // save some support info in case we need
-            Logger.WriteFile("{0:F1} days since Windows was restarted", TimeSpan.FromMilliseconds(Environment.TickCount).TotalHours / 24.0);
-            Logger.WriteFile("{0} FPS currently in WOW", GetFPS());
-            Logger.WriteFile("{0} ms of Latency in WOW", SingularRoutine.Latency);
-            Logger.WriteFile("{0} local system time", DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss"));
+        public override CapabilityFlags SupportedCapabilities
+        {
+            get { return CapabilityFlags.All; }
+        }
 
-#if HB_DE
-            Logger.WriteFile("HB_DE defined for this build");
-#endif
+        public override bool WantButton
+        {
+            get { return true; }
+        }
 
-            // verify installed source integrity 
-            try
+        public WoWUnit[] ActiveEnemies { get; private set; }
+
+        private static bool IsMounted
+        {
+            get
             {
-                string singularFolder = GetSingularSourcePath();
-
-                FileCheckList actual = new FileCheckList();
-                actual.Generate(singularFolder);
-
-                FileCheckList certified = new FileCheckList();
-                certified.Load(Path.Combine(singularFolder, "singular.xml"));
-
-                List<FileCheck> err = certified.Compare(actual);
-
-                List<FileCheck> fcerrors = FileCheckList.Test(GetSingularSourcePath());
-                if (!fcerrors.Any())
-                    Logger.Write("Installation: integrity verified for {0}", GetSingularVersion());
-                else
+                if (StyxWoW.Me.Class == WoWClass.Druid)
                 {
-                    Logger.Write(Color.HotPink, "Installation: modified by user - forum support may not be available", singularName);
-                    Logger.WriteFile("=== following {0} differ from Singular distribution ===", fcerrors.Count);
-                    foreach (var fc in fcerrors)
+                    switch (StyxWoW.Me.Shapeshift)
                     {
-                        if ( !File.Exists( fc.Name ))
-                            Logger.WriteDiagnostic("   deleted: {0} {1}", fc.Size, fc.Name);
-                        else if ( certified.Filelist.Any( f => 0 == String.Compare( f.Name, fc.Name, true)))
-                            Logger.WriteDiagnostic("   changed: {0} {1}", fc.Size, fc.Name);
-                        else
-                            Logger.WriteDiagnostic("   inserted {0} {1}", fc.Size, fc.Name);
+                        case ShapeshiftForm.FlightForm:
+                        case ShapeshiftForm.EpicFlightForm:
+                            return true;
                     }
-                    Logger.WriteFile(Styx.Common.LogLevel.Diagnostic, "");
                 }
+
+                return StyxWoW.Me.Mounted;
             }
-            catch (FileNotFoundException e)
+        }
+
+        private static LocalPlayer Me
+        {
+            get { return StyxWoW.Me; }
+        }
+
+        private Dictionary<int, AuraEntry> Auras { get; set; }
+
+        #endregion
+
+        #region Public Methods
+
+        public static string GetHonorBuddyFolder()
+        {
+            string hbpath = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+            return hbpath;
+        }
+
+        public static string GetSingularRoutineName()
+        {
+            return "CustomSingular v" + GetSingularVersion();
+        }
+
+        public static string GetSingularSourcePath()
+        {
+            // bit of a hack, but source code folder for the assembly is only 
+            // .. available from the filename of the .dll
+            FileCheck fc = new FileCheck();
+            Assembly singularDll = Assembly.GetExecutingAssembly();
+            FileInfo fi = new FileInfo(singularDll.Location);
+            int len = fi.Name.LastIndexOf("_");
+            string folderName = fi.Name.Substring(0, len);
+
+            folderName = Path.Combine(GlobalSettings.Instance.CombatRoutinesPath, folderName);
+
+            // now check if relative path and if so, append to honorbuddy folder
+            if (!Path.IsPathRooted(folderName))
+                folderName = Path.Combine(GetHonorBuddyFolder(), folderName);
+
+            return folderName;
+        }
+
+        public static bool IsAllowed(CapabilityFlags flags)
+        {
+            return RoutineManager.GetCapabilityState(flags) == CapabilityState.DontCare;
+        }
+
+        public static void OnPlayerTargetChange(WoWUnit unit)
+        {
+            // special handling if targeting Training Dummy
+            if (ForcedContext == WoWContext.None && unit != null && !IsQuestBotActive && unit.IsTrainingDummy())
             {
-                Logger.Write(Color.HotPink, "Installation: file missing - forum support not available");
-                Logger.Write(Color.HotPink, "missing file: {0}", e.FileName );
+                ForcedContext = TrainingDummyBehaviors;
+                Logger.Write(LogColor.Hilite, "^Start Training Dummy: forcing {0} behaviors", CurrentWoWContext.ToString());
             }
-            catch (Exception e)
+            else if (ForcedContext != WoWContext.None && (unit == null || !unit.IsTrainingDummy()))
             {
-                Logger.Write(Color.HotPink, "Installation: verification error - forum support not available");
-                Logger.WriteFile(e.ToString());
+                ForcedContext = WoWContext.None;
+                Logger.Write(LogColor.Hilite, "^Cancel Training Dummy: restoring {0} behaviors", CurrentWoWContext.ToString());
             }
         }
 
@@ -290,86 +203,201 @@ namespace Singular
                 }
             }
 
-            Logger.Write(Color.HotPink,reason);
+            Logger.Write(Color.HotPink, reason);
         }
 
-        static int countRentrancyStopBot = 0;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <returns></returns>
-        private static uint GetFPS()
+        public static bool UpdateDiagnosticCastingState(bool retVal = false)
         {
-            try
+            if (SingularSettings.Debug && SingularSettings.DebugSpellCasting)
             {
-                return (uint)Lua.GetReturnVal<float>("return GetFramerate()", 0);
-            }
-            catch
-            {
-
-            }
-
-            return 0;
-        }
-
-        public static string GetSingularRoutineName()
-        {
-            return "Singular v" + GetSingularVersion();
-        }
-
-        public static string GetSingularSourcePath()
-        {
-            // bit of a hack, but source code folder for the assembly is only 
-            // .. available from the filename of the .dll
-            FileCheck fc = new FileCheck();
-            Assembly singularDll = Assembly.GetExecutingAssembly();
-            FileInfo fi = new FileInfo(singularDll.Location);
-            int len = fi.Name.LastIndexOf("_");
-            string folderName = fi.Name.Substring(0, len);
-
-            folderName = Path.Combine(Styx.Helpers.GlobalSettings.Instance.CombatRoutinesPath, folderName);
-
-            // now check if relative path and if so, append to honorbuddy folder
-            if (!Path.IsPathRooted(folderName))
-                folderName = Path.Combine(GetHonorBuddyFolder(), folderName);
-
-            return folderName;
-        }
-
-        public static string GetHonorBuddyFolder()
-        {
-            string hbpath = Path.GetDirectoryName(System.Reflection.Assembly.GetEntryAssembly().Location);
-            return hbpath;
-        }
-
-        public static bool WeAreTheCurrentCombatRoutine
-        {
-            get
-            {
-                return RoutineManager.Current.Name == SingularRoutine.Instance.Name;
-            }
-        }
-
-        private static bool IsMounted
-        {
-            get
-            {
-                if (StyxWoW.Me.Class == WoWClass.Druid)
+                if (SingularSettings.DebugSpellCasting)
                 {
-                    switch (StyxWoW.Me.Shapeshift)
+                    if (_lastIsGCD != Spell.IsGlobalCooldown())
                     {
-                        case ShapeshiftForm.FlightForm:
-                        case ShapeshiftForm.EpicFlightForm:
-                            return true;
+                        _lastIsGCD = !_lastIsGCD;
+                        Logger.WriteDebug("CastingState:  GCD={0} GCDTimeLeft={1}", _lastIsGCD.ToYN(), (int) Spell.GcdTimeLeft.TotalMilliseconds);
+                    }
+                    if (_lastIsCasting != Spell.IsCasting())
+                    {
+                        _lastIsCasting = !_lastIsCasting;
+                        Logger.WriteDebug("CastingState:  Casting={0} CastTimeLeft={1}", _lastIsCasting.ToYN(), (int) Me.CurrentCastTimeLeft.TotalMilliseconds);
+                    }
+                    if (_lastIsChanneling != Spell.IsChannelling())
+                    {
+                        _lastIsChanneling = !_lastIsChanneling;
+                        Logger.WriteDebug("ChannelingState:  Channeling={0} ChannelTimeLeft={1}", _lastIsChanneling.ToYN(), (int) Me.CurrentChannelTimeLeft.TotalMilliseconds);
                     }
                 }
+                if (_lastIsInVehicle != Me.InVehicle)
+                {
+                    _lastIsInVehicle = !_lastIsInVehicle;
+                    Logger.WriteDebug("VehicleState:  InVehicle={0} ***", _lastIsInVehicle.ToYN());
+                }
 
-                return StyxWoW.Me.Mounted;
+                if (_lastIsInCinematic != InCinematic())
+                {
+                    _lastIsInCinematic = !_lastIsInCinematic;
+                    Logger.WriteDebug("CinematicState:  InCinematic={0} ***", _lastIsInCinematic.ToYN());
+                }
+                WoWSpell pending = Spell.GetPendingCursorSpell;
+                if (_lastIsSpellPending != (pending != null))
+                {
+                    _lastIsSpellPending = !_lastIsSpellPending;
+                    _lastSpellPending = pending.Name;
+                    Logger.WriteDebug("PendingState:  Pending Target={0}{1}", _lastIsSpellPending.ToYN(), !_lastIsSpellPending ? "" : ", Spell=" + _lastSpellPending);
+                }
+
+                if (SingularSettings.DebugSpellCasting)
+                {
+                    /// Special: provide diagnostics if healer 
+                    if (HealerManager.NeedHealTargeting && (_nextAbcWarning < DateTime.Now) && !Me.IsCasting && !Me.IsChanneling && !Spell.IsGlobalCooldown(LagTolerance.No))
+                    {
+                        WoWUnit low = HealerManager.FindLowestHealthTarget();
+                        if (low != null)
+                        {
+                            float lh = low.PredictedHealthPercent();
+                            if ((SingularSettings.Instance.HealerCombatAllow && HealerManager.CancelHealerDPS()) || (!SingularSettings.Instance.HealerCombatAllow && lh < 70))
+                            {
+                                Logger.WriteDebug("Healer ABC Warning: no cast in progress detected, low health {0} {1:F1}% @ {2:F1} yds", low.SafeName(), lh, low.SpellDistance());
+                                _nextAbcWarning = DateTime.Now + TimeSpan.FromSeconds(1);
+                            }
+                        }
+                    }
+                }
             }
+            return retVal;
         }
 
-        private ConfigurationForm _configForm;
+        public override void Initialize()
+        {
+            DateTime timeStart = DateTime.Now;
+
+            Logger.WriteFile("Initialize: started"); // cannot call method which references SingularSettings
+
+            TalentManager.Init(); // initializes CurrentSpec which is referenced everywhere
+            SingularSettings.Initialize(); // loads Singular global and spec-specific settings (must determine spec first)
+
+            DetermineCurrentWoWContext();
+
+            WriteSupportInfo();
+
+            _lastLogLevel = GlobalSettings.Instance.LogLevel;
+
+            // When we actually need to use it, we will.
+            Spell.Init();
+            Spell.GcdInitialize();
+
+            EventHandlers.Init();
+            MountManager.Init();
+            HotkeyDirector.Init();
+            MovementManager.Init();
+            // SoulstoneManager.Init();   // switch to using Death behavior
+            Dispelling.Init();
+            PartyBuff.Init();
+            BossList.Init();
+
+            Targeting.Instance.WeighTargetsFilter += PullMoreWeighTargetsFilter;
+
+            //Logger.Write("Combat log event handler started.");
+            // Do this now, so we ensure we update our context when needed.
+            BotEvents.Player.OnMapChanged += e =>
+            {
+                // Don't run this handler if we're not the current routine!
+                if (!WeAreTheCurrentCombatRoutine)
+                    return;
+
+                // Only ever update the context. All our internal handlers will use the context changed event
+                // so we're not reliant on anything outside of ourselves for updates.
+                UpdateContext();
+            };
+
+            TreeHooks.Instance.HooksCleared += () =>
+            {
+                // Don't run this handler if we're not the current routine!
+                if (!WeAreTheCurrentCombatRoutine)
+                    return;
+
+                Logger.Write(LogColor.Hilite, "Hooks cleared, re-creating behaviors");
+                RebuildBehaviors(silent: true);
+                Spell.GcdInitialize(); // probably not needed, but quick
+            };
+
+            GlobalSettings.Instance.PropertyChanged += (sender, e) =>
+            {
+                // Don't run this handler if we're not the current routine!
+                if (!WeAreTheCurrentCombatRoutine)
+                    return;
+
+                // only LogLevel change will impact our behav trees
+                // .. as we conditionally include/omit some diagnostic nodes if debugging
+                // also need to keep a cached copy of prior value as the event
+                // .. fires on the settor, not when the value is different
+                if (e.PropertyName == "LogLevel" && _lastLogLevel != GlobalSettings.Instance.LogLevel)
+                {
+                    _lastLogLevel = GlobalSettings.Instance.LogLevel;
+                    Logger.Write(LogColor.Hilite, "HonorBuddy {0} setting changed to {1}, re-creating behaviors", e.PropertyName, _lastLogLevel.ToString());
+                    RebuildBehaviors();
+                    Spell.GcdInitialize(); // probably not needed, but quick
+                }
+            };
+
+            // install botevent handler so we can consolidate validation on whether 
+            // .. local botevent handlers should be called or not
+            SingularBotEventInitialize();
+
+            Logger.Write("Determining talent spec.");
+            try
+            {
+                TalentManager.Update();
+            }
+            catch (Exception e)
+            {
+                StopBot(e.ToString());
+            }
+            Logger.Write("Current spec is " + SpecName());
+
+            // write current settings to log file... only written at startup and when Save press in Settings UI
+            SingularSettings.Instance.LogSettings();
+
+            // Update the current WoWContext, and fire an event for the change.
+            UpdateContext();
+
+            // NOTE: Hook these events AFTER the context update.
+            OnWoWContextChanged += (orig, ne) =>
+            {
+                Logger.Write(LogColor.Hilite, "Context changed, re-creating behaviors");
+                DescribeContext();
+                RebuildBehaviors();
+                Spell.GcdInitialize();
+                BossList.Init();
+            };
+            RoutineManager.Reloaded += (s, e) =>
+            {
+                Logger.Write(LogColor.Hilite, "Routines were reloaded, re-creating behaviors");
+                RebuildBehaviors(silent: true);
+                Spell.GcdInitialize();
+            };
+
+
+            // create silently since Start button will create a context change (at least first Start)
+            // .. which will build behaviors again
+            if (!Instance.RebuildBehaviors())
+            {
+                return;
+            }
+
+            //
+            if (IsPluginEnabled("DrinkPotions"))
+            {
+                Logger.Write(LogColor.Hilite, "info: disabling DrinkPotions plugin, conflicts with Singular potion support");
+                SetPluginEnabled("DrinkPotions", false);
+            }
+
+            Logger.WriteDebug(Color.White, "Verified behaviors can be created!");
+            Logger.Write("Initialization complete!");
+            Logger.WriteDiagnostic(Color.White, "Initialize: completed taking {0:F2} seconds", (DateTime.Now - timeStart).TotalSeconds);
+        }
+
         public override void OnButtonPress()
         {
             if (_configForm == null || _configForm.IsDisposed || _configForm.Disposing)
@@ -377,50 +405,31 @@ namespace Singular
                 _configForm = new ConfigurationForm();
                 _configForm.Height = SingularSettings.Instance.FormHeight;
                 _configForm.Width = SingularSettings.Instance.FormWidth;
-                TabControl tab = (TabControl)_configForm.Controls["tabControl1"];
+                TabControl tab = (TabControl) _configForm.Controls["tabControl1"];
                 tab.SelectedIndex = SingularSettings.Instance.FormTabIndex;
             }
 
             _configForm.Show();
         }
 
-        static DateTime _nextNoCallMsgAllowed = DateTime.MinValue;
-
-        static DateTime _nextNotInGameMsgAllowed = DateTime.MinValue;
-        static DateTime _nextNotInWorldMsgAllowed = DateTime.MinValue;
-        static bool _lastCombatDisabledState = false;
-
-        static int _pulsePhase = 0;
-
         public override void Pulse()
         {
-
-#region Pulse - check for conditions that we should not Pulse during
-            /*
-            if (!StyxWoW.IsInGame)
+            // Check ennemies
+            if (_waitForEnemiesCheck.IsFinished)
             {
-                if (DateTime.Now > _nextNotInGameMsgAllowed)
-                {
-                    Logger.WriteDebug(Color.HotPink, "info: not in game");
-                    _nextNotInGameMsgAllowed = DateTime.Now.AddSeconds(30);
-                }
-                return;
-            }
-            _nextNotInGameMsgAllowed = DateTime.MinValue;
+                ActiveEnemies = Unit.UnfriendlyUnits()
+                    .Where(u =>
+                    {
+                        if (u == null || !u.IsValid)
+                            return false;
 
-            if (!StyxWoW.IsInWorld)
-            {
-                if (DateTime.Now > _nextNotInWorldMsgAllowed)
-                {
-                    Logger.WriteDebug(Color.HotPink, "info: not in world");
-                    _nextNotInWorldMsgAllowed = DateTime.Now.AddSeconds(30);
-                }
-                return;
-            }
-            _nextNotInWorldMsgAllowed = DateTime.MinValue;
-             */
+                        if (u == StyxWoW.Me.CurrentTarget || u.Aggro || u.TaggedByMe || u.IsTargetingUs())
+                            return true;
 
-#endregion
+                        return false;
+                    }).ToArray();
+                _waitForEnemiesCheck.Reset();
+            }
 
             _pulsePhase++;
 
@@ -437,12 +446,12 @@ namespace Singular
                 MonitorBehaviorFlags();
 
                 // now if combat disabled, bail out 
-                bool combatDisabled = Bots.Grind.BehaviorFlags.Combat != (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Combat);
+                bool combatDisabled = BehaviorFlags.Combat != (LevelBot.BehaviorFlags & BehaviorFlags.Combat);
                 if (combatDisabled != _lastCombatDisabledState)
                 {
                     _lastCombatDisabledState = combatDisabled;
-                    Logger.Write(Color.HotPink, 
-                        combatDisabled 
+                    Logger.Write(Color.HotPink,
+                        combatDisabled
                             ? "info: botbase disabled BehaviorFlags.Combat"
                             : "info: botbase enabled BehaviorFlags.Combat"
                         );
@@ -452,12 +461,12 @@ namespace Singular
                 if (SingularSettings.Debug)
                 {
                     TimeSpan since = CallWatch.TimeSpanSinceLastCall;
-                    if (since.TotalSeconds > (4 * CallWatch.SecondsBetweenWarnings))
+                    if (since.TotalSeconds > (4*CallWatch.SecondsBetweenWarnings))
                     {
                         if (!Me.IsGhost && !Me.Mounted && !Me.IsFlying && DateTime.Now > _nextNoCallMsgAllowed)
                         {
                             Logger.WriteDebug(Color.HotPink, "info: {0:F0} seconds since {1} BotBase last called Singular", since.TotalSeconds, GetBotName());
-                            _nextNoCallMsgAllowed = DateTime.Now.AddSeconds(4 * CallWatch.SecondsBetweenWarnings);
+                            _nextNoCallMsgAllowed = DateTime.Now.AddSeconds(4*CallWatch.SecondsBetweenWarnings);
                         }
                     }
                 }
@@ -527,67 +536,102 @@ namespace Singular
                     TankManager.Instance.Pulse();
                 }
             }
-
         }
 
-        public struct AuraEntry
-        {
-            public string Name;
-            public int SpellId;
-            public uint EffectId;
-        }
-        private Dictionary<int, AuraEntry> Auras { get; set; }
-        private DateTime NextAuraCheck = DateTime.MinValue;
-        private void WatchAurasForProcs()
-        {
-            if (!SingularSettings.Instance.EnableDebugTraceBuffPresence)
-                return;
+        #endregion
 
-            if (DateTime.UtcNow < NextAuraCheck)
-                return;
+        #region Private Methods
 
-            NextAuraCheck = DateTime.UtcNow + TimeSpan.FromSeconds(1);
-            if (Auras == null)
-                Auras = new Dictionary<int, AuraEntry>();
-            
-            Dictionary<int, AuraEntry> found = new Dictionary<int,AuraEntry>();
-            foreach (var a in Me.GetAllAuras().Where(a => !a.IsHarmful && a.TimeLeft > TimeSpan.Zero))
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        private static uint GetFPS()
+        {
+            try
             {
-                SpellEffect se = a.Spell.SpellEffects.FirstOrDefault( s => s != null);
-                if (se != null)
-                {
-                    AuraEntry ae = new AuraEntry() { Name = a.Name, SpellId = a.SpellId, EffectId = se.Id  };
-                    if (found.ContainsKey(ae.SpellId))
-                    {
-                        Logger.WriteDiagnostic("Aura: *dup* [{0}] #{1} EffId:{2}", ae.Name, ae.SpellId, ae.EffectId);
-                    }
-                    else
-                    {
-                        found.Add(a.SpellId, ae);
-                        if (!Auras.ContainsKey(a.SpellId))
-                        {
-                            Logger.WriteDiagnostic("Aura: +new+ [{0}] #{1} EffId:{2} Typ:{3} Remn:{4:F2}", ae.Name, ae.SpellId, ae.EffectId, a.ApplyAuraType, a.TimeLeft.TotalSeconds);
-                            Auras.Add(a.SpellId, ae);
-                        }
-                    }
-                }
+                return (uint) Lua.GetReturnVal<float>("return GetFramerate()", 0);
+            }
+            catch
+            {
             }
 
-            int i = Auras.Count();
-            while (i-- > 0)
-            {
-                KeyValuePair<int, AuraEntry> kvp = Auras.ElementAt(i);
-                if (!found.ContainsKey(kvp.Key))
-                {
-                    Logger.WriteDiagnostic("Aura: -exp- [{0}] #{1}", kvp.Value.Name, kvp.Value.SpellId);
-                    Auras.Remove(kvp.Key);
-                }
-            }
-
+            return 0;
         }
 
-        private static WoWGuid _lastPetGuid = WoWGuid.Empty;
-        private static bool _lastPetAlive;
+        private static void UpdateDiagnosticFPS()
+        {
+            if (SingularSettings.Debug && _pollInterval.IsFinished && Me.Combat)
+            {
+                uint currFPS = GetFPS();
+                if (currFPS != _lastFPS)
+                {
+                    _lastFPS = currFPS;
+                    Logger.WriteDebug("CombatPerfMon: FPS:{0} Latency:{1}", currFPS, Latency);
+                }
+
+                _pollInterval.Reset();
+            }
+        }
+
+        private static void WriteSupportInfo()
+        {
+            string singularName = GetSingularRoutineName(); // "Singular v" + GetSingularVersion();
+            Logger.Write(LogColor.Hilite, "Starting " + singularName);
+
+            // save some support info in case we need
+            Logger.WriteFile("{0:F1} days since Windows was restarted", TimeSpan.FromMilliseconds(Environment.TickCount).TotalHours/24.0);
+            Logger.WriteFile("{0} FPS currently in WOW", GetFPS());
+            Logger.WriteFile("{0} ms of Latency in WOW", Latency);
+            Logger.WriteFile("{0} local system time", DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss"));
+
+#if HB_DE
+            Logger.WriteFile("HB_DE defined for this build");
+#endif
+
+            // verify installed source integrity 
+            try
+            {
+                string singularFolder = GetSingularSourcePath();
+
+                FileCheckList actual = new FileCheckList();
+                actual.Generate(singularFolder);
+
+                FileCheckList certified = new FileCheckList();
+                certified.Load(Path.Combine(singularFolder, "singular.xml"));
+
+                List<FileCheck> err = certified.Compare(actual);
+
+                List<FileCheck> fcerrors = FileCheckList.Test(GetSingularSourcePath());
+                if (!fcerrors.Any())
+                    Logger.Write("Installation: integrity verified for {0}", GetSingularVersion());
+                else
+                {
+                    Logger.Write(Color.HotPink, "Installation: modified by user - forum support may not be available", singularName);
+                    Logger.WriteFile("=== following {0} differ from Singular distribution ===", fcerrors.Count);
+                    foreach (var fc in fcerrors)
+                    {
+                        if (!File.Exists(fc.Name))
+                            Logger.WriteDiagnostic("   deleted: {0} {1}", fc.Size, fc.Name);
+                        else if (certified.Filelist.Any(f => 0 == String.Compare(f.Name, fc.Name, true)))
+                            Logger.WriteDiagnostic("   changed: {0} {1}", fc.Size, fc.Name);
+                        else
+                            Logger.WriteDiagnostic("   inserted {0} {1}", fc.Size, fc.Name);
+                    }
+                    Logger.WriteFile(LogLevel.Diagnostic, "");
+                }
+            }
+            catch (FileNotFoundException e)
+            {
+                Logger.Write(Color.HotPink, "Installation: file missing - forum support not available");
+                Logger.Write(Color.HotPink, "missing file: {0}", e.FileName);
+            }
+            catch (Exception e)
+            {
+                Logger.Write(Color.HotPink, "Installation: verification error - forum support not available");
+                Logger.WriteFile(e.ToString());
+            }
+        }
 
         private void CheckCurrentPet()
         {
@@ -603,10 +647,10 @@ namespace Singular
                         Logger.WriteDebug("YourCurrentPet: (none)");
                 }
             }
-            else 
+            else
             {
                 // check for change in current pet
-                if ( Me.Pet.Guid != _lastPetGuid || Me.Pet.IsAlive != _lastPetAlive)
+                if (Me.Pet.Guid != _lastPetGuid || Me.Pet.IsAlive != _lastPetAlive)
                 {
                     _lastPetGuid = Me.Pet.Guid;
                     _lastPetAlive = Me.Pet.IsAlive;
@@ -615,13 +659,8 @@ namespace Singular
 
                 // now check pets target
                 CheckTarget(Me.Pet.CurrentTarget, ref _lastCheckPetsTargetGuid, "PetsCurrentTarget", (x) => { });
-
             }
-
         }
-
-        private static WoWGuid _lastCheckCurrTargetGuid;
-        private static WoWGuid _lastCheckPetsTargetGuid;
 
         private void CheckCurrentTarget()
         {
@@ -650,11 +689,11 @@ namespace Singular
                 if (SingularSettings.Debug)
                 {
                     string info = "";
-                    if (Styx.CommonBot.POI.BotPoi.Current.Guid == Me.CurrentTargetGuid)
-                        info += string.Format(", IsBotPoi={0}", Styx.CommonBot.POI.BotPoi.Current.Type);
+                    if (BotPoi.Current.Guid == Me.CurrentTargetGuid)
+                        info += string.Format(", IsBotPoi={0}", BotPoi.Current.Type);
 
-                    if (Styx.CommonBot.Targeting.Instance.TargetList.Contains(Me.CurrentTarget))
-                        info += string.Format(", TargetIndex={0}", Styx.CommonBot.Targeting.Instance.TargetList.IndexOf(Me.CurrentTarget) + 1);
+                    if (Targeting.Instance.TargetList.Contains(Me.CurrentTarget))
+                        info += string.Format(", TargetIndex={0}", Targeting.Instance.TargetList.IndexOf(Me.CurrentTarget) + 1);
 
                     string playerInfo = "N";
                     if (unit.IsPlayer)
@@ -672,7 +711,10 @@ namespace Singular
                             );
                     }
 
-                    Logger.WriteDebug(description + ": changed to: {0} lvl={1} h={2:F1}%, maxh={3}, d={4:F1} yds, box={5:F1}, boss={6}, trivial={7}, player={8}, attackable={9}, neutral={10}, hostile={11}, entry={12}, faction={13}, loss={14}, facing={15}, blacklist={16}, combat={17}, flying={18}, abovgrnd={19}" + info,
+                    Logger.WriteDebug(
+                        description +
+                        ": changed to: {0} lvl={1} h={2:F1}%, maxh={3}, d={4:F1} yds, box={5:F1}, boss={6}, trivial={7}, player={8}, attackable={9}, neutral={10}, hostile={11}, entry={12}, faction={13}, loss={14}, facing={15}, blacklist={16}, combat={17}, flying={18}, abovgrnd={19}" +
+                        info,
                         unit.SafeName(),
                         unit.Level,
                         unit.HealthPercent,
@@ -682,7 +724,6 @@ namespace Singular
                         unit.IsBoss().ToYN(),
                         unit.IsTrivial().ToYN(),
                         playerInfo,
-
                         unit.Attackable.ToYN(),
                         unit.IsNeutral().ToYN(),
                         unit.IsHostile.ToYN(),
@@ -699,109 +740,84 @@ namespace Singular
             }
         }
 
-        public static void OnPlayerTargetChange(WoWUnit unit)
+        private void PullMoreWeighTargetsFilter(List<Targeting.TargetPriority> units)
         {
-            // special handling if targeting Training Dummy
-            if (ForcedContext == WoWContext.None && unit != null && !IsQuestBotActive && unit.IsTrainingDummy())
+            // Singular setting botpoi so if set increase that targets weight
+            if (IsPullMoreActive && Me.Combat)
             {
-                ForcedContext = SingularRoutine.TrainingDummyBehaviors;
-                Logger.Write( LogColor.Hilite, "^Start Training Dummy: forcing {0} behaviors", CurrentWoWContext.ToString());
-            }
-            else if (ForcedContext != WoWContext.None && (unit == null || !unit.IsTrainingDummy()))
-            {
-                ForcedContext = WoWContext.None;
-                Logger.Write( LogColor.Hilite, "^Cancel Training Dummy: restoring {0} behaviors", CurrentWoWContext.ToString());
+                foreach (Targeting.TargetPriority p in units)
+                {
+                    WoWUnit u = p.Object.ToUnit();
+                    if (BotPoi.Current != null && BotPoi.Current.Guid == u.Guid && !u.IsPlayer && !u.IsTagged)
+                        p.Score += 500;
+                }
             }
         }
 
-        private static bool _lastIsGCD = false;
-        private static bool _lastIsCasting = false;
-        private static bool _lastIsChanneling = false;
-        private static bool _lastIsInVehicle = false;
-        private static bool _lastIsInCinematic = false;
-        private static bool _lastIsSpellPending = false;
-        private static string _lastSpellPending = string.Empty;
-
-        private static DateTime _nextAbcWarning = DateTime.MinValue;
-        public static bool UpdateDiagnosticCastingState( bool retVal = false)
+        private void WatchAurasForProcs()
         {
-            if (SingularSettings.Debug && SingularSettings.DebugSpellCasting)
+            if (!SingularSettings.Instance.EnableDebugTraceBuffPresence)
+                return;
+
+            if (DateTime.UtcNow < NextAuraCheck)
+                return;
+
+            NextAuraCheck = DateTime.UtcNow + TimeSpan.FromSeconds(1);
+            if (Auras == null)
+                Auras = new Dictionary<int, AuraEntry>();
+
+            Dictionary<int, AuraEntry> found = new Dictionary<int, AuraEntry>();
+            foreach (var a in Me.GetAllAuras().Where(a => !a.IsHarmful && a.TimeLeft > TimeSpan.Zero))
             {
-                if (SingularSettings.DebugSpellCasting)
+                SpellEffect se = a.Spell.SpellEffects.FirstOrDefault(s => s != null);
+                if (se != null)
                 {
-                    if (_lastIsGCD != Spell.IsGlobalCooldown())
+                    AuraEntry ae = new AuraEntry() {Name = a.Name, SpellId = a.SpellId, EffectId = se.Id};
+                    if (found.ContainsKey(ae.SpellId))
                     {
-                        _lastIsGCD = !_lastIsGCD;
-                        Logger.WriteDebug("CastingState:  GCD={0} GCDTimeLeft={1}", _lastIsGCD.ToYN(), (int)Spell.GcdTimeLeft.TotalMilliseconds);
+                        Logger.WriteDiagnostic("Aura: *dup* [{0}] #{1} EffId:{2}", ae.Name, ae.SpellId, ae.EffectId);
                     }
-                    if (_lastIsCasting != Spell.IsCasting())
+                    else
                     {
-                        _lastIsCasting = !_lastIsCasting;
-                        Logger.WriteDebug("CastingState:  Casting={0} CastTimeLeft={1}", _lastIsCasting.ToYN(), (int)Me.CurrentCastTimeLeft.TotalMilliseconds);
-                    }
-                    if (_lastIsChanneling != Spell.IsChannelling())
-                    {
-                        _lastIsChanneling = !_lastIsChanneling;
-                        Logger.WriteDebug("ChannelingState:  Channeling={0} ChannelTimeLeft={1}", _lastIsChanneling.ToYN(), (int)Me.CurrentChannelTimeLeft.TotalMilliseconds);
-                    }
-                }
-                if (_lastIsInVehicle != Me.InVehicle)
-                {
-                    _lastIsInVehicle = !_lastIsInVehicle;
-                    Logger.WriteDebug("VehicleState:  InVehicle={0} ***", _lastIsInVehicle.ToYN());
-                }
-
-                if (_lastIsInCinematic != InCinematic())
-                {
-                    _lastIsInCinematic = !_lastIsInCinematic;
-                    Logger.WriteDebug("CinematicState:  InCinematic={0} ***", _lastIsInCinematic.ToYN());
-                }
-                WoWSpell pending = Spell.GetPendingCursorSpell;
-                if (_lastIsSpellPending != (pending != null))
-                {
-                    _lastIsSpellPending = !_lastIsSpellPending;
-                    _lastSpellPending = pending.Name;
-                    Logger.WriteDebug("PendingState:  Pending Target={0}{1}", _lastIsSpellPending.ToYN(), !_lastIsSpellPending ? "" : ", Spell=" + _lastSpellPending);
-                }
-
-                if (SingularSettings.DebugSpellCasting)
-                {
-                    /// Special: provide diagnostics if healer 
-                    if (HealerManager.NeedHealTargeting && (_nextAbcWarning < DateTime.Now) && !Me.IsCasting && !Me.IsChanneling && !Spell.IsGlobalCooldown(LagTolerance.No))
-                    {
-                        WoWUnit low = HealerManager.FindLowestHealthTarget();
-                        if (low != null)
+                        found.Add(a.SpellId, ae);
+                        if (!Auras.ContainsKey(a.SpellId))
                         {
-                            float lh = low.PredictedHealthPercent();
-                            if ((SingularSettings.Instance.HealerCombatAllow && HealerManager.CancelHealerDPS()) || (!SingularSettings.Instance.HealerCombatAllow && lh < 70))
-                            {
-                                Logger.WriteDebug("Healer ABC Warning: no cast in progress detected, low health {0} {1:F1}% @ {2:F1} yds", low.SafeName(), lh, low.SpellDistance());
-                                _nextAbcWarning = DateTime.Now + TimeSpan.FromSeconds(1);
-                            }
+                            Logger.WriteDiagnostic("Aura: +new+ [{0}] #{1} EffId:{2} Typ:{3} Remn:{4:F2}", ae.Name, ae.SpellId, ae.EffectId, a.ApplyAuraType, a.TimeLeft.TotalSeconds);
+                            Auras.Add(a.SpellId, ae);
                         }
                     }
                 }
             }
-            return retVal;
-        }
 
-        private static WaitTimer _pollInterval = new WaitTimer(TimeSpan.FromSeconds(10));
-        private static uint _lastFPS = 0;
-        
-        private static void UpdateDiagnosticFPS()
-        {
-            if ( SingularSettings.Debug && _pollInterval.IsFinished && Me.Combat)
+            int i = Auras.Count();
+            while (i-- > 0)
             {
-                uint currFPS = GetFPS();
-                if (currFPS != _lastFPS)
+                KeyValuePair<int, AuraEntry> kvp = Auras.ElementAt(i);
+                if (!found.ContainsKey(kvp.Key))
                 {
-                    _lastFPS = currFPS;
-                    Logger.WriteDebug("CombatPerfMon: FPS:{0} Latency:{1}", currFPS, SingularRoutine.Latency);
+                    Logger.WriteDiagnostic("Aura: -exp- [{0}] #{1}", kvp.Value.Name, kvp.Value.SpellId);
+                    Auras.Remove(kvp.Key);
                 }
-
-                _pollInterval.Reset();
             }
         }
 
+        #endregion
+
+        #region Types
+
+        public struct AuraEntry
+        {
+            #region Fields
+
+            public uint EffectId;
+            public string Name;
+            public int SpellId;
+
+            #endregion
+        }
+
+        private delegate void OnTargetChange(WoWUnit unit);
+
+        #endregion
     }
 }

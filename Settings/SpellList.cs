@@ -4,6 +4,7 @@ using System.Linq;
 using System.Xml.Serialization;
 using System.IO;
 using System.ComponentModel;
+using Styx.Common;
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
 using Styx.WoWInternals;
 
@@ -81,7 +82,7 @@ namespace Singular.Settings
             }
             catch (Exception ex)
             {
-                Styx.Common.Logging.WriteException(ex);
+                Logging.WriteException(ex);
                 Spells = new List<SpellEntry>();
                 SpellIds = new HashSet<int>();
             }
@@ -107,7 +108,7 @@ namespace Singular.Settings
             }
             catch (Exception ex)
             {
-                Styx.Common.Logging.WriteException(ex);
+                Logging.WriteException(ex);
             }
         }
 

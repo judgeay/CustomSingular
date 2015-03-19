@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Singular.Lists;
 using Styx;
 using Styx.CommonBot;
+using Styx.CommonBot.POI;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.TreeSharp;
@@ -32,7 +34,7 @@ namespace Singular.Helpers
         {
             TrivialHealth = (uint) (0.01f * SingularSettings.Instance.TrivialMaxHealthPcnt * StyxWoW.Me.MaxHealth);
 
-            Logger.WriteFile("  {0}: {1}", "TrivialHealth", Unit.TrivialHealth);
+            Logger.WriteFile("  {0}: {1}", "TrivialHealth", TrivialHealth);
             Logger.WriteFile("  {0}: {1}", "NeedTankTargeting", TankManager.NeedTankTargeting);
             Logger.WriteFile("  {0}: {1}", "NeedHealTargeting", HealerManager.NeedHealTargeting);
             return null;
@@ -454,7 +456,7 @@ namespace Singular.Helpers
                 return false;
 
             // good enemy if BotPoi
-            if (Styx.CommonBot.POI.BotPoi.Current.Guid == u.Guid && Styx.CommonBot.POI.BotPoi.Current.Type == Styx.CommonBot.POI.PoiType.Kill)
+            if (BotPoi.Current.Guid == u.Guid && BotPoi.Current.Type == PoiType.Kill)
                 return false;
 
             // good enemy if Targeting
@@ -543,7 +545,7 @@ namespace Singular.Helpers
             int distFromMe = 40 + (int) distance;
 
             var curTarLocation = unit.Location;
-            return Unit.UnfriendlyUnits(distFromMe).Where(p => p.Location.DistanceSqr(curTarLocation) <= distFromTargetSqr).ToList();
+            return UnfriendlyUnits(distFromMe).Where(p => p.Location.DistanceSqr(curTarLocation) <= distFromTargetSqr).ToList();
         }
 
         /// <summary>
@@ -1113,7 +1115,7 @@ namespace Singular.Helpers
         /// <returns>true if targeting your guys, false if not</returns>
         public static bool IsTargetingUs(this WoWUnit u)
         {
-            return u.IsTargetingMyStuff() || Unit.GroupMemberInfos.Any(m => m.Guid == u.CurrentTargetGuid);
+            return u.IsTargetingMyStuff() || GroupMemberInfos.Any(m => m.Guid == u.CurrentTargetGuid);
         }
 
         public static bool IsSensitiveDamage(this WoWUnit u,  int range = 0)
@@ -1132,7 +1134,7 @@ namespace Singular.Helpers
 
         public static bool IsShredBoss(this WoWUnit unit)
         {
-            return Lists.BossList.CanShredBoss.Contains(unit.Entry);
+            return BossList.CanShredBoss.Contains(unit.Entry);
         }
 
         public static bool HasAuraWithEffect(this WoWUnit unit, WoWApplyAuraType auraType, int miscValue, int basePointsMin, int basePointsMax)
@@ -1452,7 +1454,7 @@ namespace Singular.Helpers
 
         public static IEnumerable<WoWUnit> MobsAttackingTank()
         {
-            return Unit.NearbyUnfriendlyUnits.Where(u => Group.Tanks.Any( t => t.IsAlive && t.Guid == u.CurrentTargetGuid));
+            return NearbyUnfriendlyUnits.Where(u => Group.Tanks.Any( t => t.IsAlive && t.Guid == u.CurrentTargetGuid));
         }
 
         public static WoWUnit LowestHealthMobAttackingTank()
@@ -1670,7 +1672,7 @@ namespace Singular.Helpers
                 RecentDamage = recentd;
             }
 
-            System.Diagnostics.Debug.Assert(Mobs != null);
+            Debug.Assert(Mobs != null);
         }
     }
 

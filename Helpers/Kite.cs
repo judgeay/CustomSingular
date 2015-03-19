@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Linq;
 using Singular.Managers;
 using Singular.Settings;
 using Styx;
 using Styx.CommonBot;
 using Styx.TreeSharp;
+using Styx.WoWInternals.World;
 using Styx.WoWInternals.WoWObjects;
 using Action = Styx.TreeSharp.Action;
 using System.Collections.Generic;
@@ -200,7 +202,7 @@ namespace Singular.Helpers
                 new PrioritySelector(
                     new Decorator(
                         ret => bstate == State.None,
-                        new Action(r => System.Diagnostics.Debug.Assert(false, "Kiting Failure:  should never run with state == State.None"))
+                        new Action(r => Debug.Assert(false, "Kiting Failure:  should never run with state == State.None"))
                         ),
 
                     new Decorator(
@@ -1117,7 +1119,7 @@ namespace Singular.Helpers
 #else
             float baseDestinationFacing;          
             if (PreferredDirection == Disengage.Direction.None && MobToRunFrom != null)
-                baseDestinationFacing = Styx.Helpers.WoWMathHelper.CalculateNeededFacing(MobToRunFrom.Location, Me.Location);
+                baseDestinationFacing = WoWMathHelper.CalculateNeededFacing(MobToRunFrom.Location, Me.Location);
             else if (PreferredDirection == Disengage.Direction.Frontwards)
                 baseDestinationFacing = Me.RenderFacing;
             else // if (PreferredDirection == Disengage.Direction.Backwards)
@@ -1213,7 +1215,7 @@ namespace Singular.Helpers
                     {
                         WoWPoint ptAdjDest = ptDestination;
                         ptAdjDest.Z += 1f;
-                        if (!Styx.WoWInternals.World.GameWorld.IsInLineOfSight(ptAdjOrigin, ptAdjDest))
+                        if (!GameWorld.IsInLineOfSight(ptAdjOrigin, ptAdjDest))
                         {
                             // Logger.WriteDebug( Color.Cyan, "Mob-free location failed line of sight check for degrees={0:F1} dist={1:F1}", degreesFrom, distFromOrigin);
                             countFailToPointLoS++;
@@ -1223,9 +1225,9 @@ namespace Singular.Helpers
 
                     if (CheckSpellLineOfSightToMob && LineOfSightMob != null)
                     {
-                        if (!Styx.WoWInternals.World.GameWorld.IsInLineOfSpellSight(ptDestination, LineOfSightMob.GetTraceLinePos()))
+                        if (!GameWorld.IsInLineOfSpellSight(ptDestination, LineOfSightMob.GetTraceLinePos()))
                         {
-                            if (!Styx.WoWInternals.World.GameWorld.IsInLineOfSight(ptDestination, LineOfSightMob.GetTraceLinePos()))
+                            if (!GameWorld.IsInLineOfSight(ptDestination, LineOfSightMob.GetTraceLinePos()))
                             {
                                 // Logger.WriteDebug( Color.Cyan, "Mob-free location failed line of sight check for degrees={0:F1} dist={1:F1}", degreesFrom, distFromOrigin);
                                 countFailToMobLoS++;
@@ -1385,9 +1387,9 @@ namespace Singular.Helpers
                     {
                         origSpot = new WoWPoint(Me.Location.X, Me.Location.Y, Me.Location.Z);
                         if (dir == Direction.Frontwards)
-                            needFacing = Styx.Helpers.WoWMathHelper.CalculateNeededFacing(origSpot, safeSpot);
+                            needFacing = WoWMathHelper.CalculateNeededFacing(origSpot, safeSpot);
                         else
-                            needFacing = Styx.Helpers.WoWMathHelper.CalculateNeededFacing(safeSpot, origSpot);
+                            needFacing = WoWMathHelper.CalculateNeededFacing(safeSpot, origSpot);
 
                         needFacing = WoWMathHelper.NormalizeRadian(needFacing);
                         float rotation = WoWMathHelper.NormalizeRadian(Math.Abs(needFacing - Me.RenderFacing));

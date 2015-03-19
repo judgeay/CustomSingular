@@ -99,7 +99,7 @@ namespace Singular.Managers
                         PetSummonAfterDismountTimer.Reset();
                         _petGuid = StyxWoW.Me.Pet.Guid;
 
-                        Logger.WriteDebug("---PetSpells Loaded for: {0} Pet ---", PetManager.GetPetTalentTree());
+                        Logger.WriteDebug("---PetSpells Loaded for: {0} Pet ---", GetPetTalentTree());
                         foreach (var sp in PetSpells)
                         {
                             if (sp.Spell == null)
@@ -132,7 +132,7 @@ namespace Singular.Managers
                 lastPetAttack = unit.Guid;
                 if (SingularSettings.Debug)
                     Logger.WriteDebug("PetAttack: on {0} @ {1:F1} yds", unit.SafeName(), unit.SpellDistance());
-                PetManager.CastPetAction("Attack", unit);
+                CastPetAction("Attack", unit);
                 waitNextPetAttack.Reset();
                 return true;
             }
@@ -153,7 +153,7 @@ namespace Singular.Managers
             else
                 Logger.Write(LogColor.Hilite, "/petpassive (stop attacking {0})", StyxWoW.Me.Pet.CurrentTarget.SafeName());
 
-            PetManager.CastPetAction("Passive");
+            CastPetAction("Passive");
             return true;
         }
 
@@ -280,7 +280,7 @@ namespace Singular.Managers
                 },
                 new Sequence(
                 // new Action(ctx => _lastBuffCast = name),
-                    new Action( r => PetManager.CastPetAction(spell)),
+                    new Action( r => CastPetAction(spell)),
                     new Action(ret => Spell.UpdateDoubleCast(spell, _buffUnit))
                     )
                 );
@@ -407,7 +407,7 @@ namespace Singular.Managers
                         {
                             NeedToCheckPetTauntAutoCast = !(HandleAutoCastForSpell("Growl") || HandleAutoCastForSpell("Taunt") || HandleAutoCastForSpell("Thunderstomp"));
                         }
-                        else if (StyxWoW.Me.Class == WoWClass.Warlock && Singular.ClassSpecific.Warlock.Common.GetCurrentPet() == Settings.WarlockPet.Voidwalker)
+                        else if (StyxWoW.Me.Class == WoWClass.Warlock/* && ClassSpecific.Warlock.Common.GetCurrentPet() == Settings.WarlockPet.Voidwalker*/)
                         {
                             NeedToCheckPetTauntAutoCast = !HandleAutoCastForSpell("Suffering");
                         }
@@ -451,7 +451,7 @@ namespace Singular.Managers
                 return false;
 
             bool allowed;
-            bool active = PetManager.IsAutoCast(ps, out allowed);
+            bool active = IsAutoCast(ps, out allowed);
             if (!allowed)
                 return false;
 
@@ -468,7 +468,7 @@ namespace Singular.Managers
             else
             {
                 bool allowed;
-                bool active = PetManager.IsAutoCast(ps, out allowed);
+                bool active = IsAutoCast(ps, out allowed);
                 if (!allowed)
                     Logger.Write( LogColor.Hilite, "PetManager: '{0}' is NOT an auto-cast ability for this Pet", spellName);
                 else

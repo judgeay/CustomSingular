@@ -3,6 +3,7 @@ using Singular.Lists;
 using Singular.Settings;
 
 using Styx;
+using Styx.CommonBot.Routines;
 using Styx.Helpers;
 using Styx.Pathing;
 using Styx.TreeSharp;
@@ -218,7 +219,7 @@ namespace Singular.Helpers
 
         public static Composite CreateFaceTargetBehavior(UnitSelectionDelegate toUnit, float viewDegrees = 100f, bool waitForFacing = true)
         {
-            System.Diagnostics.Debug.Assert( toUnit != null);
+            Debug.Assert( toUnit != null);
 
             return new Sequence(
                 ctx => toUnit(ctx),
@@ -567,7 +568,7 @@ namespace Singular.Helpers
                 ret =>
                 {
                     if (MovementManager.IsMovementDisabled 
-                        || !SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.MoveBehind) 
+                        || !SingularRoutine.IsAllowed(CapabilityFlags.MoveBehind) 
                         || !requirements(ret) 
                         || Spell.IsCastingOrChannelling() 
                         || Group.MeIsTank)

@@ -236,7 +236,7 @@ namespace Singular.Helpers
             }
 
             return new Decorator(
-                req => SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.DefensiveDispel),
+                req => SingularRoutine.IsAllowed(CapabilityFlags.DefensiveDispel),
                 new Sequence(
                     new Action(r => _unitDispel = HealerManager.Instance.TargetList.FirstOrDefault(u => u.IsAlive && CanDispel(u))),
                     prio
@@ -254,7 +254,7 @@ namespace Singular.Helpers
                 mov => false,
                 on =>
                 {
-                    if (!SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.DefensiveDispel))
+                    if (!SingularRoutine.IsAllowed(CapabilityFlags.DefensiveDispel))
                         return null;
 
                     WoWUnit unit = GetPurgeEnemyTarget(spellName);

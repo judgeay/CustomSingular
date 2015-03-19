@@ -117,9 +117,9 @@ namespace Singular.Utilities
 
         public static bool IsPathErrorTarget(this WoWUnit unit)
         { 
-            if ( unit.Guid != Singular.Utilities.EventHandlers.LastNoPathTarget )
+            if ( unit.Guid != LastNoPathTarget )
                 return false;
-            if (Singular.Utilities.EventHandlers.LastNoPathFailure < DateTime.Now - TimeSpan.FromMinutes(15))
+            if (LastNoPathFailure < DateTime.Now - TimeSpan.FromMinutes(15))
                 return false;
             return true;
         }
@@ -350,7 +350,7 @@ namespace Singular.Utilities
                             Lua.DoString("CancelShapeshiftForm()");
                         }
                     }
-                    else if (StyxWoW.Me.Class == WoWClass.Rogue && SingularSettings.Instance.Rogue().UsePickPocket)
+                    else if (StyxWoW.Me.Class == WoWClass.Rogue/* && SingularSettings.Instance.Rogue().UsePickPocket*/)
                     {
                         if (e.Args[14].ToString() == LocalizedNoPocketsToPickFailure)
                         {
@@ -434,15 +434,6 @@ namespace Singular.Utilities
                         {
                             Logger.WriteDebug("{0} is immune to {1} spell school", unit.Name, e.SpellSchool);
                             SpellImmunityManager.Add(unit.Entry, e.SpellSchool);
-                        }
-
-                        if (StyxWoW.Me.Class == WoWClass.Rogue && e.SpellId == 6770)
-                        {
-                            WoWUnit unitImmune = unit;
-                            if (unitImmune == null)
-                                unitImmune = ObjectManager.GetObjectByGuid<WoWUnit>(Singular.ClassSpecific.Rogue.Common.lastSapTarget);
-
-                            Singular.ClassSpecific.Rogue.Common.AddEntryToSapImmuneList(unitImmune);
                         }
                     }
                     break;
@@ -589,7 +580,7 @@ namespace Singular.Utilities
                 Logger.WriteDebug("[WoWRedError] {0}", args.Args[0].ToString());
             }
 
-            if (StyxWoW.Me.Class == WoWClass.Rogue && SingularSettings.Instance.Rogue().UsePickPocket && args.Args[0].ToString() == LocalizedAlreadyPickPocketedError)
+            if (StyxWoW.Me.Class == WoWClass.Rogue /*&& SingularSettings.Instance.Rogue().UsePickPocket && args.Args[0].ToString() == LocalizedAlreadyPickPocketedError*/)
             {
                 if (StyxWoW.Me.GotTarget())
                 {

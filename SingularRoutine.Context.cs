@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using NewMixedMode;
 using Styx;
 using Styx.CommonBot;
 using Styx.WoWInternals.DBC;
@@ -36,8 +37,6 @@ namespace Singular
         private static WoWContext _lastContext = WoWContext.None;
         private static uint _lastMapId = 0;
 
-        internal static CombatScenario FightNearMe { get; set; }
-        internal static CombatScenario FightNearTarget { get; set; }
         internal static WoWContext ForcedContext { get; set; }
 
         internal static bool IsQuestBotActive { get; set; }
@@ -147,7 +146,7 @@ namespace Singular
             {
                 // Subscribe to OnBattlegroundEntered. Just 'cause.
                 BotEvents.Battleground.OnBattlegroundEntered += e => UpdateContext();
-                SingularRoutine.OnBotEvent += (src, arg) =>
+                OnBotEvent += (src, arg) =>
                 {
                     if (arg.Event == SingularBotEvent.BotStarted || arg.Event == SingularBotEvent.BotChanged)
                     {
@@ -263,7 +262,7 @@ namespace Singular
 
             Logging.Write(" "); // spacer before prior log text
 
-            Logger.Write(Color.LightGreen, "Your Level {0}{1}{2} Build is", Me.Level, SingularRoutine.RaceName(), SingularRoutine.SpecAndClassName());
+            Logger.Write(Color.LightGreen, "Your Level {0}{1}{2} Build is", Me.Level, RaceName(), SpecAndClassName());
 
             Logger.Write(Color.LightGreen, "... running the {0} bot in {1} {2}",
                  GetBotName(),
@@ -360,8 +359,8 @@ namespace Singular
             }
 #endif
 
-            if (Styx.CommonBot.Targeting.PullDistance < 25)
-                Logger.Write( LogColor.Hilite, "your Pull Distance is {0:F0} yds which is low for any class!!!", Styx.CommonBot.Targeting.PullDistance);
+            if (Targeting.PullDistance < 25)
+                Logger.Write( LogColor.Hilite, "your Pull Distance is {0:F0} yds which is low for any class!!!", Targeting.PullDistance);
         }
 
         public static string RaceName()
@@ -398,11 +397,11 @@ namespace Singular
 
             if (TreeRoot.Current != null)
             {
-                if (!(TreeRoot.Current is NewMixedMode.MixedModeEx))
+                if (!(TreeRoot.Current is MixedModeEx))
                     bot = TreeRoot.Current;
                 else
                 {
-                    NewMixedMode.MixedModeEx mmb = (NewMixedMode.MixedModeEx)TreeRoot.Current;
+                    MixedModeEx mmb = (MixedModeEx)TreeRoot.Current;
                     if (mmb != null)
                     {
                         if (mmb.SecondaryBot != null && mmb.SecondaryBot.RequirementsMet)
@@ -420,9 +419,9 @@ namespace Singular
             BotBase bot = TreeRoot.Current;
             if (bot != null)
             {
-                if ((bot is NewMixedMode.MixedModeEx))
+                if ((bot is MixedModeEx))
                 {
-                    NewMixedMode.MixedModeEx mmb = (NewMixedMode.MixedModeEx)bot;
+                    MixedModeEx mmb = (MixedModeEx)bot;
                     if (mmb != null)
                     {
                         if (mmb.SecondaryBot != null && mmb.SecondaryBot.RequirementsMet)
@@ -449,7 +448,7 @@ namespace Singular
             bool res = Styx.Plugins.PluginManager.Plugins.Any(p => p.Enabled && lowerNames.Contains(p.Name.ToLowerInvariant()));
             return res;
 #else
-            foreach (PluginContainer pi in Styx.Plugins.PluginManager.Plugins)
+            foreach (PluginContainer pi in PluginManager.Plugins)
             {
                 if (pluginName.Equals(pi.Name, StringComparison.InvariantCultureIgnoreCase))
                 {

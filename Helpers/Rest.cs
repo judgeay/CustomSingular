@@ -115,7 +115,7 @@ namespace Singular.Helpers
                             ),
 
                 // Make sure we wait out res sickness. 
-                        Helpers.Common.CreateWaitForRessSickness(),
+                        Common.CreateWaitForRessSickness(),
 
                 // Cannibalize support goes before drinking/eating. changed to a Sequence with wait because Rest behaviors that had a 
                 // .. WaitForCast() before call to DefaultRest would prevent cancelling when health/mana reached
@@ -182,7 +182,7 @@ namespace Singular.Helpers
                                         Logger.Write("Drinking @ {0:F1}% mana", Me.ManaPercent);
                                         Styx.CommonBot.Rest.DrinkImmediate();
                                     }),
-                                    Helpers.Common.CreateWaitForLagDuration(),
+                                    Common.CreateWaitForLagDuration(),
                                     new PrioritySelector(
                                         new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Drink", "Refreshment"), new ActionAlwaysSucceed()),
                                         new Action(r => Logger.WriteDiagnostic("Drinking: failed to see 'Drink' aura"))
@@ -208,7 +208,7 @@ namespace Singular.Helpers
                                             Logger.Write("Eating @ {0:F1}% health", Me.HealthPercent);
                                             Styx.CommonBot.Rest.FeedImmediate();
                                         }),
-                                    Helpers.Common.CreateWaitForLagDuration(),
+                                    Common.CreateWaitForLagDuration(),
                                     new PrioritySelector(
                                         new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Food", "Refreshment"), new ActionAlwaysSucceed()),
                                         new Action( r => Logger.WriteDiagnostic("Eating: failed to see 'Food' aura"))

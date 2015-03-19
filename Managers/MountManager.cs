@@ -1,7 +1,9 @@
 ﻿using Singular.Helpers;
 using Singular.Settings;
+using Singular.Utilities;
 using Styx;
 using Styx.CommonBot;
+using Styx.Helpers;
 using Styx.WoWInternals;
 using System.Linq;
 namespace Singular.Managers
@@ -28,11 +30,11 @@ namespace Singular.Managers
             if (Spell.GcdActive || StyxWoW.Me.IsCasting || StyxWoW.Me.ChanneledSpell != null )
                 return;
 
-            if ((!Battlegrounds.IsInsideBattleground || !PVP.IsPrepPhase) && !Utilities.EventHandlers.IsShapeshiftSuppressed)
+            if ((!Battlegrounds.IsInsideBattleground || !PVP.IsPrepPhase) && !EventHandlers.IsShapeshiftSuppressed)
             {
-                if (e.Destination.Distance(StyxWoW.Me.Location) < Styx.Helpers.CharacterSettings.Instance.MountDistance)
+                if (e.Destination.Distance(StyxWoW.Me.Location) < CharacterSettings.Instance.MountDistance)
                 {
-                    if (StyxWoW.Me.Class == WoWClass.Shaman && SpellManager.HasSpell("Ghost Wolf") && SingularSettings.Instance.Shaman().UseGhostWolf)
+                    if (StyxWoW.Me.Class == WoWClass.Shaman && SpellManager.HasSpell("Ghost Wolf")/* && SingularSettings.Instance.Shaman().UseGhostWolf*/)
                     {
                         e.Cancel = true;
 
@@ -43,7 +45,7 @@ namespace Singular.Managers
                             Spell.CastPrimative("Ghost Wolf");
                         }
                     }
-                    else if (StyxWoW.Me.Class == WoWClass.Druid && SingularSettings.Instance.Druid().UseTravelForm && SpellManager.HasSpell("Travel Form") && StyxWoW.Me.IsOutdoors)
+                    else if (StyxWoW.Me.Class == WoWClass.Druid && /*SingularSettings.Instance.Druid().UseTravelForm &&*/ SpellManager.HasSpell("Travel Form") && StyxWoW.Me.IsOutdoors)
                     {
                         e.Cancel = true;
 
@@ -58,7 +60,7 @@ namespace Singular.Managers
                         }
                     }
                 }
-                else if (StyxWoW.Me.Class == WoWClass.Druid && ClassSpecific.Druid.Common.AllowAquaticForm)
+                else if (StyxWoW.Me.Class == WoWClass.Druid/* && ClassSpecific.Druid.Common.AllowAquaticForm*/)
                 {
                     e.Cancel = true;
 
@@ -75,11 +77,11 @@ namespace Singular.Managers
                 }
             }
 
-            if (StyxWoW.Me.Class == WoWClass.Shaman && SingularRoutine.CurrentWoWContext != WoWContext.Battlegrounds && ClassSpecific.Shaman.Totems.NeedToRecallTotems )
-            {
-                Logger.WriteDiagnostic("OnMountUp: recalling totems since about to mount");
-                ClassSpecific.Shaman.Totems.RecallTotems();
-            }
+            //if (StyxWoW.Me.Class == WoWClass.Shaman && SingularRoutine.CurrentWoWContext != WoWContext.Battlegrounds && ClassSpecific.Shaman.Totems.NeedToRecallTotems )
+            //{
+            //    Logger.WriteDiagnostic("OnMountUp: recalling totems since about to mount");
+            //    ClassSpecific.Shaman.Totems.RecallTotems();
+            //}
         }
     }
 }

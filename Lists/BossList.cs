@@ -37,11 +37,11 @@ namespace Singular.Lists
 
             // output list of bosses
             Logger.WriteFile("BossList: for {0}", StyxWoW.Me.CurrentMap.Name); // + " - " + StyxWoW.Me.CurrentMap.MapDescription);
-            foreach (var s in Singular.Lists.BossList.CurrentMapBosses)
+            foreach (var s in CurrentMapBosses)
             {
                 Logger.WriteFile("- boss {0}", s);
             }
-            Logger.WriteFile("BossList: contains {0} entries", Singular.Lists.BossList.CurrentMapBosses.Count());
+            Logger.WriteFile("BossList: contains {0} entries", CurrentMapBosses.Count());
         }
 
         public static HashSet<uint> BossIds

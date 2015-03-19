@@ -87,9 +87,9 @@ namespace Singular
             return Right(string.Format("{0:X4}", guid.Lowest), 4);
         }
 
-        public static Styx.StatType GetPrimaryStat(this WoWUnit unit)
+        public static StatType GetPrimaryStat(this WoWUnit unit)
         {
-            Styx.StatType primaryStat = StatType.Strength;
+            StatType primaryStat = StatType.Strength;
             if (unit.Agility > unit.Strength)
                 primaryStat = StatType.Agility;
             if (unit.Intellect > unit.Agility)
@@ -144,22 +144,22 @@ namespace Singular
             return StyxWoW.Me.AutoRepeatingSpellId == 5019;
         }
 
-        private static HashSet<int> _AddtlHealSpells = new HashSet<int>()
+        private static readonly HashSet<int> _addtlHealSpells = new HashSet<int>()
         {
             33076,  // Prayer of Mending
             120517, // Halo
             73920,  // Healing Rain
             115460, // Healing Sphere,
-            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingStream),
+            /*ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingStream),
             ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingTide),
-            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.SpiritLink),
+            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.SpiritLink),*/
             124682, // Enveloping Mist
             116694, // Surging Mist
         };
 
         public static bool IsHeal(this WoWSpell spell)
         {
-            bool isHeal = _AddtlHealSpells.Contains(spell.Id)
+            bool isHeal = _addtlHealSpells.Contains(spell.Id)
                 || spell.SpellEffects
                     .Any(s => s.EffectType == WoWSpellEffectType.Heal
                         || s.EffectType == WoWSpellEffectType.HealMaxHealth
@@ -174,7 +174,7 @@ namespace Singular
                     if (!isHeal)
                     {
                         Logger.WriteDebug("Developer Info: please report to add {0} #{1} as Healing Spell. Dynamically added to Singular in for Debug purposes only", spell.Name, spell.Id);
-                        _AddtlHealSpells.Add(spell.Id);
+                        _addtlHealSpells.Add(spell.Id);
                     }
                 }
             }

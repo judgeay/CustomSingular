@@ -91,6 +91,7 @@ namespace Singular.Settings
         Always = 1,
         Auto = 2
     }
+
     enum PullMoreTargetType
     {
         None = 0,
@@ -185,8 +186,8 @@ namespace Singular.Settings
                 {
                     if (StyxWoW.Me.Class == WoWClass.DeathKnight)
                     {
-                        this.MinHealth = 50;
-                        Logger.Write(LogColor.Init, "Settings: default Min Health to {0}% since Death Knight", this.MinHealth);
+                        MinHealth = 50;
+                        Logger.Write(LogColor.Init, "Settings: default Min Health to {0}% since Death Knight", MinHealth);
                     }
 
                 }
@@ -218,7 +219,7 @@ namespace Singular.Settings
 
             if (StyxWoW.Me.Specialization != WoWSpec.None)
             {
-                if (this.PullMoreMobCount != mobCount)
+                if (PullMoreMobCount != mobCount)
                     Logger.Write(LogColor.Init, "Settings: default Pull More Count to {0} mobs for{1}", mobCount, SingularRoutine.SpecAndClassName());
                 if (PullMoreMinHealth != minHealth)
                     Logger.Write(LogColor.Init, "Settings: default Pull More Health to {0}% for{1}", minHealth, SingularRoutine.SpecAndClassName());
@@ -226,10 +227,10 @@ namespace Singular.Settings
                 PullMoreSpecDefaultsSaved = true;
             }
 
-            this.PullMoreDistMelee = distMelee;
-            this.PullMoreDistRanged = distRanged;
-            this.PullMoreMinHealth = minHealth;
-            this.PullMoreMobCount = mobCount;
+            PullMoreDistMelee = distMelee;
+            PullMoreDistRanged = distRanged;
+            PullMoreMinHealth = minHealth;
+            PullMoreMobCount = mobCount;
         }
 
         public static string GlobalSettingsPath
@@ -274,8 +275,8 @@ namespace Singular.Settings
 
         public static bool IsTrinketUsageWanted(TrinketUsage usage)
         {
-            return usage == SingularSettings.Instance.Trinket1Usage
-                || usage == SingularSettings.Instance.Trinket2Usage;
+            return usage == Instance.Trinket1Usage
+                || usage == Instance.Trinket2Usage;
         }
 
         /// <summary>
@@ -286,52 +287,52 @@ namespace Singular.Settings
             Logger.WriteFile("");
 
             // reference the internal references so we can display only for our class
-            LogSettings("Singular", SingularSettings.Instance);
+            LogSettings("Singular", Instance);
             LogSettings("HotkeySettings", Hotkeys());
-            if (StyxWoW.Me.Class == WoWClass.DeathKnight )  LogSettings("DeathKnightSettings", DeathKnight());
-            if (StyxWoW.Me.Class == WoWClass.Druid )        LogSettings("DruidSettings", Druid());
-            if (StyxWoW.Me.Class == WoWClass.Hunter )       LogSettings("HunterSettings", Hunter());
-            if (StyxWoW.Me.Class == WoWClass.Mage )         LogSettings("MageSettings", Mage());
-            if (StyxWoW.Me.Class == WoWClass.Monk )         LogSettings("MonkSettings", Monk());
-            if (StyxWoW.Me.Class == WoWClass.Paladin )      LogSettings("PaladinSettings", Paladin());
-            if (StyxWoW.Me.Class == WoWClass.Priest )       LogSettings("PriestSettings", Priest());
-            if (StyxWoW.Me.Class == WoWClass.Rogue )        LogSettings("RogueSettings", Rogue());
-            if (StyxWoW.Me.Class == WoWClass.Shaman)        LogSettings("ShamanSettings", Shaman());
-            if (StyxWoW.Me.Class == WoWClass.Warlock)       LogSettings("WarlockSettings", Warlock());
-            if (StyxWoW.Me.Class == WoWClass.Warrior)       LogSettings("WarriorSettings", Warrior());
+            //if (StyxWoW.Me.Class == WoWClass.DeathKnight )  LogSettings("DeathKnightSettings", DeathKnight());
+            //if (StyxWoW.Me.Class == WoWClass.Druid )        LogSettings("DruidSettings", Druid());
+            //if (StyxWoW.Me.Class == WoWClass.Hunter )       LogSettings("HunterSettings", Hunter());
+            //if (StyxWoW.Me.Class == WoWClass.Mage )         LogSettings("MageSettings", Mage());
+            //if (StyxWoW.Me.Class == WoWClass.Monk )         LogSettings("MonkSettings", Monk());
+            //if (StyxWoW.Me.Class == WoWClass.Paladin )      LogSettings("PaladinSettings", Paladin());
+            //if (StyxWoW.Me.Class == WoWClass.Priest )       LogSettings("PriestSettings", Priest());
+            //if (StyxWoW.Me.Class == WoWClass.Rogue )        LogSettings("RogueSettings", Rogue());
+            //if (StyxWoW.Me.Class == WoWClass.Shaman)        LogSettings("ShamanSettings", Shaman());
+            //if (StyxWoW.Me.Class == WoWClass.Warlock)       LogSettings("WarlockSettings", Warlock());
+            //if (StyxWoW.Me.Class == WoWClass.Warrior)       LogSettings("WarriorSettings", Warrior());
 
             if (TalentManager.CurrentSpec == WoWSpec.ShamanRestoration)
             {
-                LogSettings("Shaman.Heal.Battleground", Shaman().RestoBattleground);
-                LogSettings("Shaman.Heal.Instance", Shaman().RestoInstance);
-                LogSettings("Shaman.Heal.Raid", Shaman().RestoRaid);
+                //LogSettings("Shaman.Heal.Battleground", Shaman().RestoBattleground);
+                //LogSettings("Shaman.Heal.Instance", Shaman().RestoInstance);
+                //LogSettings("Shaman.Heal.Raid", Shaman().RestoRaid);
             }
 
             if (TalentManager.CurrentSpec == WoWSpec.PriestHoly)
             {
-                LogSettings("Priest.Holy.Heal.Battleground", Priest().HolyBattleground);
-                LogSettings("Priest.Holy.Heal.Instance", Priest().HolyInstance);
-                LogSettings("Priest.Holy.Heal.Raid", Priest().HolyRaid);
+                //LogSettings("Priest.Holy.Heal.Battleground", Priest().HolyBattleground);
+                //LogSettings("Priest.Holy.Heal.Instance", Priest().HolyInstance);
+                //LogSettings("Priest.Holy.Heal.Raid", Priest().HolyRaid);
             }
 
             if (TalentManager.CurrentSpec == WoWSpec.PriestDiscipline)
             {
-                LogSettings("Priest.Disc.Heal.Battleground", Priest().DiscBattleground);
-                LogSettings("Priest.Disc.Heal.Instance", Priest().DiscInstance);
-                LogSettings("Priest.Disc.Heal.Raid", Priest().DiscRaid);
+                //LogSettings("Priest.Disc.Heal.Battleground", Priest().DiscBattleground);
+                //LogSettings("Priest.Disc.Heal.Instance", Priest().DiscInstance);
+                //LogSettings("Priest.Disc.Heal.Raid", Priest().DiscRaid);
             }
 
             if (TalentManager.CurrentSpec == WoWSpec.DruidRestoration)
             {
-                LogSettings("Druid.Heal.Battleground", Druid().Battleground);
-                LogSettings("Druid.Heal.Instance", Druid().Instance);
-                LogSettings("Druid.Heal.Raid", Druid().Raid);
+                //LogSettings("Druid.Heal.Battleground", Druid().Battleground);
+                //LogSettings("Druid.Heal.Instance", Druid().Instance);
+                //LogSettings("Druid.Heal.Raid", Druid().Raid);
             }
 
             Logger.WriteFile("====== Evaluated/Dynamic Settings ======");
-            Logger.WriteFile("  {0}: {1}", "Debug", SingularSettings.Debug.ToYN());
-            Logger.WriteFile("  {0}: {1}", "DisableAllMovement", SingularSettings.Instance.DisableAllMovement.ToYN());
-            Logger.WriteFile("  {0}: {1}", "DisableAllTargeting", SingularSettings.DisableAllTargeting.ToYN());
+            Logger.WriteFile("  {0}: {1}", "Debug", Debug.ToYN());
+            Logger.WriteFile("  {0}: {1}", "DisableAllMovement", Instance.DisableAllMovement.ToYN());
+            Logger.WriteFile("  {0}: {1}", "DisableAllTargeting", DisableAllTargeting.ToYN());
             Logger.WriteFile("");
 
             if (DisableSpellsWithCooldown == 0)
@@ -374,13 +375,13 @@ namespace Singular.Settings
 
         public void SetPropertyReadOnly(string propName, bool isReadOnly)
         {
-            PropertyDescriptor descriptor = TypeDescriptor.GetProperties(this.GetType())[propName];
+            PropertyDescriptor descriptor = TypeDescriptor.GetProperties(GetType())[propName];
             ReadOnlyAttribute attribute = (ReadOnlyAttribute)descriptor.Attributes[typeof(ReadOnlyAttribute)];
             if (attribute != null)
             {
                 FieldInfo fieldToChange = attribute.GetType().GetField("isReadOnly",
-                                                 System.Reflection.BindingFlags.NonPublic |
-                                                 System.Reflection.BindingFlags.Instance);
+                                                 BindingFlags.NonPublic |
+                                                 BindingFlags.Instance);
                 if (fieldToChange != null)
                 {
                     bool currentlyReadOnly = (bool) fieldToChange.GetValue(attribute);
@@ -439,7 +440,7 @@ namespace Singular.Settings
         {
             get
             {
-                return Debug && SingularSettings.Instance.EnableDebugTrace;
+                return Debug && Instance.EnableDebugTrace;
             }
         }
 
@@ -448,8 +449,8 @@ namespace Singular.Settings
         {
             get
             {
-                if (SingularSettings.Instance.TypeOfTargeting != TargetingStyle.Auto)
-                    return SingularSettings.Instance.TypeOfTargeting == TargetingStyle.None;
+                if (Instance.TypeOfTargeting != TargetingStyle.Auto)
+                    return Instance.TypeOfTargeting == TargetingStyle.None;
 
                 return SingularRoutine.IsManualMovementBotActive || SingularRoutine.IsDungeonBuddyActive;
             }
@@ -1243,44 +1244,11 @@ namespace Singular.Settings
         // It's written so we ONLY load the settings we're going to use.
         // There's no reason to load the settings for every class, if we're only executing code for a Druid.
 
-        private DeathKnightSettings _dkSettings;
-
-        private DruidSettings _druidSettings;
-
-        private HunterSettings _hunterSettings;
-
-        private MageSettings _mageSettings;
-		
-		private MonkSettings _monkSettings;
-		
-        private PaladinSettings _pallySettings;
-
-        private PriestSettings _priestSettings;
-
-        private RogueSettings _rogueSettings;
-
-        private ShamanSettings _shamanSettings;
-
-        private WarlockSettings _warlockSettings;
-
-        private WarriorSettings _warriorSettings;
-
         private HotkeySettings _hotkeySettings;
 
         // late-binding interfaces 
         // -- changed from readonly properties to methods as GetProperties() in SaveToXML() was causing all classes configs to load
         // -- this was causing Save to write a DeathKnight.xml file for all non-DKs for example
-        internal DeathKnightSettings DeathKnight() { return _dkSettings ?? (_dkSettings = new DeathKnightSettings()); } 
-        internal DruidSettings Druid() { return _druidSettings ?? (_druidSettings = new DruidSettings()); }
-        internal HunterSettings Hunter() { return _hunterSettings ?? (_hunterSettings = new HunterSettings()); }
-        internal MageSettings Mage() { return _mageSettings ?? (_mageSettings = new MageSettings()); }
-        internal MonkSettings Monk() { return _monkSettings ?? (_monkSettings = new MonkSettings()); }
-        internal PaladinSettings Paladin() { return _pallySettings ?? (_pallySettings = new PaladinSettings()); }
-        internal PriestSettings Priest() { return _priestSettings ?? (_priestSettings = new PriestSettings()); }
-        internal RogueSettings Rogue() { return _rogueSettings ?? (_rogueSettings = new RogueSettings()); }
-        internal ShamanSettings Shaman() { return _shamanSettings ?? (_shamanSettings = new ShamanSettings()); }
-        internal WarlockSettings Warlock() { return _warlockSettings ?? (_warlockSettings = new WarlockSettings()); }
-        internal WarriorSettings Warrior() { return _warriorSettings ?? (_warriorSettings = new WarriorSettings()); }
         internal HotkeySettings Hotkeys() { return _hotkeySettings ?? (_hotkeySettings = new HotkeySettings()); }
 
         #endregion

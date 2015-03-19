@@ -1,7 +1,8 @@
 ﻿
 using System.Collections.Generic;
 using System.Linq;
-
+using Singular.Dynamics;
+using Singular.Lists;
 using Singular.Settings;
 using Singular.Helpers;
 
@@ -116,10 +117,10 @@ namespace Singular.Managers
                     if (SingularSettings.Instance.IncludePetsAsHealTargets && player != null && player.GotAlivePet)
                         outgoingUnits.Add(player.Pet);
                 }
-                catch (System.AccessViolationException)
+                catch (AccessViolationException)
                 {
                 }
-                catch (Styx.InvalidObjectPointerException)
+                catch (InvalidObjectPointerException)
                 {
                 }
             }
@@ -225,12 +226,12 @@ namespace Singular.Managers
                         continue;
                     }
                 }
-                catch (System.AccessViolationException)
+                catch (AccessViolationException)
                 {
                     units.RemoveAt(i);
                     continue;
                 }
-                catch (Styx.InvalidObjectPointerException)
+                catch (InvalidObjectPointerException)
                 {
                     units.RemoveAt(i);
                     continue;
@@ -294,12 +295,12 @@ namespace Singular.Managers
                         prio.Score += 125f;
                     }
                 }
-                catch (System.AccessViolationException)
+                catch (AccessViolationException)
                 {
                     prio.Score = -9999f;
                     continue;
                 }
-                catch (Styx.InvalidObjectPointerException)
+                catch (InvalidObjectPointerException)
                 {
                     prio.Score = -9999f;
                     continue;
@@ -375,7 +376,7 @@ namespace Singular.Managers
             WoWUnit minUnit = null;
 
             // iterate the list so we make a single pass through it
-            foreach (WoWUnit unit in HealerManager.Instance.TargetList)
+            foreach (WoWUnit unit in Instance.TargetList)
             {
                 try
                 {
@@ -476,7 +477,7 @@ namespace Singular.Managers
             }
 
             // check if group health has dropped below setting
-            WoWUnit low = HealerManager.FindLowestHealthTarget();
+            WoWUnit low = FindLowestHealthTarget();
             if (low != null && low.HealthPercent < SingularSettings.Instance.HealerCombatMinHealth)
             {
                 Logger.Write( LogColor.Hilite, "{0} because {1} @ {2:F1}% health fell below minimum {3}%", action, low.SafeName(), low.HealthPercent, SingularSettings.Instance.HealerCombatMinHealth);
@@ -489,7 +490,7 @@ namespace Singular.Managers
         private static WoWUnit FindUnitForAllowDpsCheck()
         {
             // return HealerManager.Instance.FirstUnit;
-            return HealerManager.FindLowestHealthTarget();
+            return FindLowestHealthTarget();
         }
 
         public static WoWUnit GetBestCoverageTarget(string spell, int health, int range, int radius, int minCount, SimpleBooleanDelegate requirements = null, IEnumerable<WoWUnit> mainTarget = null)
@@ -508,7 +509,7 @@ namespace Singular.Managers
                 requirements = req => true;
 
             // build temp list of targets that could use heal and are in range + radius
-            List<WoWUnit> coveredTargets = HealerManager.Instance.TargetList
+            List<WoWUnit> coveredTargets = Instance.TargetList
                 .Where(u => u.IsAlive && u.SpellDistance() < (range + radius) && u.HealthPercent < health && requirements(u))
                 .ToList();
 
@@ -518,7 +519,7 @@ namespace Singular.Managers
             if (range == 0)
                 listOf = new List<WoWUnit>() { Me };
             else if (mainTarget == null)
-                listOf = HealerManager.Instance.TargetList.Where(p => p.IsAlive && p.SpellDistance() <= range);
+                listOf = Instance.TargetList.Where(p => p.IsAlive && p.SpellDistance() <= range);
             else
                 listOf = mainTarget;
 
@@ -587,7 +588,7 @@ namespace Singular.Managers
         public static bool IsTankSettledIntoFight(WoWUnit tank = null)
         {
             if (tank == null)
-                tank = HealerManager.TankToStayNear;
+                tank = TankToStayNear;
 
             if (tank == null)
                 ;
@@ -633,9 +634,9 @@ namespace Singular.Managers
                 stopNearTank = (moveNearTank * 6) / 10;     // be slightly more elastic at rest
             }
 
-            Logger.WriteDebug("StayNearTank in {0}: will move towards at {1} yds and stop if within {2} yds", Dynamics.CompositeBuilder.CurrentBehaviorType, moveNearTank, stopNearTank);
+            Logger.WriteDebug("StayNearTank in {0}: will move towards at {1} yds and stop if within {2} yds", CompositeBuilder.CurrentBehaviorType, moveNearTank, stopNearTank);
             return new PrioritySelector(
-                ctx => HealerManager.TankToStayNear,
+                ctx => TankToStayNear,
 
                 // no healing needed, then move within heal range of tank
                 new ThrottlePasses(
@@ -707,7 +708,7 @@ namespace Singular.Managers
 
         private static bool IsThisBehaviorCalledDuringCombat()
         {
-            return (Dynamics.CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
+            return (CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
         }
 
         /// <summary>
@@ -729,7 +730,7 @@ namespace Singular.Managers
             if (gapCloser == null)
                 gapCloser = new ActionAlwaysFail();
 
-            bool incombat = (Dynamics.CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
+            bool incombat = (CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
             if (incombat)
             {
                 moveNearTank = Math.Max(5, SingularSettings.Instance.StayNearTankRangeCombat);
@@ -791,7 +792,7 @@ namespace Singular.Managers
             if (gapCloser == null)
                 gapCloser = new ActionAlwaysFail();
 
-            bool incombat = (Dynamics.CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
+            bool incombat = (CompositeBuilder.CurrentBehaviorType & BehaviorType.InCombat) != (BehaviorType)0;
             if (incombat)
             {
                 moveNearTank = Math.Max(5, SingularSettings.Instance.StayNearTankRangeCombat);
@@ -885,7 +886,7 @@ namespace Singular.Managers
                 if (Me.GroupInfo.IsInRaid)
                     return false;
 
-                WoWUnit first = HealerManager.Instance.FirstUnit;
+                WoWUnit first = Instance.FirstUnit;
                 if (first != null)
                 {
                     double health = first.PredictedHealthPercent(includeMyHeals: true);
@@ -977,8 +978,8 @@ namespace Singular.Managers
         {
             this.tank = tank;
             this.target = target;
-            this.context = ctx;
-            behind = target != null && target.IsBoss() && !Singular.Lists.BossList.AvoidRearBosses.Contains(target.Entry);
+            context = ctx;
+            behind = target != null && target.IsBoss() && !BossList.AvoidRearBosses.Contains(target.Entry);
         }
     }
 
@@ -1031,7 +1032,7 @@ namespace Singular.Managers
 
         public void ListBehaviors()
         {
-            if (Dynamics.CompositeBuilder.SilentBehaviorCreation)
+            if (CompositeBuilder.SilentBehaviorCreation)
                 return;
 
             foreach (PrioritizedBehavior hs in blist)

@@ -2,9 +2,9 @@
 using System.Linq;
 
 using CommonBehaviors.Actions;
-
+using Singular.ClassSpecific;
 using Singular.Settings;
-
+using Singular.Utilities;
 using Styx;
 using Styx.TreeSharp;
 using Styx.WoWInternals;
@@ -25,7 +25,7 @@ namespace Singular.Helpers
 
         public static bool HasItem(uint itemId)
         {
-            WoWItem item = FindItem(itemId);
+            var item = FindItem(itemId);
             return item != null;
         }
 
@@ -71,7 +71,7 @@ namespace Singular.Helpers
 
         public static Composite UseEquippedTrinket(TrinketUsage usage)
         {
-            PrioritySelector ps = new PrioritySelector();
+            var ps = new PrioritySelector();
 
             if (SingularSettings.Instance.Trinket1Usage == usage)
             {
@@ -111,7 +111,7 @@ namespace Singular.Helpers
         private static bool CanUseEquippedItem(WoWItem item)
         {
             // Check for engineering tinkers!
-            string itemSpell = Lua.GetReturnVal<string>("return GetItemSpell(" + item.Entry + ")",0);
+            var itemSpell = Lua.GetReturnVal<string>("return GetItemSpell(" + item.Entry + ")",0);
             if (string.IsNullOrEmpty(itemSpell))
                 return false;
 
@@ -120,13 +120,13 @@ namespace Singular.Helpers
 
         public static WoWSpell GetItemSpell(WoWItem item)
         {
-            string spellName = Lua.GetReturnVal<string>("return GetItemSpell(" + item.Entry + ")", 0);
+            var spellName = Lua.GetReturnVal<string>("return GetItemSpell(" + item.Entry + ")", 0);
             if (string.IsNullOrEmpty(spellName))
             {
                 return null;
             }
 
-            int spellId = Lua.GetReturnVal<int>("return GetSpellBookItemInfo('" + spellName + "')", 1);
+            var spellId = Lua.GetReturnVal<int>("return GetSpellBookItemInfo('" + spellName + "')", 1);
             return WoWSpell.FromId(spellId);
         }
 
@@ -149,7 +149,7 @@ namespace Singular.Helpers
         /// <returns></returns>
         public static WoWItem FindFirstUsableItemBySpell(params string[] spellNames)
         {
-            List<WoWItem> carried = StyxWoW.Me.CarriedItems;
+            var carried = StyxWoW.Me.CarriedItems;
             // Yes, this is a bit of a hack. But the cost of creating an object each call, is negated by the speed of the Contains from a hash set.
             // So take your optimization bitching elsewhere.
             var spellNameHashes = new HashSet<string>(spellNames);
@@ -206,12 +206,12 @@ namespace Singular.Helpers
                             new Sequence(
                                 new Action(ret => Logger.Write(LogColor.SpellHeal, "/use {0} @ {1:F1}% Health", ((WoWItem)ret).Name, StyxWoW.Me.HealthPercent )),
                                 new Action(ret => ((WoWItem)ret).UseContainerItem()),
-                                Helpers.Common.CreateWaitForLagDuration()
+                                Common.CreateWaitForLagDuration()
                                 )
                             ),
                         new Decorator(
-                            req => Me.Inventory.Equipped.Neck != null && Item.IsUsableItemBySpell(Me.Inventory.Equipped.Neck, "Heal"),
-                            Item.UseEquippedItem((uint) WoWInventorySlot.Neck)
+                            req => Me.Inventory.Equipped.Neck != null && IsUsableItemBySpell(Me.Inventory.Equipped.Neck, "Heal"),
+                            UseEquippedItem((uint) WoWInventorySlot.Neck)
                             )
                         )
                     ),
@@ -224,7 +224,7 @@ namespace Singular.Helpers
                             new Sequence(
                                 new Action(ret => Logger.Write(LogColor.Hilite, "/use {0} @ {1:F1}% Mana", ((WoWItem)ret).Name, StyxWoW.Me.ManaPercent )),
                                 new Action(ret => ((WoWItem)ret).UseContainerItem()),
-                                Helpers.Common.CreateWaitForLagDuration()
+                                Common.CreateWaitForLagDuration()
                                 )
                             )
                         )
@@ -348,7 +348,7 @@ namespace Singular.Helpers
             return new Sequence(
                 ctx =>
                 {
-                    ScrollContext sc = new ScrollContext();
+                    var sc = new ScrollContext();
                     sc.scroll = FindBestScroll();
                     return sc;
                 },
@@ -360,16 +360,16 @@ namespace Singular.Helpers
 
                 new Action(r =>
                     {
-                        ScrollContext sc = (ScrollContext)r;
+                        var sc = (ScrollContext)r;
                         sc.usedAt = DateTime.Now;
                         UseItem(sc.scroll);
                     }),
 
                 new WaitContinue(
                     TimeSpan.FromMilliseconds(250),
-                    until => Utilities.EventHandlers.LastRedErrorMessage > ((ScrollContext) until).usedAt,
+                    until => EventHandlers.LastRedErrorMessage > ((ScrollContext) until).usedAt,
                     new Action(r => {
-                        int suppressFor = 5;
+                        var suppressFor = 5;
                         suppressScrollsUntil = DateTime.Now.AddMinutes(suppressFor);
                         Logger.WriteDebug("UseBestScroll: suppressing Scroll Use for {0} minutes due to WoWRedError encountered", suppressFor);
                         return RunStatus.Failure;
@@ -380,8 +380,8 @@ namespace Singular.Helpers
 
         private static WoWItem FindBestScroll()
         {
-            Styx.StatType primary = Me.GetPrimaryStat();
-            WoWItem scroll = FindFirstUsableItemBySpell(primary.ToString());
+            var primary = Me.GetPrimaryStat();
+            var scroll = FindFirstUsableItemBySpell(primary.ToString());
             if (scroll == null)
                 scroll = FindFirstUsableItemBySpell("Stamina");
             if (scroll == null && primary == StatType.Intellect)
@@ -452,63 +452,63 @@ namespace Singular.Helpers
                 Logger.WriteFile("");
             }
 
-            Logger.WriteFile("Talents Selected: {0}", Singular.Managers.TalentManager.Talents.Count(t => t.Selected));
-            foreach (var t in Singular.Managers.TalentManager.Talents)
-            {
-                if (!t.Selected)
-                    continue;
+            //Logger.WriteFile("Talents Selected: {0}", TalentManager.Talents.Count(t => t.Selected));
+            //foreach (var t in TalentManager.Talents)
+            //{
+            //    if (!t.Selected)
+            //        continue;
 
-                string talent = "unknown";
-                switch (Me.Class)
-                {
-                    case WoWClass.DeathKnight:
-                        talent = ((ClassSpecific.DeathKnight.DeathKnightTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Druid:
-                        talent = ((ClassSpecific.Druid.DruidTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Hunter:
-                        talent = ((ClassSpecific.Hunter.HunterTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Mage:
-                        talent = ((ClassSpecific.Mage.MageTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Monk:
-                        talent = ((ClassSpecific.Monk.MonkTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Paladin:
-                        talent = ((ClassSpecific.Paladin.PaladinTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Priest:
-                        talent = ((ClassSpecific.Priest.PriestTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Rogue:
-                        talent = ((ClassSpecific.Rogue.RogueTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Shaman:
-                        talent = ((ClassSpecific.Shaman.ShamanTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Warlock:
-                        talent = ((ClassSpecific.Warlock.WarlockTalents)t.Index).ToString();
-                        break;
-                    case WoWClass.Warrior:
-                        talent = ((ClassSpecific.Warrior.WarriorTalents)t.Index).ToString();
-                        break;
-                }
+            //    string talent = "unknown";
+            //    switch (Me.Class)
+            //    {
+            //        case WoWClass.DeathKnight:
+            //            talent = ((DeathKnight.DeathKnightTalentsEnum)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Druid:
+            //            talent = ((ClassSpecific.Druid.DruidTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Hunter:
+            //            talent = ((ClassSpecific.Hunter.HunterTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Mage:
+            //            talent = ((ClassSpecific.Mage.MageTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Monk:
+            //            talent = ((ClassSpecific.Monk.MonkTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Paladin:
+            //            talent = ((ClassSpecific.Paladin.PaladinTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Priest:
+            //            talent = ((ClassSpecific.Priest.PriestTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Rogue:
+            //            talent = ((ClassSpecific.Rogue.RogueTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Shaman:
+            //            talent = ((ClassSpecific.Shaman.ShamanTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Warlock:
+            //            talent = ((ClassSpecific.Warlock.WarlockTalents)t.Index).ToString();
+            //            break;
+            //        case WoWClass.Warrior:
+            //            talent = ((ClassSpecific.Warrior.WarriorTalents)t.Index).ToString();
+            //            break;
+            //    }
 
-                Logger.WriteFile("--- #{0} -{1}", t.Index, talent.CamelToSpaced());
-            }
+            //    Logger.WriteFile("--- #{0} -{1}", t.Index, talent.CamelToSpaced());
+            //}
 
             Logger.WriteFile(" ");
-            Logger.WriteFile("Glyphs Equipped: {0}", Singular.Managers.TalentManager.Glyphs.Count());
-            foreach (string glyphName in Singular.Managers.TalentManager.Glyphs.OrderBy(g => g).Select(g => g).ToList())
+            Logger.WriteFile("Glyphs Equipped: {0}", TalentManager.Glyphs.Count());
+            foreach (var glyphName in TalentManager.Glyphs.OrderBy(g => g).Select(g => g).ToList())
             {
                 Logger.WriteFile("--- {0}", glyphName );
             }
 
             Logger.WriteFile("");
 
-            Regex pat = new Regex( "Item \\-" + Me.Class.ToString().CamelToSpaced() + " .*P Bonus");
+            var pat = new Regex( "Item \\-" + Me.Class.ToString().CamelToSpaced() + " .*P Bonus");
             if ( Me.GetAllAuras().Any( a => pat.IsMatch( a.Name )))
             {
                 foreach( var a in Me.GetAllAuras())
@@ -524,13 +524,13 @@ namespace Singular.Helpers
 
             if (Me.Inventory.Equipped.Trinket1 != null)
             {
-                int itemeffectid = 0;
+                var itemeffectid = 0;
                 uint spelleffectid = 0;
                 SpellEffect se;
 
                 try
                 {
-                    ItemEffect ie = Me.Inventory.Equipped.Trinket1.Effects.FirstOrDefault(e => e != null);
+                    var ie = Me.Inventory.Equipped.Trinket1.Effects.FirstOrDefault(e => e != null);
                     if (ie != null)
                     {
                         itemeffectid = ie.SpellId;
@@ -552,13 +552,13 @@ namespace Singular.Helpers
 
             if (Me.Inventory.Equipped.Trinket2 != null)
             {
-                int itemeffectid = 0;
+                var itemeffectid = 0;
                 uint spelleffectid = 0;
                 SpellEffect se;
 
                 try
                 {
-                    ItemEffect ie = Me.Inventory.Equipped.Trinket2.Effects.FirstOrDefault(e => e != null);
+                    var ie = Me.Inventory.Equipped.Trinket2.Effects.FirstOrDefault(e => e != null);
                     if (ie != null)
                     {
                         itemeffectid = ie.SpellId;
@@ -578,61 +578,19 @@ namespace Singular.Helpers
                     );
             }
 
-
-            WoWItem item;
-            if (Me.Inventory.Equipped.Hands != null)
-            {
-                /*
-                item = Me.Inventory.Equipped.Hands;
-                if (!item.Usable)
-                    Logger.WriteDiagnostic("Hands: {0} #{1} - are not usable and will be ignored", item.Name, item.Entry);
-                else 
-                {
-                    string itemSpell = Lua.GetReturnVal<string>("return GetItemSpell(" + item.Entry + ")",0);       
-                    if (string.IsNullOrEmpty(itemSpell))
-                        Logger.WriteDiagnostic("Hands: {0} #{1} - does not appear to have a usable enchant present and will be ignored", item.Name, item.Entry);
-                    else
-                        Logger.WriteFile("Hands: {0} #{1} - found [{2}] and will use as per user settings", item.Name, item.Entry, itemSpell);
-                }
-                */
-
-                /*
-                // debug logic:  try another method to check for Engineering Tinkers
-                foreach (var enchName in GloveEnchants)
-                {
-                    WoWItem.WoWItemEnchantment ench = item.GetEnchantment(enchName);
-                    if (ench != null)
-                        Logger.WriteFile("Hands (double check): {0} #{1} - found enchant [{2}] #{3} (debug info only)", item.Name, item.Entry, ench.Name, ench.Id);
-                }
-                */
-            }
-
-            item = Me.Inventory.Equipped.Waist;
+            var item = Me.Inventory.Equipped.Waist;
             if (item != null)
             {
-                foreach (var enchName in BeltEnchants)
+                foreach (var enchName in _beltEnchants)
                 {
-                    WoWItem.WoWItemEnchantment ench = item.GetEnchantment(enchName);
+                    var ench = item.GetEnchantment(enchName);
                     if (ench != null)
                         Logger.WriteFile("Belt (double check): {0} #{1} - found enchant [{2}] #{3} (debug info only)", item.Name, item.Entry, ench.Name, ench.Id);
                 }
             }
         }
 
-        /*
-        // should be an api to inspect gloves, but instead yal (yet another list)
-        internal static List<string> GloveEnchants = new List<string>() 
-        {
-            "Hyperspeed Accelerators",
-            "Hand-Mounted Pyro Rocket",
-            "Tazik Shocker",
-            "Synapse Springs",
-            "Phase Fingers",
-            "Incendiary Fireworks Launcher"
-        };
-        */
-
-        internal static List<string> BeltEnchants = new List<string>() 
+        private static readonly List<string> _beltEnchants = new List<string>() 
         {
             "Nitro Boosts",
             "Frag Belt"
@@ -643,10 +601,10 @@ namespace Singular.Helpers
             uint totalItemLevel = 0;
             for (uint slot = 0; slot < Me.Inventory.Equipped.Slots; slot++)
             {
-                WoWItem item = Me.Inventory.Equipped.GetItemBySlot(slot);
+                var item = Me.Inventory.Equipped.GetItemBySlot(slot);
                 if (item != null && IsItemImportantToGearScore(item))
                 {
-                    uint itemLvl = GetGearScore(item);
+                    var itemLvl = GetGearScore(item);
                     totalItemLevel += itemLvl;
                     // Logger.WriteFile("  good:  item[{0}]: {1}  [{2}]", slot, itemLvl, item.Name);
                 }
@@ -677,7 +635,7 @@ namespace Singular.Helpers
 
         private static InventoryType GetInventoryType(WoWItem item)
         {
-            InventoryType typ = Styx.InventoryType.None;
+            var typ = InventoryType.None;
             try
             {
                 if (item != null)
@@ -853,12 +811,12 @@ namespace Singular.Helpers
                             && Me.CurrentTarget.SpellDistance() >= 20
                             && Me.CurrentTarget.InLineOfSight
                             && Me.IsSafelyFacing(Me.CurrentTarget)
-                            && (DateTime.Now - Utilities.EventHandlers.LastNoPathFailure) > TimeSpan.FromSeconds(15),
+                            && (DateTime.Now - EventHandlers.LastNoPathFailure) > TimeSpan.FromSeconds(15),
                         new Sequence(
                             new Action(r =>
                             {
                                 const int THUNDERLORD_GRAPPLE_SPELL = 150258;
-                                WoWSpell grapple = WoWSpell.FromId(THUNDERLORD_GRAPPLE_SPELL);
+                                var grapple = WoWSpell.FromId(THUNDERLORD_GRAPPLE_SPELL);
                                 if (grapple != null && Me.CurrentTarget.SpellDistance() < grapple.MaxRange)
                                     return RunStatus.Success;
                                 return RunStatus.Failure;
@@ -871,7 +829,7 @@ namespace Singular.Helpers
                                 ),
                             new Action(r =>
                             {
-                                WoWItem item = FindItem(THUNDERLORD_GRAPPLE_ITEM);
+                                var item = FindItem(THUNDERLORD_GRAPPLE_ITEM);
                                 UseItem(item, Me.CurrentTarget);
                             }),
                             new Wait(
@@ -905,7 +863,7 @@ namespace Singular.Helpers
 
         private static bool CanUseCarriedItem(int itemId)
         {
-            WoWItem item = Me.CarriedItems
+            var item = Me.CarriedItems
                 .Where(b => b.Entry == itemId)
                 .FirstOrDefault();           
             return item == null ? false : CanUseItem(item);

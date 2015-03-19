@@ -24,7 +24,7 @@ namespace Singular.Helpers
                     && PetManager.PetSummonAfterDismountTimer.IsFinished,
                 new Sequence(
                     new Action(ret => PetManager.CallPet(petName)),
-                    Helpers.Common.CreateWaitForLagDuration(),
+                    Common.CreateWaitForLagDuration(),
                     new Wait(
                         5,
                         ret => StyxWoW.Me.GotAlivePet || !StyxWoW.Me.IsCasting,

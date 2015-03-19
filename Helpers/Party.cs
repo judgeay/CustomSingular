@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using CommonBehaviors.Actions;
 using Styx;
@@ -325,7 +326,7 @@ namespace Singular.Helpers
                     new Wait(1, until => StyxWoW.Me.HasPartyBuff(name), new ActionAlwaysSucceed()),
                     new Action(ret =>
                     {
-                        System.Diagnostics.Debug.Assert(PartyBuffType.None != GetPartyBuffForSpell(name));
+                        Debug.Assert(PartyBuffType.None != GetPartyBuffForSpell(name));
                         if (PartyBuffType.None != GetPartyBuffForSpell(name))
                             ResetReadyToPartyBuffTimer();
                         else
@@ -347,7 +348,7 @@ namespace Singular.Helpers
                         new Wait(1, until => StyxWoW.Me.HasPartyBuff(name), new ActionAlwaysSucceed()),
                         new Action(ret =>
                         {
-                            System.Diagnostics.Debug.Assert(PartyBuffType.None != GetPartyBuffForSpell(name));
+                            Debug.Assert(PartyBuffType.None != GetPartyBuffForSpell(name));
                             if (PartyBuffType.None != GetPartyBuffForSpell(name))
                                 ResetReadyToPartyBuffTimer();
                             else

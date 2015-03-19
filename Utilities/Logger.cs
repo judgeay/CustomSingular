@@ -2,6 +2,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using Singular.Dynamics;
 using Singular.Settings;
 using Styx.Common;
 using Styx.TreeSharp;
@@ -202,13 +203,13 @@ namespace Singular
         /// <param name="args">replacement parameter values</param>
         public static void WriteInBehaviorCreate(string message, params object[] args)
         {
-            if (!Dynamics.CompositeBuilder.SilentBehaviorCreation)
+            if (!CompositeBuilder.SilentBehaviorCreation)
                 Write(message, args);
         }
 
         public static void WriteInBehaviorCreate(Color clr, string message, params object[] args)
         {
-            if (!Dynamics.CompositeBuilder.SilentBehaviorCreation)
+            if (!CompositeBuilder.SilentBehaviorCreation)
                 Write(clr, message, args);
         }
 
@@ -219,13 +220,13 @@ namespace Singular
         /// <param name="args">replacement parameter values</param>
         public static void WriteDebugInBehaviorCreate(string message, params object[] args)
         {
-            if (!Dynamics.CompositeBuilder.SilentBehaviorCreation)
+            if (!CompositeBuilder.SilentBehaviorCreation)
                 WriteDebug(message, args);
         }
 
         public static void WriteDebugInBehaviorCreate(Color clr, string message, params object[] args)
         {
-            if (!Dynamics.CompositeBuilder.SilentBehaviorCreation)
+            if (!CompositeBuilder.SilentBehaviorCreation)
                 WriteDebug(clr, message, args);
         }
 

@@ -1,7 +1,9 @@
 ﻿
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 
@@ -24,7 +26,7 @@ namespace Singular.GUI
             InitializeComponent();
         }
 
-        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        protected override void OnClosing(CancelEventArgs e)
         {
             if (DialogResult == DialogResult.OK || DialogResult == DialogResult.Yes)
             {
@@ -54,49 +56,49 @@ namespace Singular.GUI
             tabClass.Text = SingularRoutine.ClassName().Substring(1) + " Specific";
             
             Styx.Helpers.Settings toSelect = null;
-            switch (StyxWoW.Me.Class)
-            {
-                case WoWClass.Warrior:
-                    toSelect = SingularSettings.Instance.Warrior();
-                    break;
-                case WoWClass.Paladin:
-                    toSelect = SingularSettings.Instance.Paladin();
-                    break;
-                case WoWClass.Hunter:
-                    toSelect = SingularSettings.Instance.Hunter();
-                    break;
-                case WoWClass.Rogue:
-                    toSelect = SingularSettings.Instance.Rogue();
-                    break;
-                case WoWClass.Priest:
-                    toSelect = SingularSettings.Instance.Priest();
-                    break;
-                case WoWClass.DeathKnight:
-                    toSelect = SingularSettings.Instance.DeathKnight();
-                    break;
-                case WoWClass.Shaman:
-                    toSelect = SingularSettings.Instance.Shaman();
-                    break;
-                case WoWClass.Mage:
-                    toSelect = SingularSettings.Instance.Mage();
-                    break;
-                case WoWClass.Warlock:
-                    toSelect = SingularSettings.Instance.Warlock();
-                    break;
-                case WoWClass.Druid:
-                    toSelect = SingularSettings.Instance.Druid();
-                    break;
-                case WoWClass.Monk:
-                    toSelect = SingularSettings.Instance.Monk();
-                    break;
-                default:
-                    break;
-            }
+            //switch (StyxWoW.Me.Class)
+            //{
+            //    case WoWClass.Warrior:
+            //        toSelect = SingularSettings.Instance.Warrior();
+            //        break;
+            //    case WoWClass.Paladin:
+            //        toSelect = SingularSettings.Instance.Paladin();
+            //        break;
+            //    case WoWClass.Hunter:
+            //        toSelect = SingularSettings.Instance.Hunter();
+            //        break;
+            //    case WoWClass.Rogue:
+            //        toSelect = SingularSettings.Instance.Rogue();
+            //        break;
+            //    case WoWClass.Priest:
+            //        toSelect = SingularSettings.Instance.Priest();
+            //        break;
+            //    case WoWClass.DeathKnight:
+            //        toSelect = SingularSettings.Instance.DeathKnight();
+            //        break;
+            //    case WoWClass.Shaman:
+            //        toSelect = SingularSettings.Instance.Shaman();
+            //        break;
+            //    case WoWClass.Mage:
+            //        toSelect = SingularSettings.Instance.Mage();
+            //        break;
+            //    case WoWClass.Warlock:
+            //        toSelect = SingularSettings.Instance.Warlock();
+            //        break;
+            //    case WoWClass.Druid:
+            //        toSelect = SingularSettings.Instance.Druid();
+            //        break;
+            //    case WoWClass.Monk:
+            //        toSelect = SingularSettings.Instance.Monk();
+            //        break;
+            //    default:
+            //        break;
+            //}
 
-            if (toSelect != null)
-            {
-                pgClass.SelectedObject = toSelect;
-            }
+            //if (toSelect != null)
+            //{
+            //    pgClass.SelectedObject = toSelect;
+            //}
 
             pgHotkeys.SelectedObject = SingularSettings.Instance.Hotkeys();
 
@@ -112,13 +114,13 @@ namespace Singular.GUI
             if (!timer1.Enabled)
                 timer1.Start();
 
-            Screen screen = Screen.FromHandle(this.Handle);
-            if (this.Left.Between(0, screen.WorkingArea.Width) && this.Top.Between(0, screen.WorkingArea.Height))
+            Screen screen = Screen.FromHandle(Handle);
+            if (Left.Between(0, screen.WorkingArea.Width) && Top.Between(0, screen.WorkingArea.Height))
             {
-                int height = screen.WorkingArea.Height - this.Top;
+                int height = screen.WorkingArea.Height - Top;
                 if (height > 200)
                 {
-                    this.Height = height;
+                    Height = height;
                 }
             }
 
@@ -155,25 +157,25 @@ namespace Singular.GUI
             cboHealContext.Items.Clear();
             if (cls == WoWClass.Shaman)
             {
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoBattleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoInstance));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoRaid));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.None, SingularSettings.Instance.Shaman().OffhealBattleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.None, SingularSettings.Instance.Shaman().OffhealPVE));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoBattleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoInstance));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.ShamanRestoration, SingularSettings.Instance.Shaman().RestoRaid));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.None, SingularSettings.Instance.Shaman().OffhealBattleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.None, SingularSettings.Instance.Shaman().OffhealPVE));
             }
 
             if (cls == WoWClass.Druid)
             {
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Battleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Instance));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Raid));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Battleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Instance));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Raid));
             }
 
             if (cls == WoWClass.Monk)
             {
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistBattleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistInstance));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistRaid));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistBattleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistInstance));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.MonkMistweaver, SingularSettings.Instance.Monk().MistRaid));
             }
 
             if (cls == WoWClass.Priest)
@@ -183,12 +185,12 @@ namespace Singular.GUI
                 cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscInstance));
                 cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscRaid));
  */ 
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyBattleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyInstance));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyRaid));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscBattleground));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscInstance));
-                cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscRaid));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyBattleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyInstance));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.PriestHoly, SingularSettings.Instance.Priest().HolyRaid));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscBattleground));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscInstance));
+                //cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.PriestDiscipline, SingularSettings.Instance.Priest().DiscRaid));
             }
 
             bool needHealPage = cboHealContext.Items.Count > 0;
@@ -317,8 +319,8 @@ namespace Singular.GUI
                 SingularRoutine.TrainingDummyBehaviors = (WoWContext) GetComboBoxEnum(cboForceUseOf);
 
                 // save form position
-                SingularSettings.Instance.FormHeight = this.Height;
-                SingularSettings.Instance.FormWidth = this.Width;
+                SingularSettings.Instance.FormHeight = Height;
+                SingularSettings.Instance.FormWidth = Width;
                 SingularSettings.Instance.FormTabIndex = tabControl1.SelectedIndex; ;
 
                 // save property group settings from each tab
@@ -350,7 +352,7 @@ namespace Singular.GUI
 
 #pragma warning disable 168
 
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        [DllImport("user32.dll")]
         public static extern int SendMessage(IntPtr hWnd, Int32 wMsg, bool wParam, IntPtr lParam);
         private const int WM_SETREDRAW = 11; 
 
@@ -448,10 +450,10 @@ namespace Singular.GUI
                         if (++i == 5)
                             break;
                     }
-                    catch (System.AccessViolationException)
+                    catch (AccessViolationException)
                     {
                     }
-                    catch (Styx.InvalidObjectPointerException)
+                    catch (InvalidObjectPointerException)
                     {
                     }
                 }
@@ -544,7 +546,7 @@ namespace Singular.GUI
         /// </summary>
         /// <param name="cb"></param>
         /// <param name="e"></param>
-        private static void SetComboBoxEnum(System.Windows.Forms.ComboBox cb, int e)
+        private static void SetComboBoxEnum(ComboBox cb, int e)
         {
             CboItem item;
             for (int i = 0; i < cb.Items.Count; i++)
@@ -567,7 +569,7 @@ namespace Singular.GUI
         /// </summary>
         /// <param name="cb"></param>
         /// <returns></returns>
-        private static int GetComboBoxEnum(System.Windows.Forms.ComboBox cb)
+        private static int GetComboBoxEnum(ComboBox cb)
         {
             CboItem item = (CboItem)cb.Items[cb.SelectedIndex];
             return item.e;
@@ -584,7 +586,7 @@ namespace Singular.GUI
 
         private void btnDump_Click(object sender, EventArgs e)
         {
-            Singular.SingularRoutine.PullMoreQuestTargetsDump();
+            SingularRoutine.PullMoreQuestTargetsDump();
         }
     }
 
