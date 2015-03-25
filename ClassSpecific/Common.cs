@@ -20,7 +20,7 @@ namespace Singular.ClassSpecific
 
         protected static int active_enemies
         {
-            get { return active_enemies_list.Count(); }
+            get { return Spell.UseAOE ? active_enemies_list.Count() : 1; }
         }
 
         protected static IEnumerable<WoWUnit> active_enemies_list
@@ -83,10 +83,10 @@ namespace Singular.ClassSpecific
                 get { return StyxWoW.Me.CurrentTarget.HealthPercent; }
             }
 
-            public static long time_to_die
-            {
-                get { return StyxWoW.Me.CurrentTarget.TimeToDeath(int.MaxValue); }
-            }
+            //public static long time_to_die
+            //{
+            //    get { return StyxWoW.Me.CurrentTarget.TimeToDeath(int.MaxValue); }
+            //}
 
             #endregion
         }

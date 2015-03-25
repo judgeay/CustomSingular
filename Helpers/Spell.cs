@@ -92,10 +92,7 @@ namespace Singular.Helpers
         {
             var result = SpellManager.Cast(spellName);
             
-            if (SingularRoutine.Latency < 800)
-                Thread.Sleep(Convert.ToInt32(SingularRoutine.Latency + 5));
-
-            if (SpellManager.GlobalCooldown) PreviousGcdSpell = spellName;
+            PreviousGcdSpell = spellName;
 
             return result;
         }
@@ -109,10 +106,7 @@ namespace Singular.Helpers
         {
             var result = SpellManager.Cast(spell);
 
-            if (SingularRoutine.Latency < 800)
-                Thread.Sleep(Convert.ToInt32(SingularRoutine.Latency + 5));
-
-            if (SpellManager.GlobalCooldown) PreviousGcdSpell = spell.Name;
+            PreviousGcdSpell = spell.Name;
 
             return result;
         }
@@ -120,11 +114,8 @@ namespace Singular.Helpers
         private static bool CastPrimative(string spellName, WoWUnit unit)
         {
             var result = SpellManager.Cast(spellName, unit);
-
-            if (SingularRoutine.Latency < 800)
-                Thread.Sleep(Convert.ToInt32(SingularRoutine.Latency + 5));
-
-            if (SpellManager.GlobalCooldown) PreviousGcdSpell = spellName;
+            
+            PreviousGcdSpell = spellName;
 
             return result;
         }
@@ -137,11 +128,8 @@ namespace Singular.Helpers
         public static bool CastPrimative(WoWSpell spell, WoWUnit unit)
         {
             var result = SpellManager.Cast(spell, unit);
-
-            if (SingularRoutine.Latency < 800)
-                Thread.Sleep(Convert.ToInt32(SingularRoutine.Latency + 5));
-
-            if (SpellManager.GlobalCooldown) PreviousGcdSpell = spell.Name;
+            
+            PreviousGcdSpell = spell.Name;
 
             return result;
         }
