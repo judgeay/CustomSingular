@@ -256,7 +256,7 @@ namespace Singular.ClassSpecific
                 // actions.aoe+=/blood_tap
                 Spell.Cast(blood_tap),
                 // actions.aoe+=/plague_leech
-                Spell.Cast(plague_leech /*, req => disease.min_ticking*/),
+                Spell.Cast(plague_leech , req => disease.min_ticking),
                 // actions.aoe+=/empower_rune_weapon
                 Spell.Cast(empower_rune_weapon),
 
@@ -278,7 +278,7 @@ namespace Singular.ClassSpecific
                 // actions.bos_aoe+=/blood_tap,if=buff.blood_charge.stack>=5
                 Spell.Cast(blood_tap, req => buff.blood_charge_stack >= 5),
                 // actions.bos_aoe+=/plague_leech
-                Spell.Cast(plague_leech /*, req => disease.min_ticking*/),
+                Spell.Cast(plague_leech, req => disease.min_ticking),
                 // actions.bos_aoe+=/empower_rune_weapon
                 Spell.Cast(empower_rune_weapon),
                 // actions.bos_aoe+=/death_coil,if=buff.sudden_doom_react
@@ -301,7 +301,7 @@ namespace Singular.ClassSpecific
                 // actions.bos_st+=/blood_tap,if=buff.blood_charge.stack>=5
                 Spell.Cast(blood_tap, req => buff.blood_charge_stack >= 5),
                 // actions.bos_st+=/plague_leech
-                Spell.Cast(plague_leech /*, req => disease.min_ticking*/),
+                Spell.Cast(plague_leech, req => disease.min_ticking),
                 // actions.bos_aoe+=/empower_rune_weapon
                 Spell.Cast(empower_rune_weapon),
                 // actions.bos_aoe+=/death_coil,if=buff.sudden_doom_react
@@ -315,11 +315,11 @@ namespace Singular.ClassSpecific
         {
             return new PrioritySelector(
                 // actions.single_target=plague_leech,if=(cooldown.outbreak.remains<1)&((blood<1&frost<1)|(blood<1&unholy<1)|(frost<1&unholy<1))
-                Spell.Cast(plague_leech, req => /*disease.min_ticking &&*/ (cooldown.outbreak_remains < 1) && ((blood < 1 && frost < 1) || (blood < 1 && unholy < 1) || (frost < 1 && unholy < 1))),
+                Spell.Cast(plague_leech, req => disease.min_ticking && (cooldown.outbreak_remains < 1) && ((blood < 1 && frost < 1) || (blood < 1 && unholy < 1) || (frost < 1 && unholy < 1))),
                 // actions.single_target+=/plague_leech,if=((blood<1&frost<1)|(blood<1&unholy<1)|(frost<1&unholy<1))&disease.min_remains<3
-                Spell.Cast(plague_leech, req => /*disease.min_ticking &&*/ ((blood < 1 && frost < 1) || (blood < 1 && unholy < 1) || (frost < 1 && unholy < 1)) && disease.min_remains < 3),
+                Spell.Cast(plague_leech, req => disease.min_ticking && ((blood < 1 && frost < 1) || (blood < 1 && unholy < 1) || (frost < 1 && unholy < 1)) && disease.min_remains < 3),
                 // actions.single_target+=/plague_leech,if=disease.min_remains<1
-                Spell.Cast(plague_leech, req => /*disease.min_ticking &&*/ disease.min_remains < 1),
+                Spell.Cast(plague_leech, req => disease.min_ticking && disease.min_remains < 1),
                 //actions.single_target+=/outbreak,if=!disease.min_ticking
                 Spell.Cast(outbreak, req => !disease.min_ticking),
                 // actions.single_target+=/unholy_blight,if=!talent.necrotic_plague.enabled&disease.min_remains<3unholy_blight
@@ -397,7 +397,7 @@ namespace Singular.ClassSpecific
                 //actions.single_target+=/death_coil
                 Spell.Cast(death_coil),
                 //actions.single_target+=/plague_leech
-                Spell.Cast(plague_leech /*, req => disease.min_ticking*/),
+                Spell.Cast(plague_leech, req => disease.min_ticking),
                 //actions.single_target+=/scourge_strike,if=cooldown.empower_rune_weapon.remains=0
                 Spell.Cast(scourge_strike, req => cooldown.empower_rune_weapon_remains == 0),
                 //actions.single_target+=/festering_strike,if=cooldown.empower_rune_weapon.remains=0
