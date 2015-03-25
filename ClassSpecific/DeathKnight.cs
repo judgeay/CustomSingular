@@ -13,50 +13,6 @@ namespace Singular.ClassSpecific
     // ReSharper disable InconsistentNaming
     public class DeathKnight : Common
     {
-        #region Constant
-
-        //public const string army_of_the_dead = "Army of the Dead";
-        public const string blood_boil = "Blood Boil";
-
-        //private const string antimagic_shell = "Anti-Magic Shell";
-        private const string blood_charge = "Blood Charge";
-        private const string blood_plague = "Blood Plague";
-        private const string blood_tap = "Blood Tap";
-        //public const string bone_shield = "Bone Shield";
-        private const string breath_of_sindragosa = "Breath of Sindragosa";
-        //public const string conversion = "Conversion";
-        //private const int crimson_scourge = 81141;
-        //public const string dancing_rune_weapon = "Dancing Rune Weapon";
-        private const string dark_transformation = "Dark Transformation";
-        private const string death_and_decay = "Death and Decay";
-        private const string death_coil = "Death Coil";
-        private const string defile = "Defile";
-        private const string empower_rune_weapon = "Empower Rune Weapon";
-        private const string festering_strike = "Festering Strike";
-        //private const int freezing_fog = 59052;
-        private const string frost_fever = "Frost Fever";
-        //public const string icebound_fortitude = "Icebound Fortitude";
-        private const string icy_touch = "Icy Touch";
-        //private const int killing_machine = 51124;
-        //public const string lichborne = "Lichborne";
-        private const string necrotic_plague = "Necrotic Plague";
-        private const string outbreak = "Outbreak";
-        //private const string pillar_of_frost = "Pillar of Frost";
-        private const string plague_leech = "Plague Leech";
-        private const string plague_strike = "Plague Strike";
-        private const string raise_dead = "Raise Dead";
-        //public const string rune_tap = "Rune Tap";
-        //public const string runic_empowerment = "Runic Empowerment";
-        private const string scourge_strike = "Scourge Strike";
-        private const string shadow_infusion = "Shadow Infusion";
-        private const string soul_reaper = "Soul Reaper";
-        private const int sudden_doom = 81340;
-        private const string summon_gargoyle = "Summon Gargoyle";
-        private const string unholy_blight = "Unholy Blight";
-        //public const string vampiric_blood = "Vampiric Blood";
-
-        #endregion
-
         #region Enums
 
         private enum DeathKnightTalentsEnum
@@ -94,6 +50,52 @@ namespace Singular.ClassSpecific
 
         #endregion
 
+        #region Constant
+
+        public const string blood_boil = "Blood Boil";
+
+        //private const string antimagic_shell = "Anti-Magic Shell";
+        //private const string army_of_the_dead = "Army of the Dead";
+        private const string blood_charge = "Blood Charge";
+        private const string blood_plague = "Blood Plague";
+        private const string blood_tap = "Blood Tap";
+        private const string bone_shield = "Bone Shield";
+        private const string breath_of_sindragosa = "Breath of Sindragosa";
+        //private const string conversion = "Conversion";
+        //private const int crimson_scourge = 81141;
+        //private const string dancing_rune_weapon = "Dancing Rune Weapon";
+        private const string dark_transformation = "Dark Transformation";
+        private const string death_and_decay = "Death and Decay";
+        private const string death_coil = "Death Coil";
+        private const string death_grip = "Death Grip";
+        private const string defile = "Defile";
+        private const string empower_rune_weapon = "Empower Rune Weapon";
+        private const string festering_strike = "Festering Strike";
+        //private const int freezing_fog = 59052;
+        private const string frost_fever = "Frost Fever";
+        private const string horn_of_winter = "Horn of Winter";
+        //private const string icebound_fortitude = "Icebound Fortitude";
+        private const string icy_touch = "Icy Touch";
+        //private const int killing_machine = 51124;
+        //private const string lichborne = "Lichborne";
+        private const string necrotic_plague = "Necrotic Plague";
+        private const string outbreak = "Outbreak";
+        //private const string pillar_of_frost = "Pillar of Frost";
+        private const string plague_leech = "Plague Leech";
+        private const string plague_strike = "Plague Strike";
+        private const string raise_dead = "Raise Dead";
+        //private const string rune_tap = "Rune Tap";
+        //private const string runic_empowerment = "Runic Empowerment";
+        private const string scourge_strike = "Scourge Strike";
+        private const string shadow_infusion = "Shadow Infusion";
+        private const string soul_reaper = "Soul Reaper";
+        private const int sudden_doom = 81340;
+        private const string summon_gargoyle = "Summon Gargoyle";
+        private const string unholy_blight = "Unholy Blight";
+        //private const string vampiric_blood = "Vampiric Blood";
+
+        #endregion
+
         #region Properties
 
         private static int blood
@@ -123,15 +125,360 @@ namespace Singular.ClassSpecific
 
         #endregion
 
+        #region Types
+
+        private static class buff
+        {
+            #region Properties
+
+            public static uint blood_charge_stack
+            {
+                get { return Stack(blood_charge); }
+            }
+
+            //public static bool crimson_scourge_react
+            //{
+            //    get { return React(crimson_scourge); }
+            //}
+
+            public static bool dark_transformation_down
+            {
+                get { return PetDown(dark_transformation); }
+            }
+
+            //public static bool killing_machine_react
+            //{
+            //    get { return React(killing_machine); }
+            //}
+
+            //public static bool rime_react
+            //{
+            //    get { return React(freezing_fog); }
+            //}
+
+            public static uint shadow_infusion_stack
+            {
+                get { return Stack(shadow_infusion); }
+            }
+
+            public static bool sudden_doom_react
+            {
+                get { return React(sudden_doom); }
+            }
+
+            #endregion
+
+            #region Private Methods
+
+            private static bool PetDown(string aura)
+            {
+                return !PetUp(aura);
+            }
+
+            private static bool PetUp(string aura)
+            {
+                return StyxWoW.Me.GotAlivePet && StyxWoW.Me.Pet.ActiveAuras.ContainsKey(aura);
+            }
+
+            private static bool React(int aura)
+            {
+                return StyxWoW.Me.HasAura(aura);
+            }
+
+            private static uint Stack(string aura)
+            {
+                return StyxWoW.Me.GetAuraStacks(aura);
+            }
+
+            #endregion
+        }
+
+        private static class cooldown
+        {
+            //public static double antimagic_shell_remains
+            //{
+            //    get { return Remains(antimagic_shell); }
+            //}
+
+            #region Properties
+
+            public static double breath_of_sindragosa_remains
+            {
+                get { return Remains(breath_of_sindragosa); }
+            }
+
+            public static double defile_remains
+            {
+                get { return Remains(defile); }
+            }
+
+            public static double empower_rune_weapon_remains
+            {
+                get { return Remains(empower_rune_weapon); }
+            }
+
+            public static double outbreak_remains
+            {
+                get { return Remains(outbreak); }
+            }
+
+            //public static double pillar_of_frost_remains
+            //{
+            //    get { return Remains(pillar_of_frost); }
+            //}
+
+            public static double soul_reaper_remains
+            {
+                get { return Remains(soul_reaper); }
+            }
+
+            public static double unholy_blight_remains
+            {
+                get { return Remains(unholy_blight); }
+            }
+
+            #endregion
+
+            #region Private Methods
+
+            private static double Remains(string spell)
+            {
+                return Spell.GetSpellCooldown(spell).TotalSeconds;
+            }
+
+            #endregion
+        }
+
+        private static class disease
+        {
+            #region Fields
+
+            private static readonly string[] listBase = {blood_plague, frost_fever};
+            private static readonly string[] listWithNecroticPlague = {necrotic_plague};
+
+            #endregion
+
+            #region Properties
+
+            private static string[] diseaseArray
+            {
+                get { return talent.necrotic_plague_enabled ? listWithNecroticPlague : listBase; }
+            }
+
+            //public static double max_remains
+            //{
+            //    get { return max_remains_on(StyxWoW.Me.CurrentTarget); }
+            //}
+
+            //public static bool max_ticking
+            //{
+            //    get { return max_ticking_on(StyxWoW.Me.CurrentTarget); }
+            //}
+
+            public static double min_remains
+            {
+                get { return min_remains_on(StyxWoW.Me.CurrentTarget); }
+            }
+
+            public static bool min_ticking
+            {
+                get { return ticking; }
+            }
+
+            private static bool ticking
+            {
+                get { return ticking_on(StyxWoW.Me.CurrentTarget); }
+            }
+
+            #endregion
+
+            #region Public Methods
+
+            public static bool ticking_on(WoWUnit unit)
+            {
+                if (unit == null) return false;
+
+                return unit.HasAllMyAuras(diseaseArray);
+            }
+
+            #endregion
+
+            //private static double max_remains_on(WoWUnit unit)
+            //{
+            //    if (unit == null) return 0;
+
+            //    var max = double.MinValue;
+
+            //    // ReSharper disable once LoopCanBeConvertedToQuery
+            //    foreach (var s in diseaseArray)
+            //    {
+            //        var rmn = unit.GetAuraTimeLeft(s).TotalSeconds;
+            //        if (rmn > max)
+            //            max = rmn;
+            //    }
+
+            //    if (max <= double.MinValue)
+            //        max = 0;
+
+            //    return max;
+            //}
+
+            //private static bool max_ticking_on(WoWUnit unit)
+            //{
+            //    if(unit == null) return false;
+
+            //    return unit.HasAnyOfMyAuras(diseaseArray);
+            //}
+
+            #region Private Methods
+
+            private static double min_remains_on(WoWUnit unit)
+            {
+                if (unit == null) return 0;
+
+                var min = double.MaxValue;
+
+                // ReSharper disable once LoopCanBeConvertedToQuery
+                foreach (var s in diseaseArray)
+                {
+                    var rmn = unit.GetAuraTimeLeft(s).TotalSeconds;
+                    if (rmn < min)
+                        min = rmn;
+                }
+
+                if (min >= double.MaxValue)
+                    min = 0;
+
+                return min;
+            }
+
+            #endregion
+        }
+
+        private static class dot
+        {
+            #region Properties
+
+            private static double blood_plague_remains
+            {
+                get { return Remains(blood_plague); }
+            }
+
+            public static bool blood_plague_ticking
+            {
+                get { return blood_plague_remains > 0; }
+            }
+
+            private static double breath_of_sindragosa_remains
+            {
+                get { return Remains(breath_of_sindragosa); }
+            }
+
+            public static bool breath_of_sindragosa_ticking
+            {
+                get { return breath_of_sindragosa_remains > 0; }
+            }
+
+            private static double frost_fever_remains
+            {
+                get { return Remains(frost_fever); }
+            }
+
+            public static bool frost_fever_ticking
+            {
+                get { return frost_fever_remains > 0; }
+            }
+
+            public static double necrotic_plague_remains
+            {
+                get { return Remains(necrotic_plague); }
+            }
+
+            public static bool necrotic_plague_ticking
+            {
+                get { return necrotic_plague_remains > 0; }
+            }
+
+            #endregion
+
+            #region Private Methods
+
+            private static double Remains(string aura)
+            {
+                return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(aura).TotalSeconds;
+            }
+
+            #endregion
+        }
+
+        private static class talent
+        {
+            //public static bool blood_tap_enabled
+            //{
+            //    get { return HasTalent(DeathKnightTalentsEnum.BloodTap); }
+            //}
+
+            #region Properties
+
+            public static bool breath_of_sindragosa_enabled
+            {
+                get { return HasTalent(DeathKnightTalentsEnum.BreathOfSindragosa); }
+            }
+
+            //public static bool defile_enabled
+            //{
+            //    get { return HasTalent(DeathKnightTalentsEnum.Defile); }
+            //}
+
+            public static bool necrotic_plague_enabled
+            {
+                get { return HasTalent(DeathKnightTalentsEnum.NecroticPlague); }
+            }
+
+            //public static bool runic_empowerment_enabled
+            //{
+            //    get { return HasTalent(DeathKnightTalentsEnum.RunicEmpowerment); }
+            //}
+
+            public static bool unholy_blight_enabled
+            {
+                get { return HasTalent(DeathKnightTalentsEnum.UnholyBlight); }
+            }
+
+            #endregion
+
+            #region Private Methods
+
+            private static bool HasTalent(DeathKnightTalentsEnum tal)
+            {
+                return TalentManager.IsSelected((int) tal);
+            }
+
+            #endregion
+        }
+
+        #endregion
+
         #region Public Methods
+
+        [Behavior(BehaviorType.PreCombatBuffs | BehaviorType.PullBuffs, WoWClass.DeathKnight)]
+        public static Composite Buffs()
+        {
+            return new PrioritySelector(
+                Spell.BuffSelf(bone_shield, req => Me.Specialization == WoWSpec.DeathKnightBlood),
+                Spell.BuffSelf(horn_of_winter, req => !Me.HasPartyBuff(PartyBuffType.AttackPower))
+                );
+        }
 
         [Behavior(BehaviorType.Combat | BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy)]
         public static Composite UnholyActionList()
         {
             return new PrioritySelector(
                 Spell.Buff(raise_dead, re => !StyxWoW.Me.GotAlivePet),
+
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
                 Spell.WaitForCastOrChannel(),
+
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
@@ -164,6 +511,34 @@ namespace Singular.ClassSpecific
                         new ActionAlwaysFail()
                         )
                     )
+                );
+        }
+
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec) int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
+        public static Composite CreateDeathKnightNormalAndPvPPull()
+        {
+            return new PrioritySelector(
+                Helpers.Common.EnsureReadyToAttackFromMelee(),
+                Spell.WaitForCastOrChannel(),
+
+                new Decorator(
+                    req => !Spell.IsGlobalCooldown(),
+                    new PrioritySelector(
+                        Helpers.Common.CreateInterruptBehavior(),
+                        Movement.WaitForFacing(),
+                        Movement.WaitForLineOfSpellSight(),
+
+                        Spell.Cast(death_grip,
+                            req =>
+                                !MovementManager.IsMovementDisabled && !Me.CurrentTarget.IsBoss() && Me.CurrentTarget.DistanceSqr > 10*10 &&
+                                (Me.CurrentTarget.IsPlayer || Me.CurrentTarget.TaggedByMe ||
+                                 (!Me.CurrentTarget.TaggedByOther && CompositeBuilder.CurrentBehaviorType == BehaviorType.Pull && SingularRoutine.CurrentWoWContext != WoWContext.Instances))),
+                        new DecoratorContinue(req => Me.IsMoving, new Action(req => StopMoving.Now())),
+                        new WaitContinue(1, until => !Me.GotTarget() || Me.CurrentTarget.IsWithinMeleeRange, new ActionAlwaysSucceed())
+                        )
+                    ),
+
+                Movement.CreateMoveToMeleeBehavior(true)
                 );
         }
 
@@ -379,340 +754,6 @@ namespace Singular.ClassSpecific
                 Spell.Cast(plague_strike, req => !disease.min_ticking),
                 new ActionAlwaysFail()
                 );
-        }
-
-        #endregion
-
-        #region Types
-
-        private static class buff
-        {
-            #region Properties
-
-            public static uint blood_charge_stack
-            {
-                get { return Stack(blood_charge); }
-            }
-
-            //public static bool crimson_scourge_react
-            //{
-            //    get { return React(crimson_scourge); }
-            //}
-
-            public static bool dark_transformation_down
-            {
-                get { return PetDown(dark_transformation); }
-            }
-
-            //public static bool killing_machine_react
-            //{
-            //    get { return React(killing_machine); }
-            //}
-
-            //public static bool rime_react
-            //{
-            //    get { return React(freezing_fog); }
-            //}
-
-            public static uint shadow_infusion_stack
-            {
-                get { return Stack(shadow_infusion); }
-            }
-
-            public static bool sudden_doom_react
-            {
-                get { return React(sudden_doom); }
-            }
-
-            #endregion
-
-            #region Private Methods
-
-            private static bool PetDown(string aura)
-            {
-                return !PetUp(aura);
-            }
-
-            private static bool PetUp(string aura)
-            {
-                return StyxWoW.Me.GotAlivePet && StyxWoW.Me.Pet.ActiveAuras.ContainsKey(aura);
-            }
-
-            private static bool React(int aura)
-            {
-                return StyxWoW.Me.HasAura(aura);
-            }
-
-            private static uint Stack(string aura)
-            {
-                return StyxWoW.Me.GetAuraStacks(aura);
-            }
-
-            #endregion
-        }
-
-        private static class cooldown
-        {
-            //public static double antimagic_shell_remains
-            //{
-            //    get { return Remains(antimagic_shell); }
-            //}
-
-            #region Properties
-
-            public static double breath_of_sindragosa_remains
-            {
-                get { return Remains(breath_of_sindragosa); }
-            }
-
-            public static double defile_remains
-            {
-                get { return Remains(defile); }
-            }
-
-            public static double empower_rune_weapon_remains
-            {
-                get { return Remains(empower_rune_weapon); }
-            }
-
-            public static double outbreak_remains
-            {
-                get { return Remains(outbreak); }
-            }
-
-            //public static double pillar_of_frost_remains
-            //{
-            //    get { return Remains(pillar_of_frost); }
-            //}
-
-            public static double soul_reaper_remains
-            {
-                get { return Remains(soul_reaper); }
-            }
-
-            public static double unholy_blight_remains
-            {
-                get { return Remains(unholy_blight); }
-            }
-
-            #endregion
-
-            #region Private Methods
-
-            private static double Remains(string spell)
-            {
-                return Spell.GetSpellCooldown(spell).TotalSeconds;
-            }
-
-            #endregion
-        }
-
-        private static class disease
-        {
-            #region Fields
-
-            private static readonly string[] listBase = {blood_plague, frost_fever};
-            private static readonly string[] listWithNecroticPlague = {necrotic_plague};
-
-            #endregion
-
-            //public static double max_remains
-            //{
-            //    get { return max_remains_on(StyxWoW.Me.CurrentTarget); }
-            //}
-
-            //public static bool max_ticking
-            //{
-            //    get { return max_ticking_on(StyxWoW.Me.CurrentTarget); }
-            //}
-
-            #region Properties
-
-            public static double min_remains
-            {
-                get { return min_remains_on(StyxWoW.Me.CurrentTarget); }
-            }
-
-            public static bool min_ticking
-            {
-                get { return ticking; }
-            }
-
-            private static string[] diseaseArray
-            {
-                get { return talent.necrotic_plague_enabled ? listWithNecroticPlague : listBase; }
-            }
-
-            private static bool ticking
-            {
-                get { return ticking_on(StyxWoW.Me.CurrentTarget); }
-            }
-
-            #endregion
-
-            #region Public Methods
-
-            public static bool ticking_on(WoWUnit unit)
-            {
-                if (unit == null) return false;
-
-                return unit.HasAllMyAuras(diseaseArray);
-            }
-
-            #endregion
-
-            //private static double max_remains_on(WoWUnit unit)
-            //{
-            //    if (unit == null) return 0;
-
-            //    var max = double.MinValue;
-
-            //    // ReSharper disable once LoopCanBeConvertedToQuery
-            //    foreach (var s in diseaseArray)
-            //    {
-            //        var rmn = unit.GetAuraTimeLeft(s).TotalSeconds;
-            //        if (rmn > max)
-            //            max = rmn;
-            //    }
-
-            //    if (max <= double.MinValue)
-            //        max = 0;
-
-            //    return max;
-            //}
-
-            //private static bool max_ticking_on(WoWUnit unit)
-            //{
-            //    if(unit == null) return false;
-
-            //    return unit.HasAnyOfMyAuras(diseaseArray);
-            //}
-
-            #region Private Methods
-
-            private static double min_remains_on(WoWUnit unit)
-            {
-                if (unit == null) return 0;
-
-                var min = double.MaxValue;
-
-                // ReSharper disable once LoopCanBeConvertedToQuery
-                foreach (var s in diseaseArray)
-                {
-                    var rmn = unit.GetAuraTimeLeft(s).TotalSeconds;
-                    if (rmn < min)
-                        min = rmn;
-                }
-
-                if (min >= double.MaxValue)
-                    min = 0;
-
-                return min;
-            }
-
-            #endregion
-        }
-
-        private static class dot
-        {
-            #region Properties
-
-            public static bool blood_plague_ticking
-            {
-                get { return blood_plague_remains > 0; }
-            }
-
-            public static bool breath_of_sindragosa_ticking
-            {
-                get { return breath_of_sindragosa_remains > 0; }
-            }
-
-            public static bool frost_fever_ticking
-            {
-                get { return frost_fever_remains > 0; }
-            }
-
-            public static double necrotic_plague_remains
-            {
-                get { return Remains(necrotic_plague); }
-            }
-
-            public static bool necrotic_plague_ticking
-            {
-                get { return necrotic_plague_remains > 0; }
-            }
-
-            private static double blood_plague_remains
-            {
-                get { return Remains(blood_plague); }
-            }
-
-            private static double breath_of_sindragosa_remains
-            {
-                get { return Remains(breath_of_sindragosa); }
-            }
-
-            private static double frost_fever_remains
-            {
-                get { return Remains(frost_fever); }
-            }
-
-            #endregion
-
-            #region Private Methods
-
-            private static double Remains(string aura)
-            {
-                return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(aura).TotalSeconds;
-            }
-
-            #endregion
-        }
-
-        private static class talent
-        {
-            //public static bool blood_tap_enabled
-            //{
-            //    get { return HasTalent(DeathKnightTalentsEnum.BloodTap); }
-            //}
-
-            #region Properties
-
-            public static bool breath_of_sindragosa_enabled
-            {
-                get { return HasTalent(DeathKnightTalentsEnum.BreathOfSindragosa); }
-            }
-
-            //public static bool defile_enabled
-            //{
-            //    get { return HasTalent(DeathKnightTalentsEnum.Defile); }
-            //}
-
-            public static bool necrotic_plague_enabled
-            {
-                get { return HasTalent(DeathKnightTalentsEnum.NecroticPlague); }
-            }
-
-            //public static bool runic_empowerment_enabled
-            //{
-            //    get { return HasTalent(DeathKnightTalentsEnum.RunicEmpowerment); }
-            //}
-
-            public static bool unholy_blight_enabled
-            {
-                get { return HasTalent(DeathKnightTalentsEnum.UnholyBlight); }
-            }
-
-            #endregion
-
-            #region Private Methods
-
-            private static bool HasTalent(DeathKnightTalentsEnum tal)
-            {
-                return TalentManager.IsSelected((int) tal);
-            }
-
-            #endregion
         }
 
         #endregion
