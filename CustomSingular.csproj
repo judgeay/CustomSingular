@@ -57,6 +57,7 @@
   <ItemGroup>
     <Compile Include="ClassSpecific\Common.cs" />
     <Compile Include="ClassSpecific\DeathKnight.cs" />
+    <Compile Include="ClassSpecific\Mage.cs" />
     <Compile Include="Dynamics\Attributes.cs" />
     <Compile Include="Dynamics\CompositeBuilder.cs" />
     <Compile Include="Dynamics\NoContextAvailable.cs" />
