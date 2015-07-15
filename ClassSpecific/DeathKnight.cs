@@ -74,7 +74,7 @@ namespace Singular.ClassSpecific
         private const string death_and_decay = "Death and Decay";
         private const string death_coil = "Death Coil";
         private const string death_grip = "Death Grip";
-        private const string death_strike = "Death Grip";
+        private const string death_strike = "Death Strike";
         private const string defile = "Defile";
         private const string empower_rune_weapon = "Empower Rune Weapon";
         private const string festering_strike = "Festering Strike";
