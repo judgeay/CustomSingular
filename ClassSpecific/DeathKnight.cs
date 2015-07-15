@@ -20,7 +20,7 @@ namespace Singular.ClassSpecific
     {
         #region Enums
 
-        private enum DeathKnightTalentsEnum
+        public enum DeathKnightTalentsEnum
         {
             // ReSharper disable UnusedMember.Local
             Plaguebearer = 1,
@@ -64,6 +64,7 @@ namespace Singular.ClassSpecific
         private const string army_of_the_dead = "Army of the Dead";
         private const string blood_charge = "Blood Charge";
         private const string blood_plague = "Blood Plague";
+        private const string blood_shield = "Blood Shield";
         private const string blood_tap = "Blood Tap";
         private const string bone_shield = "Bone Shield";
         private const string breath_of_sindragosa = "Breath of Sindragosa";
@@ -74,6 +75,7 @@ namespace Singular.ClassSpecific
         private const string death_and_decay = "Death and Decay";
         private const string death_coil = "Death Coil";
         private const string death_grip = "Death Grip";
+        private const string death_pact = "Death Pact";
         private const string death_strike = "Death Strike";
         private const string defile = "Defile";
         private const string empower_rune_weapon = "Empower Rune Weapon";
@@ -104,18 +106,21 @@ namespace Singular.ClassSpecific
 
         private static readonly Dictionary<object, Func<Func<bool>, Composite>> Actions = new Dictionary<object, Func<Func<bool>, Composite>>
         {
+            {antimagic_shell, cond => Spell.BuffSelf(antimagic_shell, req => cond())},
             {blood_boil, cond => Spell.Cast(blood_boil, req => Spell.UseAOE && cond())},
-            {blood_tap, cond => Spell.BuffSelf(blood_tap, req => talent.blood_tap.enabled && cond())},
+            {blood_tap, cond => Spell.Cast(blood_tap, req => talent.blood_tap.enabled && cond())},
             {bone_shield, cond => Spell.BuffSelf(bone_shield, req => cond())},
             {breath_of_sindragosa, cond => Spell.Buff(breath_of_sindragosa, req => talent.breath_of_sindragosa.enabled && Me.HasAura(breath_of_sindragosa) == false && Spell.UseAOE && cond())},
+            {conversion, cond => Spell.BuffSelf(conversion, req => cond())},
             {dancing_rune_weapon, cond => Spell.BuffSelf(dancing_rune_weapon, req => cond())},
             {dark_transformation, cond => Spell.Cast(dark_transformation, on => Me.Pet, req => cond())},
             {death_and_decay, cond => Spell.CastOnGround(death_and_decay, on => Me.CurrentTarget, req => Spell.UseAOE && cond())},
             {death_coil, cond => Spell.Cast(death_coil, req => cond())},
             {death_grip, cond => Spell.Cast(death_grip, req => cond())},
+            {death_pact, cond => Spell.BuffSelf(death_pact, req => cond())},
             {death_strike, cond => Spell.Cast(death_strike, req => cond())},
             {defile, cond => Spell.CastOnGround(defile, on => Me.CurrentTarget, req => talent.defile.enabled && Spell.UseAOE && cond())},
-            {empower_rune_weapon, cond => Spell.BuffSelf(empower_rune_weapon, req => cond())},
+            {empower_rune_weapon, cond => Spell.Cast(empower_rune_weapon, req => cond())},
             {festering_strike, cond => Spell.Cast(festering_strike, req => cond())},
             {horn_of_winter, cond => Spell.BuffSelf(horn_of_winter, req => cond())},
             {icebound_fortitude, cond => Spell.BuffSelf(icebound_fortitude, req => cond())},
@@ -123,7 +128,7 @@ namespace Singular.ClassSpecific
             {lichborne, cond => Spell.BuffSelf(lichborne, req => talent.lichborne.enabled && cond())},
             {outbreak, cond => Spell.Cast(outbreak, req => cond())},
             {pillar_of_frost, cond => Spell.BuffSelf(pillar_of_frost, req => cond())},
-            {plague_leech, cond => Spell.BuffSelf(plague_leech, req => talent.plague_leech.enabled && disease.ticking && cond())},
+            {plague_leech, cond => Spell.Cast(plague_leech, req => talent.plague_leech.enabled && disease.ticking && cond())},
             {plague_strike, cond => Spell.Cast(plague_strike, req => cond())},
             {raise_dead, cond => Spell.Cast(raise_dead, req => StyxWoW.Me.GotAlivePet == false && SingularSettings.Instance.DisablePetUsage == false && cond())},
             {rune_tap, cond => Spell.BuffSelf(rune_tap, req => cond())},
@@ -224,56 +229,65 @@ namespace Singular.ClassSpecific
                         Helpers.Common.CreateInterruptBehavior(),
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
-                // actions=auto_attack
-                // actions+=/potion,name=draenic_armor,if=buff.potion.down&buff.blood_shield.down&!unholy&!frost
-                // # if=time>10
-                // actions+=/blood_fury
-                // # if=time>10
-                // actions+=/berserking
-                // # if=time>10
-                // actions+=/arcane_torrent
-                // actions+=/antimagic_shell
-                // actions+=/conversion,if=!buff.conversion.up&runic_power>50&health.pct<90
-                // actions+=/lichborne,if=health.pct<90
-                // actions+=/death_strike,if=incoming_damage_5s>=health.max*0.65
-                // actions+=/army_of_the_dead,if=buff.bone_shield.down&buff.dancing_rune_weapon.down&buff.icebound_fortitude.down&buff.vampiric_blood.down
-                // actions+=/bone_shield,if=buff.army_of_the_dead.down&buff.bone_shield.down&buff.dancing_rune_weapon.down&buff.icebound_fortitude.down&buff.vampiric_blood.down
+                        // actions=auto_attack
+                        // actions+=/potion,name=draenic_armor,if=buff.potion.down&buff.blood_shield.down&!unholy&!frost
+                        // # if=time>10
+                        // actions+=/blood_fury
+                        // # if=time>10
+                        // actions+=/berserking
+                        // # if=time>10
+                        // actions+=/arcane_torrent
+                        // actions+=/antimagic_shell
+                        Actions[antimagic_shell](() => true),
+                        // actions+=/conversion,if=!buff.conversion.up&runic_power>50&health.pct<90
+                        Actions[conversion](() => !buff.conversion.up && runic_power > 50 && health.pct < 90),
+                        // actions+=/lichborne,if=health.pct<90
+                        Actions[lichborne](() => health.pct<90),
+                        // actions+=/death_strike,if=incoming_damage_5s>=health.max*0.65
+                        Actions[death_strike](() => buff.blood_shield.remains < 2),
+                        // actions+=/army_of_the_dead,if=buff.bone_shield.down&buff.dancing_rune_weapon.down&buff.icebound_fortitude.down&buff.vampiric_blood.down
+                        //Actions[army_of_the_dead](() => buff.bone_shield.down && buff.dancing_rune_weapon.down && buff.icebound_fortitude.down && buff.vampiric_blood.down),
+                        // actions+=/bone_shield,if=buff.army_of_the_dead.down&buff.bone_shield.down&buff.dancing_rune_weapon.down&buff.icebound_fortitude.down&buff.vampiric_blood.down
                         Actions[bone_shield](() => buff.army_of_the_dead.down && buff.bone_shield.down && buff.dancing_rune_weapon.down && buff.icebound_fortitude.down && buff.vampiric_blood.down),
-                // actions+=/vampiric_blood,if=health.pct<50
-                // actions+=/icebound_fortitude,if=health.pct<30&buff.army_of_the_dead.down&buff.dancing_rune_weapon.down&buff.bone_shield.down&buff.vampiric_blood.down
-                // actions+=/rune_tap,if=health.pct<50&buff.army_of_the_dead.down&buff.dancing_rune_weapon.down&buff.bone_shield.down&buff.vampiric_blood.down&buff.icebound_fortitude.down
-                // actions+=/dancing_rune_weapon,if=health.pct<80&buff.army_of_the_dead.down&buff.icebound_fortitude.down&buff.bone_shield.down&buff.vampiric_blood.down
+                        // actions+=/vampiric_blood,if=health.pct<50
+                        Actions[vampiric_blood](() => health.pct < 50),
+                        // actions+=/icebound_fortitude,if=health.pct<30&buff.army_of_the_dead.down&buff.dancing_rune_weapon.down&buff.bone_shield.down&buff.vampiric_blood.down
+                        Actions[icebound_fortitude](() => health.pct < 30 && buff.army_of_the_dead.down && buff.dancing_rune_weapon.down && buff.bone_shield.down && buff.vampiric_blood.down),
+                        // actions+=/rune_tap,if=health.pct<50&buff.army_of_the_dead.down&buff.dancing_rune_weapon.down&buff.bone_shield.down&buff.vampiric_blood.down&buff.icebound_fortitude.down
+                        Actions[rune_tap](() => health.pct < 50 && buff.army_of_the_dead.down && buff.dancing_rune_weapon.down && buff.bone_shield.down && buff.vampiric_blood.down && buff.icebound_fortitude.down),
+                        // actions+=/dancing_rune_weapon,if=health.pct<80&buff.army_of_the_dead.down&buff.icebound_fortitude.down&buff.bone_shield.down&buff.vampiric_blood.down
                         Actions[dancing_rune_weapon](() => health.pct < 80 && buff.army_of_the_dead.down && buff.icebound_fortitude.down && buff.bone_shield.down && buff.vampiric_blood.down),
-                // actions+=/death_pact,if=health.pct<50
-                // actions+=/outbreak,if=(!talent.necrotic_plague.enabled&disease.min_remains<8)|!disease.ticking
+                        // actions+=/death_pact,if=health.pct<50
+                        Actions[death_pact](() => health.pct < 50),
+                        // actions+=/outbreak,if=(!talent.necrotic_plague.enabled&disease.min_remains<8)|!disease.ticking
                         Actions[outbreak](() => (!talent.necrotic_plague.enabled && disease.min_remains < 8) || !disease.ticking),
-                // actions+=/death_coil,if=runic_power>90
+                        // actions+=/death_coil,if=runic_power>90
                         Actions[death_coil](() => runic_power > 90),
-                // actions+=/plague_strike,if=(!talent.necrotic_plague.enabled&!dot.blood_plague.ticking)|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
+                        // actions+=/plague_strike,if=(!talent.necrotic_plague.enabled&!dot.blood_plague.ticking)|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
                         Actions[plague_strike](() => (!talent.necrotic_plague.enabled && !dot.blood_plague.ticking) || (talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking)),
-                // actions+=/icy_touch,if=(!talent.necrotic_plague.enabled&!dot.frost_fever.ticking)|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
+                        // actions+=/icy_touch,if=(!talent.necrotic_plague.enabled&!dot.frost_fever.ticking)|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
                         Actions[icy_touch](() => (!talent.necrotic_plague.enabled && !dot.frost_fever.ticking) || (talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking)),
-                // actions+=/defile
+                        // actions+=/defile
                         Actions[defile](() => true),
-                // actions+=/plague_leech,if=((!blood&!unholy)|(!blood&!frost)|(!unholy&!frost))&cooldown.outbreak.remains<=gcd
+                        // actions+=/plague_leech,if=((!blood&!unholy)|(!blood&!frost)|(!unholy&!frost))&cooldown.outbreak.remains<=gcd
                         Actions[plague_leech](() => ((blood == 0 && unholy == 0) || (blood == 0 && frost == 0) || (unholy == 0 && frost == 0)) && cooldown.outbreak.remains <= gcd),
-                // actions+=/call_action_list,name=bt,if=talent.blood_tap.enabled
+                        // actions+=/call_action_list,name=bt,if=talent.blood_tap.enabled
                         new Decorator(req => talent.blood_tap.enabled, BloodBt()),
-                // actions+=/call_action_list,name=re,if=talent.runic_empowerment.enabled
+                        // actions+=/call_action_list,name=re,if=talent.runic_empowerment.enabled
                         new Decorator(req => talent.runic_empowerment.enabled, BloodRe()),
-                // actions+=/call_action_list,name=rc,if=talent.runic_corruption.enabled
+                        // actions+=/call_action_list,name=rc,if=talent.runic_corruption.enabled
                         new Decorator(req => talent.runic_corruption.enabled, BloodRc()),
-                // actions+=/call_action_list,name=nrt,if=!talent.blood_tap.enabled&!talent.runic_empowerment.enabled&!talent.runic_corruption.enabled
+                        // actions+=/call_action_list,name=nrt,if=!talent.blood_tap.enabled&!talent.runic_empowerment.enabled&!talent.runic_corruption.enabled
                         new Decorator(req => !talent.blood_tap.enabled && !talent.runic_empowerment.enabled && !talent.runic_corruption.enabled, BloodNrt()),
-                // actions+=/defile,if=buff.crimson_scourge.react
+                        // actions+=/defile,if=buff.crimson_scourge.react
                         Actions[defile](() => buff.crimson_scourge.react),
-                // actions+=/death_and_decay,if=buff.crimson_scourge.react
+                        // actions+=/death_and_decay,if=buff.crimson_scourge.react
                         Actions[death_and_decay](() => buff.crimson_scourge.react),
-                // actions+=/blood_boil,if=buff.crimson_scourge.react
+                        // actions+=/blood_boil,if=buff.crimson_scourge.react
                         Actions[blood_boil](() => buff.crimson_scourge.react),
-                // actions+=/death_coil
+                        // actions+=/death_coil
                         Actions[death_coil](() => true),
-                // actions+=/empower_rune_weapon,if=!blood&!unholy&!frost
+                        // actions+=/empower_rune_weapon,if=!blood&!unholy&!frost
                         Actions[empower_rune_weapon](() => blood == 0 && unholy == 0 && frost == 0),
 
                         new ActionAlwaysFail()
@@ -339,14 +353,14 @@ namespace Singular.ClassSpecific
                         Helpers.Common.CreateInterruptBehavior(),
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
-                // actions=auto_attack
-                // actions+=/deaths_advance,if=movement.remains>2
-                // actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
-                // actions+=/blood_fury,if=!talent.breath_of_sindragosa.enabled
-                // actions+=/berserking,if=!talent.breath_of_sindragosa.enabled
-                // actions+=/arcane_torrent,if=!talent.breath_of_sindragosa.enabled
-                // actions+=/potion,name=draenic_strength,if=(buff.dark_transformation.up&target.time_to_die<=60)&!talent.breath_of_sindragosa.enabled
-                // actions+=/run_action_list,name=unholy
+                        // actions=auto_attack
+                        // actions+=/deaths_advance,if=movement.remains>2
+                        // actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
+                        // actions+=/blood_fury,if=!talent.breath_of_sindragosa.enabled
+                        // actions+=/berserking,if=!talent.breath_of_sindragosa.enabled
+                        // actions+=/arcane_torrent,if=!talent.breath_of_sindragosa.enabled
+                        // actions+=/potion,name=draenic_strength,if=(buff.dark_transformation.up&target.time_to_die<=60)&!talent.breath_of_sindragosa.enabled
+                        // actions+=/run_action_list,name=unholy
                         new Decorator(UnholyUnholy()),
                         new ActionAlwaysFail()
                         )
@@ -692,13 +706,15 @@ namespace Singular.ClassSpecific
 
             public static readonly buff blood_charge = new buff(DeathKnight.blood_charge);
 
+            public static readonly buff blood_shield = new buff(DeathKnight.blood_shield);
+
             public static readonly buff bone_shield = new buff(DeathKnight.bone_shield);
+
+            public static readonly buff conversion = new buff(DeathKnight.conversion);
 
             public static readonly buff crimson_scourge = new buff(DeathKnight.crimson_scourge);
 
             public static readonly buff dancing_rune_weapon = new buff(DeathKnight.dancing_rune_weapon);
-
-            public static readonly buff dark_transformation = new buff(DeathKnight.dark_transformation);
 
             public static readonly buff icebound_fortitude = new buff(DeathKnight.icebound_fortitude);
 

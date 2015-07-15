@@ -7,11 +7,6 @@ namespace Singular.ClassSpecific.Common
     {
         #region Constructors
 
-        public DotBase(int spellId)
-            : base(spellId)
-        {
-        }
-
         public DotBase(string spell)
             : base(spell)
         {
@@ -41,7 +36,7 @@ namespace Singular.ClassSpecific.Common
 
         private double Remains()
         {
-            return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(Spell.Id).TotalSeconds;
+            return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(SpellName).TotalSeconds;
         }
 
         private bool Ticking()

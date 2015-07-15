@@ -7,11 +7,6 @@ namespace Singular.ClassSpecific.Common
     {
         #region Constructors
 
-        protected DebuffBase(int spellId)
-            : base(spellId)
-        {
-        }
-
         protected DebuffBase(string spell)
             : base(spell)
         {
@@ -36,7 +31,7 @@ namespace Singular.ClassSpecific.Common
 
         private decimal Stack()
         {
-            return StyxWoW.Me.CurrentTarget.GetAuraStacks(Spell.Id);
+            return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName);
         }
 
         #endregion

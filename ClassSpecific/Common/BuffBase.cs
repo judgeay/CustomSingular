@@ -33,9 +33,19 @@ namespace Singular.ClassSpecific.Common
             get { return React(); }
         }
 
+        public double remains
+        {
+            get { return Remains(); }
+        }
+
         public uint stack
         {
             get { return Stack(); }
+        }
+
+        public bool up
+        {
+            get { return Up(); }
         }
 
         #endregion
@@ -46,7 +56,7 @@ namespace Singular.ClassSpecific.Common
 
         private bool Down()
         {
-            return StyxWoW.Me.HasAura(Spell.Id) == false;
+            return StyxWoW.Me.HasAura(SpellName) == false;
         }
 
         private bool PetDown()
@@ -56,17 +66,27 @@ namespace Singular.ClassSpecific.Common
 
         private bool PetUp()
         {
-            return StyxWoW.Me.GotAlivePet && StyxWoW.Me.Pet.ActiveAuras.ContainsKey(Spell.Name);
+            return StyxWoW.Me.GotAlivePet && StyxWoW.Me.Pet.ActiveAuras.ContainsKey(SpellName);
         }
 
         private bool React()
         {
-            return StyxWoW.Me.HasAura(Spell.Id);
+            return StyxWoW.Me.HasAura(SpellId);
+        }
+
+        private double Remains()
+        {
+            return StyxWoW.Me.GetAuraTimeLeft(SpellName).TotalSeconds;
         }
 
         private uint Stack()
         {
-            return StyxWoW.Me.GetAuraStacks(Spell.Id);
+            return StyxWoW.Me.GetAuraStacks(SpellName);
+        }
+
+        private bool Up()
+        {
+            return StyxWoW.Me.HasAura(SpellName) == true;
         }
 
         #endregion

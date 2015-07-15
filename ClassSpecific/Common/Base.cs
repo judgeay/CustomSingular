@@ -7,7 +7,8 @@ namespace Singular.ClassSpecific.Common
     {
         #region Fields
 
-        protected readonly WoWSpell Spell;
+        protected readonly int SpellId = -1;
+        protected readonly string SpellName = null;
 
         #endregion
 
@@ -15,18 +16,12 @@ namespace Singular.ClassSpecific.Common
 
         protected Base(int spellId)
         {
-            SpellFindResults sfr;
-            SpellManager.FindSpell(spellId, out sfr);
-
-            Spell = sfr.Override ?? sfr.Original;
+            SpellId = spellId;
         }
 
-        protected Base(string spell)
+        protected Base(string spellName)
         {
-            SpellFindResults sfr;
-            SpellManager.FindSpell(spell, out sfr);
-
-            Spell = sfr.Override ?? sfr.Original;
+            SpellName = spellName;
         }
 
         #endregion

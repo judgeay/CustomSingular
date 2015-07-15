@@ -1,13 +1,10 @@
+using Singular.Helpers;
+
 namespace Singular.ClassSpecific.Common
 {
     internal abstract class CooldownBase : Base
     {
         #region Constructors
-
-        protected CooldownBase(int spellId)
-            : base(spellId)
-        {
-        }
 
         protected CooldownBase(string spell)
             : base(spell)
@@ -33,7 +30,7 @@ namespace Singular.ClassSpecific.Common
 
         private double Remains()
         {
-            return Spell.CooldownTimeLeft.TotalSeconds;
+            return Spell.GetSpellCooldown(SpellName).TotalSeconds;
         }
 
         #endregion
