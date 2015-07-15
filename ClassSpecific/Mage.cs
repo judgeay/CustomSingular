@@ -10,7 +10,7 @@ namespace Singular.ClassSpecific
 {
     // ReSharper disable InconsistentNaming
     // ReSharper disable ClassNeverInstantiated.Global
-    public class Mage : Common
+    public class Mage : Common.Common
     {
         #region Enums
 
@@ -130,7 +130,7 @@ namespace Singular.ClassSpecific
                         //actions+=/call_action_list,name=crystal_sequence,if=talent.prismatic_crystal.enabled&pet.prismatic_crystal.active
                         //new ActionList(arcane_crystal_sequence, req => talent.prismatic_crystal_enabled && pet.prismatic_crystal_active),
                         //actions+=/call_action_list,name=burn,if=time_to_die<mana.pct*0.35*spell_haste|cooldown.evocation.remains<=(mana.pct-30)*0.3*spell_haste|(buff.arcane_power.up&cooldown.evocation.remains<=(mana.pct-30)*0.4*spell_haste)
-                        new Decorator(req => cooldown.evocation_remains <= (mana_pct - 30)*0.3*spell_haste || (buff.arcane_power_up && cooldown.evocation_remains <= (mana_pct - 30)*0.4*spell_haste), arcane_burn()),
+                        new Decorator(req => cooldown.evocation_remains <= (mana.pct - 30)*0.3*spell_haste || (buff.arcane_power_up && cooldown.evocation_remains <= (mana.pct - 30)*0.4*spell_haste), arcane_burn()),
                         //actions+=/call_action_list,name=conserve
                         new Decorator(arcane_conserve()),
                         new ActionAlwaysFail()
@@ -165,7 +165,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/arcane_explosion,if=prev_gcd.evocation
                 Spell.Cast(arcane_explosion, req => UseArcaneExplosion && prev_gcd == evocation),
                 //actions.aoe+=/evocation,interrupt_if=mana.pct>96,if=mana.pct<85-2.5*buff.arcane_charge.stack
-                Spell.Cast(evocation, req => mana_pct < 85 - 2.5*buff.arcane_charge_stack),
+                Spell.Cast(evocation, req => mana.pct < 85 - 2.5*buff.arcane_charge_stack),
                 //actions.aoe+=/arcane_missiles,if=set_bonus.tier17_4pc&active_enemies<10&buff.arcane_charge.stack=4&buff.arcane_instability.react
                 Spell.Cast(arcane_missiles, req => active_enemies < 10 && buff.arcane_charge_stack == 4 && buff.arcane_instability_react),
                 //actions.aoe+=/nether_tempest,cycle_targets=1,if=talent.arcane_orb.enabled&buff.arcane_charge.stack=4&ticking&remains<cooldown.arcane_orb.remains
@@ -198,17 +198,17 @@ namespace Singular.ClassSpecific
                 //actions.burn+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd|prev_gcd.arcane_orb)
                 Spell.Cast(arcane_barrage, req => talent.arcane_orb_enabled && active_enemies >= 3 && buff.arcane_charge_stack == 4 && (cooldown.arcane_orb_remains < gcd || prev_gcd == arcane_orb)),
                 //actions.burn+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
-                Spell.BuffSelf(presence_of_mind, req => mana_pct > 96 && (!talent.prismatic_crystal_enabled || !cooldown.prismatic_crystal_up)),
+                Spell.BuffSelf(presence_of_mind, req => mana.pct > 96 && (!talent.prismatic_crystal_enabled || !cooldown.prismatic_crystal_up)),
                 //actions.burn+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
-                Spell.Cast(arcane_blast, req => buff.arcane_charge_stack == 4 && mana_pct > 93),
+                Spell.Cast(arcane_blast, req => buff.arcane_charge_stack == 4 && mana.pct > 93),
                 //actions.burn+=/arcane_missiles,if=buff.arcane_charge.stack=4&(mana.pct>70|!cooldown.evocation.up)
-                Spell.Cast(arcane_missiles, req => buff.arcane_charge_stack == 4 && (mana_pct > 70 || !cooldown.evocation_up)),
+                Spell.Cast(arcane_missiles, req => buff.arcane_charge_stack == 4 && (mana.pct > 70 || !cooldown.evocation_up)),
                 //actions.burn+=/supernova,if=mana.pct>70&mana.pct<96
-                Spell.BuffSelf(supernova, req => UseSupernova && mana_pct > 70 && mana_pct < 96),
+                Spell.BuffSelf(supernova, req => UseSupernova && mana.pct > 70 && mana.pct < 96),
                 //actions.burn+=/call_action_list,name=conserve,if=prev_gcd.evocation
                 new Decorator(req => prev_gcd == evocation, arcane_conserve()),
                 //actions.burn+=/evocation,interrupt_if=mana.pct>92,if=time_to_die>10&mana.pct<30+2.5*active_enemies*(9-active_enemies)
-                Spell.Cast(evocation, req => /*target.time_to_die > 10 &&*/ mana_pct < 30 + 2.5*active_enemies*(9 - active_enemies)),
+                Spell.Cast(evocation, req => /*target.time_to_die > 10 &&*/ mana.pct < 30 + 2.5*active_enemies*(9 - active_enemies)),
                 //actions.burn+=/presence_of_mind,if=!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up
                 Spell.BuffSelf(presence_of_mind, req => !talent.prismatic_crystal_enabled || !cooldown.prismatic_crystal_up),
                 //actions.burn+=/arcane_blast
@@ -234,9 +234,9 @@ namespace Singular.ClassSpecific
                 //actions.conserve+=/arcane_orb,if=buff.arcane_charge.stack<2
                 Spell.Cast(arcane_orb, req => buff.arcane_charge_stack < 2),
                 //actions.conserve+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
-                Spell.BuffSelf(presence_of_mind, req => mana_pct > 96 && (!talent.prismatic_crystal_enabled || !cooldown.prismatic_crystal_up)),
+                Spell.BuffSelf(presence_of_mind, req => mana.pct > 96 && (!talent.prismatic_crystal_enabled || !cooldown.prismatic_crystal_up)),
                 //actions.conserve+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
-                Spell.Cast(arcane_blast, req => buff.arcane_charge_stack == 4 && mana_pct > 93),
+                Spell.Cast(arcane_blast, req => buff.arcane_charge_stack == 4 && mana.pct > 93),
                 //actions.conserve+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd|prev_gcd.arcane_orb)
                 Spell.Cast(arcane_barrage, req => talent.arcane_orb_enabled && active_enemies >= 3 && buff.arcane_charge_stack == 4 && (cooldown.arcane_orb_remains < gcd || prev_gcd == arcane_orb)),
                 //actions.conserve+=/arcane_missiles,if=buff.arcane_charge.stack=4&(!talent.overpowered.enabled|cooldown.arcane_power.remains>10*spell_haste)
@@ -244,7 +244,7 @@ namespace Singular.ClassSpecific
                 //actions.conserve+=/supernova,if=mana.pct<96&(buff.arcane_missiles.stack<2|buff.arcane_charge.stack=4)&(buff.arcane_power.up|(charges=1&cooldown.arcane_power.remains>recharge_time))&(!talent.prismatic_crystal.enabled|current_target=prismatic_crystal|(charges=1&cooldown.prismatic_crystal.remains>recharge_time+8))
                 Spell.BuffSelf(supernova,
                     req =>
-                        UseSupernova && mana_pct < 96 && (buff.arcane_missiles_stack < 2 || buff.arcane_charge_stack == 4) && (buff.arcane_power_up || (action.supernova_charges == 1 && cooldown.arcane_power_remains > action.supernova_recharge_time)) &&
+                        UseSupernova && mana.pct < 96 && (buff.arcane_missiles_stack < 2 || buff.arcane_charge_stack == 4) && (buff.arcane_power_up || (action.supernova_charges == 1 && cooldown.arcane_power_remains > action.supernova_recharge_time)) &&
                         (!talent.prismatic_crystal_enabled || (action.supernova_charges == 1 && cooldown.prismatic_crystal_remains > action.supernova_recharge_time + 8))),
                 //actions.conserve+=/nether_tempest,cycle_targets=1,if=target!=prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<(10-3*talent.arcane_orb.enabled)*spell_haste))
                 Spell.Buff(nether_tempest, 1, on => Me.CurrentTarget,

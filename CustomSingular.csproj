@@ -55,9 +55,15 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClassSpecific\Common.cs" />
+    <Compile Include="ClassSpecific\Common\Base.cs" />
+    <Compile Include="ClassSpecific\Common\BuffBase.cs" />
+    <Compile Include="ClassSpecific\Common\Common.cs" />
+    <Compile Include="ClassSpecific\Common\CooldownBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight.cs" />
+    <Compile Include="ClassSpecific\Common\DebuffBase.cs" />
+    <Compile Include="ClassSpecific\Common\DotBase.cs" />
     <Compile Include="ClassSpecific\Mage.cs" />
+    <Compile Include="ClassSpecific\Common\TalentBase.cs" />
     <Compile Include="Dynamics\Attributes.cs" />
     <Compile Include="Dynamics\CompositeBuilder.cs" />
     <Compile Include="Dynamics\NoContextAvailable.cs" />

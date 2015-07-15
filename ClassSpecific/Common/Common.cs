@@ -6,7 +6,7 @@ using Styx;
 using Styx.CommonBot;
 using Styx.WoWInternals.WoWObjects;
 
-namespace Singular.ClassSpecific
+namespace Singular.ClassSpecific.Common
 {
     // ReSharper disable InconsistentNaming
     public abstract class Common
@@ -48,16 +48,6 @@ namespace Singular.ClassSpecific
             get { return SpellManager.GlobalCooldownLeft.TotalSeconds; }
         }
 
-        //protected static double health_pct
-        //{
-        //    get { return Me.HealthPercent; }
-        //}
-
-        protected static double mana_pct
-        {
-            get { return Me.ManaPercent; }
-        }
-
         protected static string prev_gcd
         {
             get { return Spell.PreviousGcdSpell; }
@@ -72,23 +62,50 @@ namespace Singular.ClassSpecific
 
         #region Types
 
+        protected static class health
+        {
+            #region Properties
+
+            public static double pct
+            {
+                get { return Me.HealthPercent; }
+            }
+
+            #endregion
+        }
+
+        protected static class mana
+        {
+            #region Properties
+
+            public static double pct
+            {
+                get { return Me.ManaPercent; }
+            }
+
+            #endregion
+        }
+
         protected static class target
         {
-            // ReSharper disable once MemberHidesStaticFromOuterClass
+            // ReSharper disable MemberHidesStaticFromOuterClass
 
             #region Properties
 
-            public static double health_pct
+            public static class health
             {
-                get { return StyxWoW.Me.CurrentTarget.HealthPercent; }
+                public static double pct
+                {
+                    get { return StyxWoW.Me.CurrentTarget.HealthPercent; }
+                }
             }
+
+            #endregion
 
             //public static long time_to_die
             //{
             //    get { return StyxWoW.Me.CurrentTarget.TimeToDeath(int.MaxValue); }
             //}
-
-            #endregion
         }
 
         #endregion
