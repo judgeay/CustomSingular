@@ -32,7 +32,7 @@ namespace Singular.ClassSpecific.Common
                 switch (StyxWoW.Me.Specialization)
                 {
                     case WoWSpec.DeathKnightUnholy:
-                        distance = TalentManager.HasGlyph(DeathKnight.blood_boil) ? 15 : 10;
+                        distance = TalentManager.HasGlyph(DeathKnight.DkSpells.blood_boil) ? 15 : 10;
                         break;
                     case WoWSpec.DeathKnightBlood:
                         distance = 20;
