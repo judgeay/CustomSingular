@@ -90,14 +90,18 @@ namespace Singular.ClassSpecific.Common
         {
             // ReSharper disable MemberHidesStaticFromOuterClass
 
-            #region Properties
+            #region Types
 
             public static class health
             {
+                #region Properties
+
                 public static double pct
                 {
                     get { return StyxWoW.Me.CurrentTarget.HealthPercent; }
                 }
+
+                #endregion
             }
 
             #endregion

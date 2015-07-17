@@ -9,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using CommonBehaviors.Actions;
 using Styx;
 using Styx.CommonBot;
@@ -195,7 +194,7 @@ namespace Singular.Helpers
                 if (!SingularRoutine.IsAllowed(CapabilityFlags.Aoe))
                     return false;
 
-                return HotkeyDirector.IsAoeEnabled && SingularSettings.Instance.AllowAOE;
+                return HotkeyDirector.IsAoeEnabled && SingularSettings.Instance.AllowAoe;
             }
         }
 

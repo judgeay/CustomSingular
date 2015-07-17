@@ -1,76 +1,74 @@
-﻿
-using System.ComponentModel;
+﻿using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using Styx;
 using Styx.Helpers;
-
 using DefaultValue = Styx.Helpers.DefaultValueAttribute;
 using Singular.Managers;
 using System.Reflection;
 using System;
 using Singular.Helpers;
 using Styx.CommonBot;
-using Styx.WoWInternals;
 using System.Drawing;
 using Styx.CommonBot.CharacterManagement;
 
 namespace Singular.Settings
 {
-    enum AllowMovementType
+    internal enum AllowMovementType
     {
         None,
         ClassSpecificOnly,
         All,
-        Auto       
+        Auto
     }
 
-    enum CheckTargets
+    internal enum CheckTargets
     {
         None = 0,
         Current,
         All
     }
 
-    enum PurgeAuraFilter
+    internal enum PurgeAuraFilter
     {
         None = 0,
         Whitelist,
         All
     }
 
-    enum RelativePriority
+    internal enum RelativePriority
     {
         None = 0,
         LowPriority,
         HighPriority
     }
 
-    enum TargetingStyle
+    internal enum TargetingStyle
     {
         None = 0,
         Enable,
         Auto
     }
 
-    enum SelfRessurectStyle
+    internal enum SelfRessurectStyle
     {
         None = 0,
         Enable,
         Auto
     }
 
-    enum CombatRezTarget
+    internal enum CombatRezTarget
     {
         None = 0,
-        All = Tank | Healer | DPS,
+        All = Tank | Healer | Dps,
         Tank = 1,
         Healer = 2,
         TankOrHealer = Tank | Healer,
-        DPS = 4
+        Dps = 4
     }
 
-    enum DpsOffHealWhen
+    internal enum DpsOffHealWhen
     {
         Never = 0,
         NoHealer,
@@ -78,21 +76,21 @@ namespace Singular.Settings
         Always
     }
 
-    enum DebugOutputDest
+    internal enum DebugOutputDest
     {
         None = 0,
         FileOnly = 1,
         WindowAndFile = 3
     }
 
-    enum PullMoreUsageType
+    internal enum PullMoreUsageType
     {
         None = 0,
         Always = 1,
         Auto = 2
     }
 
-    enum PullMoreTargetType
+    internal enum PullMoreTargetType
     {
         None = 0,
         LikeCurrent,
@@ -103,17 +101,17 @@ namespace Singular.Settings
 
     internal class SingularSettings : Styx.Helpers.Settings
     {
-        private static int entrycount = 0;
+        private static int _entrycount;
         private static SingularSettings _instance;
 
         public SingularSettings()
             : base(Path.Combine(CharacterSettingsPath, "SingularSettings.xml"))
         {
             // changing how we are initialize the _instance pointer
-            entrycount++;
-            if (entrycount != 1)
+            _entrycount++;
+            if (_entrycount != 1)
             {
-                Logger.WriteFile("Settings: unexpected reentrant call in Settings: {0}", entrycount );
+                Logger.WriteFile("Settings: unexpected reentrant call in Settings: {0}", _entrycount);
             }
 
             if (_instance != null)
@@ -127,10 +125,10 @@ namespace Singular.Settings
             {
                 _instance = this;
 
-                bool fileExists = ConfigVersion != null;
-                bool weSetPullMoreValues = false;
-                Version verSourceCode = SingularRoutine.GetSingularVersion();
-                Version verConfigFile = null;
+                var fileExists = ConfigVersion != null;
+                var weSetPullMoreValues = false;
+                var verSourceCode = SingularRoutine.GetSingularVersion();
+                Version verConfigFile;
 
                 // if version is null, set to current value
                 if (ConfigVersion == null)
@@ -161,7 +159,7 @@ namespace Singular.Settings
                     if (verConfigFile < new Version("3.0.0.3173"))
                     {
                         Logger.WriteDiagnostic(LogColor.Init, "Settings: applying {0} related changes", new Version("3.0.0.3173").ToString());
-                        if ( MinHealth == 65)
+                        if (MinHealth == 65)
                             MinHealth = 60;
                         if (MinMana == 65)
                             MinMana = 50;
@@ -174,7 +172,7 @@ namespace Singular.Settings
                     }
 
                     ConfigVersion = verSourceCode.ToString();
-                    Logger.WriteDiagnostic(LogColor.Init, "Settings: config settings upgrade to {0} complete", ConfigVersion.ToString());
+                    Logger.WriteDiagnostic(LogColor.Init, "Settings: config settings upgrade to {0} complete", ConfigVersion);
                 }
 
                 // Pull More settings should be overwritten if !fileExist or last config saved was before selecting Specialization 
@@ -189,16 +187,15 @@ namespace Singular.Settings
                         MinHealth = 50;
                         Logger.Write(LogColor.Init, "Settings: default Min Health to {0}% since Death Knight", MinHealth);
                     }
-
                 }
             }
 
             // Validate settings
             //===================================================================================
-            StayNearTankRangeCombat = Validate.IntValue("StayNearTankRangeCombat", 5, 100, StayNearTankRangeCombat );
+            StayNearTankRangeCombat = Validate.IntValue("StayNearTankRangeCombat", 5, 100, StayNearTankRangeCombat);
             StayNearTankRangeRest = Validate.IntValue("StayNearTankRangeRest", 5, 100, StayNearTankRangeRest);
 
-            entrycount--;
+            _entrycount--;
         }
 
         /// <summary>
@@ -209,9 +206,9 @@ namespace Singular.Settings
             if (PullMoreSpecDefaultsSaved)
                 return;
 
-            WoWSpec spec = StyxWoW.Me.Specialization;
+            var spec = StyxWoW.Me.Specialization;
             if (spec == WoWSpec.None && CharacterManager.CurrentClassProfile != null)
-                spec =  CharacterManager.CurrentClassProfile.GetSpec();
+                spec = CharacterManager.CurrentClassProfile.GetSpec();
 
             int mobCount, distMelee, distRanged, minHealth;
 
@@ -235,10 +232,7 @@ namespace Singular.Settings
 
         public static string GlobalSettingsPath
         {
-            get
-            {
-                return Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings");
-            }
+            get { return Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings"); }
         }
 
 
@@ -246,7 +240,7 @@ namespace Singular.Settings
         {
             get
             {
-                string settingsDirectory = Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings");
+                var settingsDirectory = Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings");
                 return Path.Combine(Path.Combine(settingsDirectory, StyxWoW.Me.RealmName), StyxWoW.Me.Name);
             }
         }
@@ -256,7 +250,7 @@ namespace Singular.Settings
         {
             get
             {
-                string settingsDirectory = Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings");
+                var settingsDirectory = Path.Combine(Styx.Common.Utilities.AssemblyDirectory, "Settings");
                 return Path.Combine(Path.Combine(Path.Combine(settingsDirectory, StyxWoW.Me.RealmName), StyxWoW.Me.Name), "Singular");
             }
         }
@@ -267,8 +261,8 @@ namespace Singular.Settings
                 _instance = new SingularSettings();
         }
 
-        public static SingularSettings Instance 
-        { 
+        public static SingularSettings Instance
+        {
             get { return _instance ?? (_instance = new SingularSettings()); }
             set { _instance = value; }
         }
@@ -276,7 +270,7 @@ namespace Singular.Settings
         public static bool IsTrinketUsageWanted(TrinketUsage usage)
         {
             return usage == Instance.Trinket1Usage
-                || usage == Instance.Trinket2Usage;
+                   || usage == Instance.Trinket2Usage;
         }
 
         /// <summary>
@@ -341,17 +335,17 @@ namespace Singular.Settings
                 Logger.WriteFile("Spells with cooldown more than {0} secs Blocked by DisableSpellsWithCooldown", DisableSpellsWithCooldown);
             else
             {
-                int maxcd = DisableSpellsWithCooldown * 1000;
+                var maxcd = DisableSpellsWithCooldown * 1000;
                 Logger.WriteFile("====== Spells Blocked by DisableSpellsWithCooldown  ======");
 
                 using (StyxWoW.Memory.AcquireFrame())
                 {
-                    foreach (WoWSpell spell in SpellManager.Spells.OrderBy(s => s.Key).Select(s => s.Value))
+                    foreach (var spell in SpellManager.Spells.OrderBy(s => s.Key).Select(s => s.Value))
                     {
-                        int cd = Spell.GetBaseCooldown(spell);
+                        var cd = Spell.GetBaseCooldown(spell);
                         if (cd >= maxcd)
                         {
-                            Logger.WriteFile("  {0} {1}", (cd / 1000).ToString().AlignRight(4), spell.Name);
+                            Logger.WriteFile("  {0} {1}", (cd / 1000).ToString(CultureInfo.InvariantCulture).AlignRight(4), spell.Name);
                         }
                     }
                 }
@@ -375,16 +369,16 @@ namespace Singular.Settings
 
         public void SetPropertyReadOnly(string propName, bool isReadOnly)
         {
-            PropertyDescriptor descriptor = TypeDescriptor.GetProperties(GetType())[propName];
-            ReadOnlyAttribute attribute = (ReadOnlyAttribute)descriptor.Attributes[typeof(ReadOnlyAttribute)];
+            var descriptor = TypeDescriptor.GetProperties(GetType())[propName];
+            var attribute = (ReadOnlyAttribute)descriptor.Attributes[typeof(ReadOnlyAttribute)];
             if (attribute != null)
             {
-                FieldInfo fieldToChange = attribute.GetType().GetField("isReadOnly",
-                                                 BindingFlags.NonPublic |
-                                                 BindingFlags.Instance);
+                var fieldToChange = attribute.GetType().GetField("isReadOnly",
+                    BindingFlags.NonPublic |
+                    BindingFlags.Instance);
                 if (fieldToChange != null)
                 {
-                    bool currentlyReadOnly = (bool) fieldToChange.GetValue(attribute);
+                    var currentlyReadOnly = (bool)fieldToChange.GetValue(attribute);
                     if (currentlyReadOnly != isReadOnly)
                         fieldToChange.SetValue(attribute, isReadOnly);
                 }
@@ -411,37 +405,25 @@ namespace Singular.Settings
         [Browsable(false)]
         public static bool Debug
         {
-            get
-            {
-                return Instance.DebugOutput != DebugOutputDest.None;
-            }
+            get { return Instance.DebugOutput != DebugOutputDest.None; }
         }
 
         [Browsable(false)]
         public static bool DebugSpellCasting
         {
-            get
-            {
-                return Debug && Instance.EnableDebugSpellCasting;
-            }
+            get { return Debug && Instance.EnableDebugSpellCasting; }
         }
 
         [Browsable(false)]
         public static bool DebugStopMoving
         {
-            get
-            {
-                return false;
-            }
+            get { return false; }
         }
 
         [Browsable(false)]
         public static bool Trace
         {
-            get
-            {
-                return Debug && Instance.EnableDebugTrace;
-            }
+            get { return Debug && Instance.EnableDebugTrace; }
         }
 
         [Browsable(false)]
@@ -459,25 +441,25 @@ namespace Singular.Settings
         #region Category: Hidden
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         public string ConfigVersion { get; set; }
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(450)]
         [Category("Advanced")]
         [DisplayName("Spell Throttle")]
         [Description("Time between same instance of spell cast can be repeated")]
         public int SameSpellThrottle { get; set; }
-            
-        #endregion 
+
+        #endregion
 
         #region Category: Debug
 
         // code should reference SingularSettings.DebugSpellCasting
         //
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Debug")]
         [DisplayName("Debug Spell Casting Detection")]
@@ -487,7 +469,7 @@ namespace Singular.Settings
         // code should reference SingularSettings.Trace
         //
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Debug")]
         [DisplayName("Debug Trace")]
@@ -497,7 +479,7 @@ namespace Singular.Settings
         // code should reference SingularSettings.Debug
         //
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(DebugOutputDest.FileOnly)]
         [Category("Debug")]
         [DisplayName("Debug Output")]
@@ -519,26 +501,25 @@ namespace Singular.Settings
         #region Window Layout
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(337)]
         public int FormHeight { get; set; }
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(378)]
         public int FormWidth { get; set; }
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(0)]
         public int FormTabIndex { get; set; }
-
 
         #endregion
 
         #region Category: Movement
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(AllowMovementType.Auto)]
         [Category("Movement")]
         [DisplayName("Allow Movement")]
@@ -566,53 +547,53 @@ namespace Singular.Settings
         [Description("Allow Singular to move melee classes to behind bosses, etc.")]
         public bool MeleeMoveBehind { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Movement")]
         [DisplayName("Keep Melee Mobs in Front")]
         [Description("Allow Singular to move melee classes to keep melee attackers in front.  Works only in Normal (Solo) context")]
         public bool MeleeKeepMobsInFront { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Movement")]
         [DisplayName("Use Cast While Moving Buffs")]
         [Description("True: attempting to use a non-instant while moving will first cast Spiritwalker's Grace, Ice Floes, Kil'Jaedan's Cunning, etc.")]
         public bool UseCastWhileMovingBuffs { get; set; }
 
-        #endregion 
+        #endregion
 
         #region Category: Consumables
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(60)]
         [Category("Consumables")]
         [DisplayName("Eat at Health %")]
         [Description("Minimum health to eat at.")]
         public int MinHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(50)]
         [Category("Consumables")]
         [DisplayName("Drink at Mana %")]
         [Description("Minimum mana to drink at.")]
         public int MinMana { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(30)]
         [Category("Consumables")]
         [DisplayName("Potion at Health %")]
         [Description("Health % to use a health pot/trinket/stone at.")]
         public int PotionHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(30)]
         [Category("Consumables")]
         [DisplayName("Potion at Mana %")]
         [Description("Mana % to use a mana pot/trinket at. (used for all energy forms)")]
         public int PotionMana { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Consumables")]
         [DisplayName("Use Bandages")]
@@ -623,49 +604,49 @@ namespace Singular.Settings
 
         #region Category: Avoidance
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Avoidance")]
         [DisplayName("Disengage Allowed")]
         [Description("Allow use of Disengage, Blink, Rocket Jump, Balance-Wild Charge, Demonic Leap or equivalent spell to quickly jump away")]
         public bool DisengageAllowed { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(101)]
         [Category("Avoidance")]
         [DisplayName("Disengage at Health %")]
         [Description("Disengage (or equiv) if health below this % and mob in melee range")]
         public int DisengageHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(1)]
         [Category("Avoidance")]
         [DisplayName("Disengage at mob count")]
         [Description("Disengage (or equiv) if this many mobs in melee range")]
         public int DisengageMobCount { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Avoidance")]
         [DisplayName("Kiting Allowed")]
         [Description("Allow kiting of mobs.")]
         public bool KiteAllow { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(70)]
         [Category("Avoidance")]
         [DisplayName("Kite below Health %")]
         [Description("Kite if health below this % and mob in melee range")]
         public int KiteHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(1)]
         [Category("Avoidance")]
         [DisplayName("Kite at mob count")]
         [Description("Kite if this many mobs in melee range")]
         public int KiteMobCount { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(8)]
         [Category("Avoidance")]
         [DisplayName("Avoid Distance")]
@@ -673,7 +654,7 @@ namespace Singular.Settings
         public int AvoidDistance { get; set; }
 
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Avoidance")]
         [DisplayName("Jump Turn while Kiting")]
@@ -684,7 +665,7 @@ namespace Singular.Settings
 
         #region Category: General
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("General")]
         [DisplayName("Use Framelock in Singular")]
@@ -712,14 +693,14 @@ namespace Singular.Settings
         [Description("Enabling that will disable non combat behaviors. (Rest, PreCombat buffs)")]
         public bool DisableNonCombatBehaviors { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("General")]
         [DisplayName("Disable in Quest Vehicle")]
         [Description("True: Singular ignore calls from Questing Bot if in a Quest Vehicle; False: Singular tries to fight/heal when Questing Bot asks it to.")]
         public bool DisableInQuestVehicle { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(0)]
         [Category("General")]
         [DisplayName("Disable Spells with Cooldown (secs)")]
@@ -751,95 +732,95 @@ namespace Singular.Settings
 
         #region Category: Pets
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Pets")]
         [DisplayName("Disable Pet usage")]
         [Description("Enabling that will disable pet usage")]
         public bool DisablePetUsage { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Pets")]
         [DisplayName("Solo: Pet will Tanks Adds")]
         [Description("True: when Solo, switch Pet target to pickup those attacking player")]
         public bool PetTankAdds { get; set; }
 
-        #endregion 
+        #endregion
 
         #region Category: Group Healing / Support
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(35)]
         [Category("Group Healing/Support")]
         [DisplayName("DPS Off-Heal Begin %")]
         [Description("DPS Off-Heal starts if companion below % (never in raids)")]
         public int DpsOffHealBeginPct { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(65)]
         [Category("Group Healing/Support")]
         [DisplayName("DPS Off-Heal Stop %")]
         [Description("DPS heals ends if group above % and healer in range (never in raids)")]
         public int DpsOffHealEndPct { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Group Healing/Support")]
         [DisplayName("DPS Off-Heal Allowed")]
         [Description("DPS will off-heal if health below Begin %.  Will leave off-heal mode if healer in range and group above End % health (never in raids)")]
         public bool DpsOffHealAllowed { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(95)]
         [Category("Group Healing/Support")]
         [DisplayName("Ignore Targets Health")]
         [Description("Ignore healing targets with health % above; also cancels casts in progress at this value.")]
         public int IgnoreHealTargetsAboveHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(75)]
         [Category("Group Healing/Support")]
         [DisplayName("Max Heal Target Range")]
         [Description("Max distance we see heal targets (max value: 100), any beyond this are ignored")]
         public int MaxHealTargetRange { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(25)]
         [Category("Group Healing/Support")]
         [DisplayName("Stay Near Tank - Combat Range")]
         [Description("Max combat distance from Tank before we move towards it (max value: 100)")]
         public int StayNearTankRangeCombat { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(15)]
         [Category("Group Healing/Support")]
         [DisplayName("Stay Near Tank - Noncombat")]
         [Description("Max combat distance from Tank before we move towards it (max value: 100)")]
         public int StayNearTankRangeRest { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Group Healing/Support")]
         [DisplayName("Stay near Tank")]
         [Description("Move within Healing Range of Tank if nobody needs healing")]
         public bool StayNearTank { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Group Healing/Support")]
         [DisplayName("Include Pets as Heal Targets")]
         [Description("True: Include Pets as Healing targets (does not affect Owner healing of Pet)")]
         public bool IncludePetsAsHealTargets { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Group Healing/Support")]
         [DisplayName("Include Summoned NPCs as Heal Targets")]
         [Description("True: Include Escorts and Summoned Companions as Healing targets")]
         public bool IncludeCompanionssAsHealTargets { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(RelativePriority.LowPriority)]
         [Category("Group Healing/Support")]
         [DisplayName("Dispel Debufs")]
@@ -867,27 +848,26 @@ namespace Singular.Settings
         [Description("Wait (seconds) before casting Battle Rez on group member")]
         public int CombatRezDelay { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Group Healing/Support")]
         [DisplayName("Healer DPS Allow")]
         [Description("Allow Healer to DPS. Does not affect Atonement/Telluric Currents/Dream of Cenarius/etc casts.  Forced to false in Raids")]
         public bool HealerCombatAllow { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(75)]
         [Category("Group Healing/Support")]
         [DisplayName("Healer DPS Min Mana %")]
         [Description("Healer will DPS if Healer Mana % is above this")]
         public int HealerCombatMinMana { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(85)]
         [Category("Group Healing/Support")]
         [DisplayName("Healer DPS Min Health %")]
         [Description("Healer will DPS if Lowest Health % in group is above this")]
         public int HealerCombatMinHealth { get; set; }
-
 
         #endregion
 
@@ -964,21 +944,21 @@ namespace Singular.Settings
 
         #region Category: Items
 
-        [Setting,ReadOnly(true)]
+        [Setting, ReadOnly(true)]
         [DefaultValue(true)]
         [Category("Items")]
         [DisplayName("Use Flasks/Crystals/etc")]
         [Description("Uses flasks not consumed on use (Alchemist Flasks, Crystal of Insanity, Orialius' Whispering Crystal, others ...?)")]
         public bool UseAlchemyFlasks { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Items")]
         [DisplayName("Use Scrolls of ...")]
         [Description("Uses Scrolls present in bags that temporarily buff a useful stat. Uses those buffing primary stat first, then Scrolls of Stamina")]
         public bool UseScrolls { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(TrinketUsage.Never)]
         [Category("Items")]
         [DisplayName("Trinket 1 Usage")]
@@ -1001,18 +981,18 @@ namespace Singular.Settings
 
         #region Category: Racials
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Racials")]
         [DisplayName("Use Racials")]
         public bool UseRacials { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(30)]
         [Category("Racials")]
         [DisplayName("Gift of the Naaru HP")]
         [Description("Uses Gift of the Naaru when HP falls below this %.")]
-        public int GiftNaaruHP { get; set; }
+        public int GiftNaaruHp { get; set; }
 
         [Setting, ReadOnly(false)]
         [DefaultValue(0)]
@@ -1032,14 +1012,14 @@ namespace Singular.Settings
 
         #region Category: Tanking
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Tanking")]
         [DisplayName("Disable Target Switching")]
         [Description("True: stay on current target while Tanking.  False: switch targets based upon threat differential with group")]
         public bool DisableTankTargetSwitching { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Tanking")]
         [DisplayName("Enable Taunting for tanks")]
@@ -1049,14 +1029,14 @@ namespace Singular.Settings
 
         #region Category: Targeting
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(TargetingStyle.Auto)]
         [Category("Targeting")]
         [DisplayName("Targeting by Singular")]
         [Description("None: disabled, Enable: intelligent switching; Auto: disable for DungeonBuddy/manual Assist Bots, otherwise intelligent switching.")]
         public TargetingStyle TypeOfTargeting { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Targeting")]
         [DisplayName("Target World PVP Regardless")]
@@ -1067,7 +1047,7 @@ namespace Singular.Settings
 
         #region Category: Enemy Control
 
-        private PullMoreUsageType _PullMoreAllowed = PullMoreUsageType.Auto;
+        private PullMoreUsageType _pullMoreAllowed = PullMoreUsageType.Auto;
 
         [DefaultValue(8)]
         [Category("Enemy Control")]
@@ -1082,66 +1062,57 @@ namespace Singular.Settings
         [Description("Auto: enable the feature only with Questing and Grind Bot; Enable: pull adds based upon settings; None: disable pull more feature")]
         public PullMoreUsageType UsePullMore
         {
-            get
-            {
-                return _PullMoreAllowed;
-            }
+            get { return _pullMoreAllowed; }
 
             set
             {
-                _PullMoreAllowed = value;
-                SetPropertyReadOnly("PullMoreTargetType", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreMobCount", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreDistMelee", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreDistRanged", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreMinHealth", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreTimeOut", _PullMoreAllowed == PullMoreUsageType.None);
-                SetPropertyReadOnly("PullMoreMaxTime", _PullMoreAllowed == PullMoreUsageType.None);
+                _pullMoreAllowed = value;
+                SetPropertyReadOnly("PullMoreTargetType", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreMobCount", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreDistMelee", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreDistRanged", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreMinHealth", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreTimeOut", _pullMoreAllowed == PullMoreUsageType.None);
+                SetPropertyReadOnly("PullMoreMaxTime", _pullMoreAllowed == PullMoreUsageType.None);
             }
         }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(PullMoreTargetType.LikeCurrent)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Target Type")]
         [Description("None: disabled, Current: like CurrentTarget; Hostile: any hostile target; Any: any nearby valid target")]
         public PullMoreTargetType PullMoreTargetType { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(3)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Count")]
         [Description("Pull more until in combat with this many, then finish them off before acquiring more")]
         public int PullMoreMobCount { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(35)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Dist Melee")]
         [Description("For Melee Characters: Maximum distance of adds which will be pulled")]
         public int PullMoreDistMelee { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(55)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Dist Ranged")]
         [Description("For Ranged Characters: Maximum distance of adds which will be pulled")]
         public int PullMoreDistRanged { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(60)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Health %")]
         [Description("Pull more unless Health % below this")]
         public int PullMoreMinHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting, ReadOnly(false)]
         [DefaultValue(12)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Tagged Timeout (secs)")]
@@ -1149,7 +1120,6 @@ namespace Singular.Settings
         public int PullMoreTimeOut { get; set; }
 
         [Setting, ReadOnly(false)]
-
         [DefaultValue(45)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Max Time (secs)")]
@@ -1178,14 +1148,14 @@ namespace Singular.Settings
         [Description("None: disabled, Current: our target only, All: enemies in range we are facing")]
         public CheckTargets PurgeTargets { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(PurgeAuraFilter.Whitelist)]
         [Category("Enemy Control")]
         [DisplayName("Purge Buffs")]
         [Description("False: disabled, Current: our target only, Other: enemies in range we are facing")]
         public PurgeAuraFilter PurgeBuffs { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(CheckTargets.All)]
         [Category("Enemy Control")]
         [DisplayName("Interrupt Targets")]
@@ -1234,7 +1204,7 @@ namespace Singular.Settings
         [Category("Enemy Control")]
         [DisplayName("Use AOE Attacks")]
         [Description("True: use multi-target damage spells when necessary; False: single target spells on current target only")]
-        public bool AllowAOE { get; set; }
+        public bool AllowAoe { get; set; }
 
         #endregion
 
@@ -1249,26 +1219,32 @@ namespace Singular.Settings
         // late-binding interfaces 
         // -- changed from readonly properties to methods as GetProperties() in SaveToXML() was causing all classes configs to load
         // -- this was causing Save to write a DeathKnight.xml file for all non-DKs for example
-        internal HotkeySettings Hotkeys() { return _hotkeySettings ?? (_hotkeySettings = new HotkeySettings()); }
+        internal HotkeySettings Hotkeys()
+        {
+            return _hotkeySettings ?? (_hotkeySettings = new HotkeySettings());
+        }
 
         #endregion
 
-        class Validate 
+        private static class Validate
         {
-            public static int IntValue( string name, int minValue, int maxValue, int setting)
+            #region Public Methods
+
+            public static int IntValue(string name, int minValue, int maxValue, int setting)
             {
-                if (!setting.Between( minValue, maxValue))
+                if (!setting.Between(minValue, maxValue))
                 {
-                    int newValue = setting;
-                    newValue = Math.Max( minValue, newValue);
-                    newValue = Math.Min( maxValue, newValue);
+                    var newValue = setting;
+                    newValue = Math.Max(minValue, newValue);
+                    newValue = Math.Min(maxValue, newValue);
                     Logger.Write(Color.Yellow, "warning: Singular setting '{0}' value of {1} out of range, changing to {2}", name, setting, newValue);
                     setting = newValue;
                 }
 
                 return setting;
             }
+
+            #endregion
         }
     }
-
 }
