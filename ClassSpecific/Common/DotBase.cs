@@ -1,5 +1,6 @@
 using Singular.Helpers;
 using Styx;
+using Styx.WoWInternals.WoWObjects;
 
 namespace Singular.ClassSpecific.Common
 {
@@ -36,12 +37,22 @@ namespace Singular.ClassSpecific.Common
 
         private double Remains()
         {
-            return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(SpellName).TotalSeconds;
+            return Remains(StyxWoW.Me.CurrentTarget);
         }
 
         private bool Ticking()
         {
             return Remains() > 0;
+        }
+
+        public bool Ticking(WoWUnit target)
+        {
+            return Remains(target) > 0;
+        }
+
+        public double Remains(WoWUnit target)
+        {
+            return target != null ? target.GetAuraTimeLeft(SpellName).TotalSeconds : 0;
         }
 
         #endregion

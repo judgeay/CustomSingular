@@ -460,7 +460,7 @@ namespace Singular.ClassSpecific
                 //actions.multi_target+=/obliterate,if=unholy>1
                 obliterate(() => unholy > 1),
                 //actions.multi_target+=/blood_boil,if=dot.blood_plague.ticking&(!talent.unholy_blight.enabled|cooldown.unholy_blight.remains<49),line_cd=28
-                blood_boil(() => active_enemies_list.Any(x => disease.ticking_on(x) == false) && dot.blood_plague.ticking && (!talent.unholy_blight.enabled || cooldown.unholy_blight.remains < 49)),
+                blood_boil(() => active_enemies_list.Any(x => !dot.blood_plague.Ticking(x)) && dot.blood_plague.ticking && (!talent.unholy_blight.enabled || cooldown.unholy_blight.remains < 49)),
                 //actions.multi_target+=/defile
                 defile(() => true),
                 //actions.multi_target+=/breath_of_sindragosa,if=runic_power>75
@@ -652,7 +652,7 @@ namespace Singular.ClassSpecific
                 // actions.bos+=/plague_strike,if=!disease.ticking
                 plague_strike(() => !disease.ticking),
                 // actions.bos+=/blood_boil,cycle_targets=1,if=(spell_targets.blood_boil>=2&!(dot.blood_plague.ticking|dot.frost_fever.ticking))|spell_targets.blood_boil>=4&(runic_power<88&runic_power>30)
-                blood_boil(() => (spell_targets.blood_boil >= 2 && !(dot.blood_plague.ticking || dot.frost_fever.ticking)) || spell_targets.blood_boil >= 4 && (runic_power < 88 && runic_power > 30)),
+                blood_boil(() => (spell_targets.blood_boil >= 2 && active_enemies_list.Any(x => !(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x)))) || spell_targets.blood_boil >= 4 && (runic_power < 88 && runic_power > 30)),
                 // actions.bos+=/death_and_decay,if=spell_targets.death_and_decay>=2&(runic_power<88&runic_power>30)
                 death_and_decay(() => spell_targets.death_and_decay >= 2 && (runic_power < 88 && runic_power > 30)),
                 // actions.bos+=/festering_strike,if=(blood=2&frost=2&(((Frost-death)>0)|((Blood-death)>0)))&runic_power<80
@@ -700,11 +700,11 @@ namespace Singular.ClassSpecific
                 // actions.unholy+=/unholy_blight,if=!disease.min_ticking
                 unholy_blight(() => !disease.min_ticking),
                 // actions.unholy+=/outbreak,cycle_targets=1,if=!talent.necrotic_plague.enabled&(!(dot.blood_plague.ticking|dot.frost_fever.ticking))
-                outbreak(() => !talent.necrotic_plague.enabled && (!(dot.blood_plague.ticking || dot.frost_fever.ticking))),
+                outbreak(() => !talent.necrotic_plague.enabled && active_enemies_list.Any(x => (!(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x))))),
                 // actions.unholy+=/plague_strike,if=(!talent.necrotic_plague.enabled&!(dot.blood_plague.ticking|dot.frost_fever.ticking))|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
                 plague_strike(() => (!talent.necrotic_plague.enabled && !(dot.blood_plague.ticking || dot.frost_fever.ticking)) || (talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking)),
                 // actions.unholy+=/blood_boil,cycle_targets=1,if=(spell_targets.blood_boil>1&!talent.necrotic_plague.enabled)&(!(dot.blood_plague.ticking|dot.frost_fever.ticking))
-                blood_boil(() => (spell_targets.blood_boil > 1 && !talent.necrotic_plague.enabled) && (!(dot.blood_plague.ticking || dot.frost_fever.ticking))),
+                blood_boil(() => (spell_targets.blood_boil > 1 && !talent.necrotic_plague.enabled) && active_enemies_list.Any(x => (!(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x))))),
                 // actions.unholy+=/death_and_decay,if=spell_targets.death_and_decay>1&unholy>1
                 death_and_decay(() => spell_targets.death_and_decay > 1 && unholy > 1),
                 // actions.unholy+=/defile,if=unholy=2
@@ -722,7 +722,7 @@ namespace Singular.ClassSpecific
                 // actions.unholy+=/festering_strike,if=(blood=2|frost=2)&(((Frost-death)>0)&((Blood-death)>0))
                 festering_strike(() => (blood == 2 || frost == 2) && (((Frost - death) > 0) && ((Blood - death) > 0))),
                 // actions.unholy+=/blood_boil,cycle_targets=1,if=(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)&spell_targets.blood_boil>1
-                blood_boil(() => (talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking) && spell_targets.blood_boil > 1),
+                blood_boil(() => (talent.necrotic_plague.enabled && active_enemies_list.Any(x => !dot.necrotic_plague.Ticking(x))) && spell_targets.blood_boil > 1),
                 // actions.unholy+=/defile,if=blood=2|frost=2
                 defile(() => blood == 2 || frost == 2),
                 // actions.unholy+=/death_and_decay,if=spell_targets.death_and_decay>1
@@ -932,7 +932,7 @@ namespace Singular.ClassSpecific
 
             public static int blood_boil
             {
-                get { return active_enemies_list.Count(disease.ticking_on) == 0 ? active_enemies_list.Count(u => disease.ticking_on(u) == false) : 0; }
+                get { return active_enemies_list.Count(u => u.Distance <= (TalentManager.HasGlyph(DkSpells.blood_boil) ? 15 : 10)); }
             }
 
             public static int death_and_decay
