@@ -8,9 +8,15 @@ using Styx.WoWInternals.WoWObjects;
 
 namespace Singular.ClassSpecific.Common
 {
-    // ReSharper disable InconsistentNaming
     public abstract class Common
     {
+        // ReSharper disable InconsistentNaming
+        #region Fields
+
+        private static readonly WoWItemWeaponClass[] _oneHandWeaponClasses = { WoWItemWeaponClass.Axe, WoWItemWeaponClass.Mace, WoWItemWeaponClass.Sword, WoWItemWeaponClass.Dagger, WoWItemWeaponClass.Fist };
+
+        #endregion
+
         #region Properties
 
         protected static LocalPlayer Me
@@ -32,6 +38,7 @@ namespace Singular.ClassSpecific.Common
                 switch (StyxWoW.Me.Specialization)
                 {
                     case WoWSpec.DeathKnightUnholy:
+                    case WoWSpec.DeathKnightFrost:
                         distance = TalentManager.HasGlyph(DeathKnight.DkSpells.blood_boil) ? 15 : 10;
                         break;
                     case WoWSpec.DeathKnightBlood:
@@ -69,6 +76,27 @@ namespace Singular.ClassSpecific.Common
             public static double pct
             {
                 get { return Me.HealthPercent; }
+            }
+
+            #endregion
+        }
+
+        protected static class main_hand
+        {
+            #region Properties
+
+            public static bool _1h
+            {
+                get
+                {
+                    return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) &&
+                           Me.Inventory.Equipped.OffHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.OffHand.ItemInfo.WeaponClass);
+                }
+            }
+
+            public static bool _2h
+            {
+                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) == false; }
             }
 
             #endregion

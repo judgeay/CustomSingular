@@ -1,4 +1,4 @@
-﻿
+﻿using System;
 using System.Linq;
 using System.Text;
 using Styx;
@@ -14,25 +14,32 @@ namespace Singular
 {
     internal static class Extensions
     {
+        #region Fields
 
-        public static bool Between(this double distance, double min, double max)
+        private static readonly HashSet<int> _addtlHealSpells = new HashSet<int>()
         {
-            return distance >= min && distance <= max;
-        }
+            33076, // Prayer of Mending
+            120517, // Halo
+            73920, // Healing Rain
+            115460, // Healing Sphere,
+            /*ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingStream),
+            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingTide),
+            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.SpiritLink),*/
+            124682, // Enveloping Mist
+            116694, // Surging Mist
+        };
 
-        public static bool Between(this float distance, float min, float max)
-        {
-            return distance >= min && distance <= max;
-        }
+        private static string _lastGetPredictedError;
 
-        public static bool Between(this int value, int min, int max)
-        {
-            return value >= min && value <= max;
-        }
-        public static bool Between(this uint value, uint min, uint max)
-        {
-            return value >= min && value <= max;
-        }
+        #endregion
+
+        #region Properties
+
+        public static bool ShowPlayerNames { get; set; }
+
+        #endregion
+
+        #region Public Methods
 
         public static string AlignLeft(this string s, int width)
         {
@@ -50,6 +57,26 @@ namespace Singular
                 return s.Left(width);
 
             return ("                                                                                                                          ".Left(width - len)) + s;
+        }
+
+        public static bool Between(this double distance, double min, double max)
+        {
+            return distance >= min && distance <= max;
+        }
+
+        public static bool Between(this float distance, float min, float max)
+        {
+            return distance >= min && distance <= max;
+        }
+
+        public static bool Between(this int value, int min, int max)
+        {
+            return value >= min && value <= max;
+        }
+
+        public static bool Between(this uint value, uint min, uint max)
+        {
+            return value >= min && value <= max;
         }
 
         /// <summary>
@@ -74,17 +101,19 @@ namespace Singular
             return sb.ToString();
         }
 
-        public static string Left(this string s, int c)
+        /// <summary>
+        /// calculate the Z of ground below unit.
+        /// </summary>
+        /// <param name="unit">unit to query</param>
+        /// <returns>float.MaxValue if non-deterministic, otherwise Z of ground</returns>
+        public static float FindGroundBelow(this WoWUnit unit)
         {
-            return s.Substring(0, c);
-        }
-        public static string Right(this string s, int c)
-        {
-            return s.Substring(c > s.Length ? 0 : s.Length - c);
-        }
-        public static string UnitID(WoWGuid guid)
-        {
-            return Right(string.Format("{0:X4}", guid.Lowest), 4);
+            var unitLoc = new WoWPoint(unit.Location.X, unit.Location.Y, unit.Location.Z);
+            var listMeshZ = Navigator.FindHeights(unitLoc.X, unitLoc.Y).Where(h => h <= unitLoc.Z + 2f);
+            if (listMeshZ.Any())
+                return listMeshZ.Max();
+
+            return float.MaxValue;
         }
 
         public static StatType GetPrimaryStat(this WoWUnit unit)
@@ -95,123 +124,6 @@ namespace Singular
             if (unit.Intellect > unit.Agility)
                 primaryStat = StatType.Intellect;
             return primaryStat;
-        }
-
-        public static bool ShowPlayerNames { get; set; }
-
-        public static string SafeName(this WoWObject obj)
-        {
-            if (obj.IsMe)
-            {
-                return "Me";
-            }
-
-            string name;
-            if (obj is WoWPlayer)
-            {
-                if (!obj.ToPlayer().IsFriendly)
-                {
-                    name = "Enemy.";
-                }
-                else
-                {
-                    if (RaFHelper.Leader == obj)
-                        name = "lead.";
-                    else if (Group.Tanks.Any(t => t.Guid == obj.Guid))
-                        name = "tank.";
-                    else if (Group.Healers.Any(t => t.Guid == obj.Guid))
-                        name = "healer.";
-                    else
-                        name = "dps.";
-                }
-                name += ShowPlayerNames ? ((WoWPlayer)obj).Name : ((WoWPlayer)obj).Class.ToString();
-            }
-            else if (obj is WoWUnit && obj.ToUnit().IsPet)
-            {
-                WoWUnit root = obj.ToUnit().OwnedByRoot;
-                name =  (root == null ? "(unknown-owner)" : root.SafeName()) + ":Pet";
-            }
-            else
-            {
-                name = obj.Name;
-            }
-
-            return name + "." + UnitID(obj.Guid);
-        }
-
-        public static bool IsWanding(this LocalPlayer me)
-        {
-            return StyxWoW.Me.AutoRepeatingSpellId == 5019;
-        }
-
-        private static readonly HashSet<int> _addtlHealSpells = new HashSet<int>()
-        {
-            33076,  // Prayer of Mending
-            120517, // Halo
-            73920,  // Healing Rain
-            115460, // Healing Sphere,
-            /*ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingStream),
-            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.HealingTide),
-            ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.SpiritLink),*/
-            124682, // Enveloping Mist
-            116694, // Surging Mist
-        };
-
-        public static bool IsHeal(this WoWSpell spell)
-        {
-            bool isHeal = _addtlHealSpells.Contains(spell.Id)
-                || spell.SpellEffects
-                    .Any(s => s.EffectType == WoWSpellEffectType.Heal
-                        || s.EffectType == WoWSpellEffectType.HealMaxHealth
-                        || s.EffectType == WoWSpellEffectType.HealPct
-                        || (s.EffectType == WoWSpellEffectType.ApplyAura && (s.AuraType == WoWApplyAuraType.PeriodicHeal || s.AuraType == WoWApplyAuraType.SchoolAbsorb))
-                        );
-            if (SingularSettings.Debug)
-            {
-                bool isHbHeal = spell.IsHealingSpell;
-                if (isHeal != isHbHeal)
-                {
-                    if (!isHeal)
-                    {
-                        Logger.WriteDebug("Developer Info: please report to add {0} #{1} as Healing Spell. Dynamically added to Singular in for Debug purposes only", spell.Name, spell.Id);
-                        _addtlHealSpells.Add(spell.Id);
-                    }
-                }
-            }
-
-            return isHeal;
-        }
-
-        public static bool IsDamageRedux(this WoWSpell spell)
-        {
-            return spell.SpellEffects
-                .Any(s => s.EffectType == WoWSpellEffectType.ApplyAura
-                    && (   s.AuraType == WoWApplyAuraType.ModDamageTaken
-                        || s.AuraType == WoWApplyAuraType.ModDamagePercentTaken
-                        || s.AuraType == WoWApplyAuraType.DamageImmunity
-                        )
-                    );
-        }
-
-        /// <summary>
-        /// determines if a target is off the ground far enough that you can
-        /// reach it with melee spells if standing directly under.
-        /// </summary>
-        /// <param name="u">unit</param>
-        /// <returns>true if above melee reach</returns>
-        public static bool IsAboveTheGround(this WoWUnit u)
-        {
-            // temporary change while working out issues with using mesh to check if off ground
-            // return !Styx.Pathing.Navigator.CanNavigateFully(StyxWoW.Me.Location, u.Location);
-
-            float height = HeightOffTheGround(u);
-            if ( height == float.MaxValue )
-                return false;   // make this true if better to assume aerial 
-
-            if (height >= StyxWoW.Me.MeleeDistance(u))
-                return true;
-
-            return false;
         }
 
         /// <summary>
@@ -232,21 +144,72 @@ namespace Singular
         }
 
         /// <summary>
-        /// calculate the Z of ground below unit.
+        /// determines if a target is off the ground far enough that you can
+        /// reach it with melee spells if standing directly under.
         /// </summary>
-        /// <param name="unit">unit to query</param>
-        /// <returns>float.MaxValue if non-deterministic, otherwise Z of ground</returns>
-        public static float FindGroundBelow(this WoWUnit unit)
+        /// <param name="u">unit</param>
+        /// <returns>true if above melee reach</returns>
+        public static bool IsAboveTheGround(this WoWUnit u)
         {
-            var unitLoc = new WoWPoint(unit.Location.X, unit.Location.Y, unit.Location.Z);
-            var listMeshZ = Navigator.FindHeights(unitLoc.X, unitLoc.Y).Where(h => h <= unitLoc.Z + 2f);
-            if (listMeshZ.Any())
-                return listMeshZ.Max();
+            // temporary change while working out issues with using mesh to check if off ground
+            // return !Styx.Pathing.Navigator.CanNavigateFully(StyxWoW.Me.Location, u.Location);
 
-            return float.MaxValue;
+            float height = HeightOffTheGround(u);
+            if (height == float.MaxValue)
+                return false; // make this true if better to assume aerial 
+
+            if (height >= StyxWoW.Me.MeleeDistance(u))
+                return true;
+
+            return false;
         }
 
-        private static string _lastGetPredictedError;
+        public static bool IsDamageRedux(this WoWSpell spell)
+        {
+            return spell.SpellEffects
+                .Any(s => s.EffectType == WoWSpellEffectType.ApplyAura
+                          && (s.AuraType == WoWApplyAuraType.ModDamageTaken
+                              || s.AuraType == WoWApplyAuraType.ModDamagePercentTaken
+                              || s.AuraType == WoWApplyAuraType.DamageImmunity
+                              )
+                );
+        }
+
+        public static bool IsHeal(this WoWSpell spell)
+        {
+            bool isHeal = _addtlHealSpells.Contains(spell.Id)
+                          || spell.SpellEffects
+                              .Any(s => s.EffectType == WoWSpellEffectType.Heal
+                                        || s.EffectType == WoWSpellEffectType.HealMaxHealth
+                                        || s.EffectType == WoWSpellEffectType.HealPct
+                                        || (s.EffectType == WoWSpellEffectType.ApplyAura && (s.AuraType == WoWApplyAuraType.PeriodicHeal || s.AuraType == WoWApplyAuraType.SchoolAbsorb))
+                              );
+            if (SingularSettings.Debug)
+            {
+                bool isHbHeal = spell.IsHealingSpell;
+                if (isHeal != isHbHeal)
+                {
+                    if (!isHeal)
+                    {
+                        Logger.WriteDebug("Developer Info: please report to add {0} #{1} as Healing Spell. Dynamically added to Singular in for Debug purposes only", spell.Name, spell.Id);
+                        _addtlHealSpells.Add(spell.Id);
+                    }
+                }
+            }
+
+            return isHeal;
+        }
+
+        public static bool IsWanding(this LocalPlayer me)
+        {
+            return StyxWoW.Me.AutoRepeatingSpellId == 5019;
+        }
+
+        public static string Left(this string s, int c)
+        {
+            return s.Substring(0, c);
+        }
+
         public static float PredictedHealthPercent(this WoWUnit u, bool includeMyHeals = false)
         {
 #if true
@@ -277,6 +240,66 @@ namespace Singular
 #endif
         }
 
+        public static string Right(this string s, int c)
+        {
+            return s.Substring(c > s.Length ? 0 : s.Length - c);
+        }
+
+        public static string SafeName(this WoWObject obj)
+        {
+            if (obj.IsMe)
+            {
+                return "Me";
+            }
+
+            string name;
+            if (obj is WoWPlayer)
+            {
+                if (!obj.ToPlayer().IsFriendly)
+                {
+                    name = "Enemy.";
+                }
+                else
+                {
+                    if (RaFHelper.Leader == obj)
+                        name = "lead.";
+                    else if (Group.Tanks.Any(t => t.Guid == obj.Guid))
+                        name = "tank.";
+                    else if (Group.Healers.Any(t => t.Guid == obj.Guid))
+                        name = "healer.";
+                    else
+                        name = "dps.";
+                }
+                name += ShowPlayerNames ? ((WoWPlayer) obj).Name : ((WoWPlayer) obj).Class.ToString();
+            }
+            else if (obj is WoWUnit && obj.ToUnit().IsPet)
+            {
+                WoWUnit root = obj.ToUnit().OwnedByRoot;
+                name = (root == null ? "(unknown-owner)" : root.SafeName()) + ":Pet";
+            }
+            else
+            {
+                name = obj.Name;
+            }
+
+            return name + "." + UnitID(obj.Guid);
+        }
+
+        public static bool ToBool(this int intValue)
+        {
+            return intValue != 0;
+        }
+
+        public static bool ToBool(this uint uintValue)
+        {
+            return uintValue != 0;
+        }
+
+        public static int ToInt(this bool boolValue)
+        {
+            return boolValue ? 1 : 0;
+        }
+
         /// <summary>
         /// converts bool to Y or N string
         /// </summary>
@@ -286,5 +309,12 @@ namespace Singular
         {
             return b ? "Y" : "N";
         }
+
+        public static string UnitID(WoWGuid guid)
+        {
+            return Right(string.Format("{0:X4}", guid.Lowest), 4);
+        }
+
+        #endregion
     }
 }

@@ -73,10 +73,13 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> defile = cond => Spell.CastOnGround(DkSpells.defile, on => Me.CurrentTarget, req => talent.defile.enabled && Spell.UseAOE && cond());
         private static readonly Func<Func<bool>, Composite> empower_rune_weapon = cond => Spell.Cast(DkSpells.empower_rune_weapon, req => cond());
         private static readonly Func<Func<bool>, Composite> festering_strike = cond => Spell.Cast(DkSpells.festering_strike, req => cond());
+        private static readonly Func<Func<bool>, Composite> frost_strike = cond => Spell.Cast(DkSpells.frost_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> horn_of_winter = cond => Spell.BuffSelf(DkSpells.horn_of_winter, req => cond());
+        private static readonly Func<Func<bool>, Composite> howling_blast = cond => Spell.Cast(DkSpells.howling_blast, req => cond());
         private static readonly Func<Func<bool>, Composite> icebound_fortitude = cond => Spell.BuffSelf(DkSpells.icebound_fortitude, req => cond());
         private static readonly Func<Func<bool>, Composite> icy_touch = cond => Spell.Cast(DkSpells.icy_touch, req => cond());
         private static readonly Func<Func<bool>, Composite> lichborne = cond => Spell.BuffSelf(DkSpells.lichborne, req => talent.lichborne.enabled && cond());
+        private static readonly Func<Func<bool>, Composite> obliterate = cond => Spell.Cast(DkSpells.obliterate, req => cond());
         private static readonly Func<Func<bool>, Composite> outbreak = cond => Spell.Cast(DkSpells.outbreak, req => cond());
         private static readonly Func<Func<bool>, Composite> pillar_of_frost = cond => Spell.BuffSelf(DkSpells.pillar_of_frost, req => cond());
         private static readonly Func<Func<bool>, Composite> plague_leech = cond => Spell.Cast(DkSpells.plague_leech, req => talent.plague_leech.enabled && disease.ticking && cond());
@@ -237,7 +240,7 @@ namespace Singular.ClassSpecific
                     // actions+=/defile
                     defile(() => true),
                     // actions+=/plague_leech,if=((!blood&!unholy)|(!blood&!frost)|(!unholy&!frost))&cooldown.outbreak.remains<=gcd
-                    plague_leech(() => ((blood == 0 && unholy == 0) || (blood == 0 && frost == 0) || (unholy == 0 && frost == 0)) && cooldown.outbreak.remains <= gcd),
+                    plague_leech(() => ((!blood.ToBool() && !unholy.ToBool()) || (!blood.ToBool() && !frost.ToBool()) || (!unholy.ToBool() && !frost.ToBool())) && cooldown.outbreak.remains <= gcd),
                     // actions+=/call_action_list,name=bt,if=talent.blood_tap.enabled
                     new Decorator(req => talent.blood_tap.enabled, BloodBt()),
                     // actions+=/call_action_list,name=re,if=talent.runic_empowerment.enabled
@@ -255,7 +258,7 @@ namespace Singular.ClassSpecific
                     // actions+=/death_coil
                     death_coil(() => true),
                     // actions+=/empower_rune_weapon,if=!blood&!unholy&!frost
-                    empower_rune_weapon(() => blood == 0 && unholy == 0 && frost == 0),
+                    empower_rune_weapon(() => !blood.ToBool() && !unholy.ToBool() && !frost.ToBool()),
                     new ActionAlwaysFail()
                     )));
         }
@@ -301,17 +304,26 @@ namespace Singular.ClassSpecific
                     //actions+=/plague_leech,if=disease.min_remains<1
                     plague_leech(() => disease.min_remains < 1),
                     //actions+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35
-                    soul_reaper(() => target.health.pct <= 35),
+                    soul_reaper(() => target.health.pct <= 36),
                     //actions+=/blood_tap,if=(target.health.pct-3*(target.health.pct%target.time_to_die)<=35&cooldown.soul_reaper.remains=0)
-                    blood_tap(() => target.health.pct <= 35 && cooldown.soul_reaper.remains == 0),
+                    blood_tap(() => target.health.pct <= 36 && cooldown.soul_reaper.remains == 0),
                     //actions+=/run_action_list,name=single_target_2h,if=spell_targets.howling_blast<4&main_hand.2h
+                    new Decorator(FrostSingleTarget2h(), req => spell_targets.howling_blast < 4 && main_hand._2h),
                     //actions+=/run_action_list,name=single_target_1h,if=spell_targets.howling_blast<3&main_hand.1h
+                    new Decorator(FrostSingleTarget1h(), req => spell_targets.howling_blast < 3 && main_hand._1h),
                     //actions+=/run_action_list,name=multi_target,if=spell_targets.howling_blast>=3+main_hand.2h
+                    new Decorator(FrostMultiTarget(), req => spell_targets.howling_blast >= (3 + main_hand._2h.ToInt())),
                     new ActionAlwaysFail()
                     )));
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec) int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Instances)]
+        public static Composite FrostInstancePull()
+        {
+            return FrostActionList();
+        }
+
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec)int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
         public static Composite NormalAndPvPPull()
         {
             return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
@@ -321,7 +333,7 @@ namespace Singular.ClassSpecific
                     Movement.WaitForLineOfSpellSight(),
                     death_grip(
                         () =>
-                            MovementManager.IsMovementDisabled == false && Me.CurrentTarget.IsBoss() == false && Me.CurrentTarget.DistanceSqr > 10*10 &&
+                            MovementManager.IsMovementDisabled == false && Me.CurrentTarget.IsBoss() == false && Me.CurrentTarget.DistanceSqr > 10 * 10 &&
                             (Me.CurrentTarget.IsPlayer || Me.CurrentTarget.TaggedByMe || (!Me.CurrentTarget.TaggedByOther && CompositeBuilder.CurrentBehaviorType == BehaviorType.Pull && SingularRoutine.CurrentWoWContext != WoWContext.Instances))),
                     new DecoratorContinue(req => Me.IsMoving, new Action(req => StopMoving.Now())),
                     new WaitContinue(1, until => !Me.GotTarget() || Me.CurrentTarget.IsWithinMeleeRange, new ActionAlwaysSucceed())
@@ -374,21 +386,21 @@ namespace Singular.ClassSpecific
                 // actions.bt=death_strike,if=unholy=2|frost=2
                 death_strike(() => unholy == 2 || frost == 2),
                 // actions.bt+=/blood_tap,if=buff.blood_charge.stack>=5&!blood
-                blood_tap(() => buff.blood_charge.stack >= 5 && blood == 0),
+                blood_tap(() => buff.blood_charge.stack >= 5 && !blood.ToBool()),
                 // actions.bt+=/death_strike,if=buff.blood_charge.stack>=10&unholy&frost
-                death_strike(() => buff.blood_charge.stack >= 10 && unholy > 0 && frost > 0),
+                death_strike(() => buff.blood_charge.stack >= 10 && unholy.ToBool() && frost.ToBool()),
                 // actions.bt+=/blood_tap,if=buff.blood_charge.stack>=10&!unholy&!frost
-                blood_tap(() => buff.blood_charge.stack >= 10 && unholy == 0 && frost == 0),
+                blood_tap(() => buff.blood_charge.stack >= 10 && !unholy.ToBool() && !frost.ToBool()),
                 // actions.bt+=/blood_tap,if=buff.blood_charge.stack>=5&(!unholy|!frost)
-                blood_tap(() => buff.blood_charge.stack >= 5 && (unholy == 0 || frost == 0)),
+                blood_tap(() => buff.blood_charge.stack >= 5 && (!unholy.ToBool() || !frost.ToBool())),
                 // actions.bt+=/blood_tap,if=buff.blood_charge.stack>=5&blood.death&!unholy&!frost
-                blood_tap(() => buff.blood_charge.stack >= 5 && blood_death > 0 && unholy == 0 && frost == 0),
+                blood_tap(() => buff.blood_charge.stack >= 5 && blood_death.ToBool() && !unholy.ToBool() && !frost.ToBool()),
                 // actions.bt+=/death_coil,if=runic_power>70
                 death_coil(() => runic_power > 70),
                 // actions.bt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&(blood=2|(blood&!blood.death))
-                soul_reaper(() => target.health.pct <= 36 && (blood == 2 || (blood > 0 && blood_death == 0))),
+                soul_reaper(() => target.health.pct <= 36 && (blood == 2 || (blood.ToBool() && !blood_death.ToBool()))),
                 // actions.bt+=/blood_boil,if=blood=2|(blood&!blood.death)
-                blood_boil(() => blood == 2 || (blood > 0 && blood_death == 0)),
+                blood_boil(() => blood == 2 || (blood.ToBool() && !blood_death.ToBool())),
                 new ActionAlwaysFail()
                 );
         }
@@ -434,6 +446,197 @@ namespace Singular.ClassSpecific
                 soul_reaper(() => target.health.pct <= 36 && blood == 2),
                 // actions.re+=/blood_boil,if=blood=2
                 blood_boil(() => blood == 2),
+                new ActionAlwaysFail()
+                );
+        }
+
+        private static Composite FrostMultiTarget()
+        {
+            return new PrioritySelector(
+                //actions.multi_target=unholy_blight
+                unholy_blight(() => true),
+                //actions.multi_target+=/frost_strike,if=buff.killing_machine.react&main_hand.1h
+                frost_strike(() => buff.killing_machine.react && main_hand._1h),
+                //actions.multi_target+=/obliterate,if=unholy>1
+                obliterate(() => unholy > 1),
+                //actions.multi_target+=/blood_boil,if=dot.blood_plague.ticking&(!talent.unholy_blight.enabled|cooldown.unholy_blight.remains<49),line_cd=28
+                blood_boil(() => active_enemies_list.Any(x => disease.ticking_on(x) == false) && dot.blood_plague.ticking && (!talent.unholy_blight.enabled || cooldown.unholy_blight.remains < 49)),
+                //actions.multi_target+=/defile
+                defile(() => true),
+                //actions.multi_target+=/breath_of_sindragosa,if=runic_power>75
+                breath_of_sindragosa(() => runic_power > 75),
+                //actions.multi_target+=/run_action_list,name=multi_target_bos,if=dot.breath_of_sindragosa.ticking
+                new Decorator(FrostMultiTargetBos(), req => dot.breath_of_sindragosa.ticking),
+                //actions.multi_target+=/howling_blast
+                howling_blast(() => true),
+                //actions.multi_target+=/blood_tap,if=buff.blood_charge.stack>10
+                blood_tap(() => buff.blood_charge.stack > 10),
+                //actions.multi_target+=/frost_strike,if=runic_power>88
+                frost_strike(() => runic_power > 88),
+                //actions.multi_target+=/death_and_decay,if=unholy=1
+                death_and_decay(() => unholy == 1),
+                //actions.multi_target+=/plague_strike,if=unholy=2&!dot.blood_plague.ticking&!talent.necrotic_plague.enabled
+                plague_strike(() => unholy == 2 && !dot.blood_plague.ticking && !talent.necrotic_plague.enabled),
+                //actions.multi_target+=/blood_tap
+                blood_tap(() => true),
+                //actions.multi_target+=/frost_strike,if=!talent.breath_of_sindragosa.enabled|cooldown.breath_of_sindragosa.remains>=10
+                frost_strike(() => !talent.breath_of_sindragosa.enabled || cooldown.breath_of_sindragosa.remains >= 10),
+                //actions.multi_target+=/plague_leech
+                plague_leech(() => true),
+                //actions.multi_target+=/plague_strike,if=unholy=1
+                plague_strike(() => unholy == 1),
+                //actions.multi_target+=/empower_rune_weapon
+                empower_rune_weapon(() => true),
+                new ActionAlwaysFail()
+                );
+        }
+
+        private static Composite FrostMultiTargetBos()
+        {
+            return new PrioritySelector(
+                //actions.multi_target_bos=howling_blast
+                howling_blast(() => true),
+                //actions.multi_target_bos+=/blood_tap,if=buff.blood_charge.stack>10
+                blood_tap(() => buff.blood_charge.stack > 10),
+                //actions.multi_target_bos+=/death_and_decay,if=unholy=1
+                death_and_decay(() => unholy == 1),
+                //actions.multi_target_bos+=/plague_strike,if=unholy=2
+                plague_strike(() => unholy == 2),
+                //actions.multi_target_bos+=/blood_tap
+                blood_tap(() => true),
+                //actions.multi_target_bos+=/plague_leech
+                plague_leech(() => true),
+                //actions.multi_target_bos+=/plague_strike,if=unholy=1
+                plague_strike(() => unholy == 1),
+                //actions.multi_target_bos+=/empower_rune_weapon
+                empower_rune_weapon(() => true),
+                new ActionAlwaysFail()
+                );
+        }
+
+        private static Composite FrostSingleTarget1h()
+        {
+            return new PrioritySelector(
+                //actions.single_target_1h=breath_of_sindragosa,if=runic_power>75
+                breath_of_sindragosa(() => runic_power > 75),
+                //actions.single_target_1h+=/run_action_list,name=single_target_bos,if=dot.breath_of_sindragosa.ticking
+                new Decorator(FrostSingleTargetBos(), req => dot.breath_of_sindragosa.ticking),
+                //actions.single_target_1h+=/frost_strike,if=buff.killing_machine.react
+                frost_strike(() => buff.killing_machine.react),
+                //actions.single_target_1h+=/obliterate,if=unholy>1|buff.killing_machine.react
+                obliterate(() => unholy > 1 || buff.killing_machine.react),
+                //actions.single_target_1h+=/defile
+                defile(() => true),
+                //actions.single_target_1h+=/blood_tap,if=talent.defile.enabled&cooldown.defile.remains=0
+                blood_tap(() => talent.defile.enabled && cooldown.defile.remains == 0),
+                //actions.single_target_1h+=/frost_strike,if=runic_power>88
+                frost_strike(() => runic_power > 88),
+                //actions.single_target_1h+=/howling_blast,if=buff.rime.react|death>1|frost>1
+                howling_blast(() => buff.rime.react || death > 1 || frost > 1),
+                //actions.single_target_1h+=/blood_tap,if=buff.blood_charge.stack>10
+                blood_tap(() => buff.blood_charge.stack > 10),
+                //actions.single_target_1h+=/frost_strike,if=runic_power>76
+                frost_strike(() => runic_power > 76),
+                //actions.single_target_1h+=/unholy_blight,if=!disease.ticking
+                unholy_blight(() => !disease.ticking),
+                //actions.single_target_1h+=/outbreak,if=!dot.blood_plague.ticking
+                outbreak(() => !dot.blood_plague.ticking),
+                //actions.single_target_1h+=/plague_strike,if=!talent.necrotic_plague.enabled&!dot.blood_plague.ticking
+                plague_strike(() => !talent.necrotic_plague.enabled && !dot.blood_plague.ticking),
+                //actions.single_target_1h+=/howling_blast,if=!(target.health.pct-3*(target.health.pct%target.time_to_die)<=35&cooldown.soul_reaper.remains<3)|death+frost>=2
+                howling_blast(() => !(target.health.pct <= 36 && cooldown.soul_reaper.remains < 3) || death + frost >= 2),
+                //actions.single_target_1h+=/outbreak,if=talent.necrotic_plague.enabled&debuff.necrotic_plague.stack<=14
+                outbreak(() => talent.necrotic_plague.enabled && debuff.necrotic_plague.stack <= 14),
+                //actions.single_target_1h+=/blood_tap
+                blood_tap(() => true),
+                //actions.single_target_1h+=/plague_leech
+                plague_leech(() => true),
+                //actions.single_target_1h+=/empower_rune_weapon
+                empower_rune_weapon(() => true),
+                new ActionAlwaysFail()
+                );
+        }
+
+        private static Composite FrostSingleTarget2h()
+        {
+            return new PrioritySelector(
+                //actions.single_target_2h=defile
+                defile(() => true),
+                //actions.single_target_2h+=/blood_tap,if=talent.defile.enabled&cooldown.defile.remains=0
+                blood_tap(() => talent.defile.enabled && cooldown.defile.remains == 0),
+                //actions.single_target_2h+=/howling_blast,if=buff.rime.react&disease.min_remains>5&buff.killing_machine.react
+                howling_blast(() => buff.rime.react && disease.min_remains > 5 && buff.killing_machine.react),
+                //actions.single_target_2h+=/obliterate,if=buff.killing_machine.react
+                obliterate(() => buff.killing_machine.react),
+                //actions.single_target_2h+=/blood_tap,if=buff.killing_machine.react
+                blood_tap(() => buff.killing_machine.react),
+                //actions.single_target_2h+=/howling_blast,if=!talent.necrotic_plague.enabled&!dot.frost_fever.ticking&buff.rime.react
+                howling_blast(() => !talent.necrotic_plague.enabled && !dot.frost_fever.ticking && buff.rime.react),
+                //actions.single_target_2h+=/outbreak,if=!disease.max_ticking
+                outbreak(() => !disease.max_ticking),
+                //actions.single_target_2h+=/unholy_blight,if=!disease.min_ticking
+                unholy_blight(() => !disease.min_ticking),
+                //actions.single_target_2h+=/breath_of_sindragosa,if=runic_power>75
+                breath_of_sindragosa(() => runic_power > 75),
+                //actions.single_target_2h+=/run_action_list,name=single_target_bos,if=dot.breath_of_sindragosa.ticking
+                new Decorator(FrostSingleTargetBos(), req => dot.breath_of_sindragosa.ticking),
+                //actions.single_target_2h+=/obliterate,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains<7&runic_power<76
+                obliterate(() => talent.breath_of_sindragosa.enabled && cooldown.breath_of_sindragosa.remains < 7 && runic_power < 76),
+                //actions.single_target_2h+=/howling_blast,if=talent.breath_of_sindragosa.enabled&cooldown.breath_of_sindragosa.remains<3&runic_power<88
+                howling_blast(() => talent.breath_of_sindragosa.enabled && cooldown.breath_of_sindragosa.remains < 3 && runic_power < 88),
+                //actions.single_target_2h+=/howling_blast,if=!talent.necrotic_plague.enabled&!dot.frost_fever.ticking
+                howling_blast(() => !talent.necrotic_plague.enabled && !dot.frost_fever.ticking),
+                //actions.single_target_2h+=/howling_blast,if=talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking
+                howling_blast(() => talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking),
+                //actions.single_target_2h+=/plague_strike,if=!talent.necrotic_plague.enabled&!dot.blood_plague.ticking
+                plague_strike(() => !talent.necrotic_plague.enabled && !dot.blood_plague.ticking),
+                //actions.single_target_2h+=/blood_tap,if=buff.blood_charge.stack>10&runic_power>76
+                blood_tap(() => buff.blood_charge.stack > 10 && runic_power > 76),
+                //actions.single_target_2h+=/frost_strike,if=runic_power>76
+                frost_strike(() => runic_power > 76),
+                //actions.single_target_2h+=/howling_blast,if=buff.rime.react&disease.min_remains>5&(blood.frac>=1.8|unholy.frac>=1.8|frost.frac>=1.8)
+                howling_blast(() => buff.rime.react && disease.min_remains > 5 && (blood >= 1 || unholy >= 1 || frost >= 1)),
+                //actions.single_target_2h+=/obliterate,if=blood.frac>=1.8|unholy.frac>=1.8|frost.frac>=1.8
+                obliterate(() => blood >= 1 || unholy >= 1 || frost >= 1),
+                //actions.single_target_2h+=/plague_leech,if=disease.min_remains<3&((blood.frac<=0.95&unholy.frac<=0.95)|(frost.frac<=0.95&unholy.frac<=0.95)|(frost.frac<=0.95&blood.frac<=0.95))
+                plague_leech(() => disease.min_remains < 3 && ((blood <= 1 && unholy <= 1) || (frost <= 1 && unholy <= 1) || (frost <= 1 && blood <= 1))),
+                //actions.single_target_2h+=/frost_strike,if=talent.runic_empowerment.enabled&(frost=0|unholy=0|blood=0)&(!buff.killing_machine.react|!obliterate.ready_in<=1)
+                frost_strike(() => talent.runic_empowerment.enabled && (frost == 0 || unholy == 0 || blood == 0) && (!buff.killing_machine.react)),
+                //actions.single_target_2h+=/frost_strike,if=talent.blood_tap.enabled&buff.blood_charge.stack<=10&(!buff.killing_machine.react|!obliterate.ready_in<=1)
+                frost_strike(() => talent.blood_tap.enabled && buff.blood_charge.stack <= 10 && (!buff.killing_machine.react)),
+                //actions.single_target_2h+=/howling_blast,if=buff.rime.react&disease.min_remains>5
+                howling_blast(() => buff.rime.react && disease.min_remains > 5),
+                //actions.single_target_2h+=/obliterate,if=blood.frac>=1.5|unholy.frac>=1.6|frost.frac>=1.6|buff.bloodlust.up|cooldown.plague_leech.remains<=4
+                obliterate(() => blood >= 2 || unholy >= 2 || frost >= 2 || cooldown.plague_leech.remains <= 4),
+                //actions.single_target_2h+=/blood_tap,if=(buff.blood_charge.stack>10&runic_power>=20)|(blood.frac>=1.4|unholy.frac>=1.6|frost.frac>=1.6)
+                blood_tap(() => (buff.blood_charge.stack > 10 && runic_power >= 20) || (blood >= 2 || unholy >= 2 || frost >= 2)),
+                //actions.single_target_2h+=/frost_strike,if=!buff.killing_machine.react
+                frost_strike(() => !buff.killing_machine.react),
+                //actions.single_target_2h+=/plague_leech,if=(blood.frac<=0.95&unholy.frac<=0.95)|(frost.frac<=0.95&unholy.frac<=0.95)|(frost.frac<=0.95&blood.frac<=0.95)
+                plague_leech(() => (blood <= 1 && unholy <= 1) || (frost <= 1 && unholy <= 1) || (frost <= 1 && blood <= 1)),
+                //actions.single_target_2h+=/empower_rune_weapon
+                empower_rune_weapon(() => true),
+                new ActionAlwaysFail()
+                );
+        }
+
+        private static Composite FrostSingleTargetBos()
+        {
+            return new PrioritySelector(
+                //actions.single_target_bos=obliterate,if=buff.killing_machine.react
+                obliterate(() => buff.killing_machine.react),
+                //actions.single_target_bos+=/blood_tap,if=buff.killing_machine.react&buff.blood_charge.stack>=5
+                blood_tap(() => buff.killing_machine.react && buff.blood_charge.stack >= 5),
+                //actions.single_target_bos+=/plague_leech,if=buff.killing_machine.react
+                plague_leech(() => buff.killing_machine.react),
+                //actions.single_target_bos+=/blood_tap,if=buff.blood_charge.stack>=5
+                blood_tap(() => buff.blood_charge.stack >= 5),
+                //actions.single_target_bos+=/plague_leech
+                plague_leech(() => true),
+                //actions.single_target_bos+=/obliterate,if=runic_power<76
+                obliterate(() => runic_power < 76),
+                //actions.single_target_bos+=/howling_blast,if=((death=1&frost=0&unholy=0)|death=0&frost=1&unholy=0)&runic_power<88
+                howling_blast(() => ((death == 1 && frost == 0 && unholy == 0) || death == 0 && frost == 1 && unholy == 0) && runic_power < 88),
                 new ActionAlwaysFail()
                 );
         }
@@ -511,7 +714,7 @@ namespace Singular.ClassSpecific
                 // actions.unholy+=/scourge_strike,if=unholy=2
                 scourge_strike(() => unholy == 2),
                 // actions.unholy+=/festering_strike,if=talent.necrotic_plague.enabled&talent.unholy_blight.enabled&dot.necrotic_plague.remains<cooldown.unholy_blight.remains%2
-                festering_strike(() => talent.necrotic_plague.enabled && talent.unholy_blight.enabled && dot.necrotic_plague.remains < cooldown.unholy_blight.remains%2),
+                festering_strike(() => talent.necrotic_plague.enabled && talent.unholy_blight.enabled && dot.necrotic_plague.remains < cooldown.unholy_blight.remains % 2),
                 // actions.unholy+=/dark_transformation
                 dark_transformation(() => true),
                 // actions.unholy+=/festering_strike,if=blood=2&frost=2&(((Frost-death)>0)|((Blood-death)>0))
@@ -588,12 +791,15 @@ namespace Singular.ClassSpecific
             public const string festering_strike = "Festering Strike";
             public const int freezing_fog = 59052;
             public const string frost_fever = "Frost Fever";
+            public const string frost_strike = "Frost Strike";
             public const string horn_of_winter = "Horn of Winter";
+            public const string howling_blast = "Howling Blast";
             public const string icebound_fortitude = "Icebound Fortitude";
             public const string icy_touch = "Icy Touch";
             public const int killing_machine = 51124;
             public const string lichborne = "Lichborne";
             public const string necrotic_plague = "Necrotic Plague";
+            public const string obliterate = "Obliterate";
             public const string outbreak = "Outbreak";
             public const string pillar_of_frost = "Pillar of Frost";
             public const string plague_leech = "Plague Leech";
@@ -618,8 +824,8 @@ namespace Singular.ClassSpecific
         {
             #region Fields
 
-            private static readonly string[] listBase = {DkSpells.blood_plague, DkSpells.frost_fever};
-            private static readonly string[] listWithNecroticPlague = {DkSpells.necrotic_plague};
+            private static readonly string[] listBase = { DkSpells.blood_plague, DkSpells.frost_fever };
+            private static readonly string[] listWithNecroticPlague = { DkSpells.necrotic_plague };
 
             #endregion
 
@@ -734,6 +940,11 @@ namespace Singular.ClassSpecific
                 get { return active_enemies_list.Count(u => u.Distance <= 10); }
             }
 
+            public static int howling_blast
+            {
+                get { return active_enemies_list.Count(u => u.Distance <= 10); }
+            }
+
             #endregion
         }
 
@@ -799,6 +1010,8 @@ namespace Singular.ClassSpecific
             public static readonly cooldown outbreak = new cooldown(DkSpells.outbreak);
 
             public static readonly cooldown pillar_of_frost = new cooldown(DkSpells.pillar_of_frost);
+
+            public static readonly cooldown plague_leech = new cooldown(DkSpells.plague_leech);
 
             public static readonly cooldown soul_reaper = new cooldown(DkSpells.soul_reaper);
 
@@ -885,7 +1098,7 @@ namespace Singular.ClassSpecific
             #region Constructors
 
             private talent(DkTalentsEnum talent)
-                : base((int) talent)
+                : base((int)talent)
             {
             }
 
