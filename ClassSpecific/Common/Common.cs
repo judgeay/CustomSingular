@@ -87,11 +87,7 @@ namespace Singular.ClassSpecific.Common
 
             public static bool _1h
             {
-                get
-                {
-                    return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) &&
-                           Me.Inventory.Equipped.OffHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.OffHand.ItemInfo.WeaponClass);
-                }
+                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass); }
             }
 
             public static bool _2h
