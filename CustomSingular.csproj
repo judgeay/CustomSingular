@@ -122,6 +122,11 @@
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="SimC Profiles\dkFrost.txt" />
+    <Content Include="SimC Profiles\dkBlood.txt" />
+    <Content Include="SimC Profiles\dkUnholy.txt" />
+    <Content Include="SimC Profiles\mageArcane.txt" />
+    <Content Include="SimC Profiles\mageFrost.txt" />
     <Content Include="Singular.xml" />
   </ItemGroup>
   <ItemGroup />

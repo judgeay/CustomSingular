@@ -4,17 +4,22 @@ actions.precombat=flask,type=greater_draenic_stamina_flask
 actions.precombat+=/food,type=whiptail_fillet
 actions.precombat+=/blood_presence
 actions.precombat+=/horn_of_winter
+# Snapshot raid buffed stats before combat begins and pre-potting is done.
 actions.precombat+=/snapshot_stats
 actions.precombat+=/potion,name=draenic_armor
 actions.precombat+=/bone_shield
+actions.precombat+=/army_of_the_dead
 
 # Executed every time the actor is available.
 
 actions=auto_attack
-actions+=/blood_fury
-actions+=/berserking
-actions+=/arcane_torrent
 actions+=/potion,name=draenic_armor,if=buff.potion.down&buff.blood_shield.down&!unholy&!frost
+# if=time>10
+actions+=/blood_fury
+# if=time>10
+actions+=/berserking
+# if=time>10
+actions+=/arcane_torrent
 actions+=/antimagic_shell
 actions+=/conversion,if=!buff.conversion.up&runic_power>50&health.pct<90
 actions+=/lichborne,if=health.pct<90
@@ -52,17 +57,17 @@ actions.bt+=/death_coil,if=runic_power>70
 actions.bt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&(blood=2|(blood&!blood.death))
 actions.bt+=/blood_boil,if=blood=2|(blood&!blood.death)
 
-actions.nrt=death_strike,if=unholy=2|frost=2
-actions.nrt+=/death_coil,if=runic_power>70
-actions.nrt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood>=1
-actions.nrt+=/blood_boil,if=blood>=1
+actions.re=death_strike,if=unholy&frost
+actions.re+=/death_coil,if=runic_power>70
+actions.re+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood=2
+actions.re+=/blood_boil,if=blood=2
 
 actions.rc=death_strike,if=unholy=2|frost=2
 actions.rc+=/death_coil,if=runic_power>70
 actions.rc+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood>=1
 actions.rc+=/blood_boil,if=blood=2
 
-actions.re=death_strike,if=unholy&frost
-actions.re+=/death_coil,if=runic_power>70
-actions.re+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood=2
-actions.re+=/blood_boil,if=blood=2
+actions.nrt=death_strike,if=unholy=2|frost=2
+actions.nrt+=/death_coil,if=runic_power>70
+actions.nrt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood>=1
+actions.nrt+=/blood_boil,if=blood>=1
