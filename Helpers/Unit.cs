@@ -1657,7 +1657,7 @@ namespace Singular.Helpers
                     })
                     .ToList();
 
-                if (!Spell.UseAOE || CcCount > 0 || PlayerCount > 0)
+                if (!Spell.UseAoe || CcCount > 0 || PlayerCount > 0)
                     AvoidAOE = true;
 
                 if (AvoidAOE)

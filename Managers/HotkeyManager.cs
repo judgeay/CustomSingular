@@ -1,4 +1,5 @@
 ﻿// #define REACT_TO_HOTKEYS_IN_PULSE
+
 #define HONORBUDDY_SUPPORTS_HOTKEYS_WITHOUT_REQUIRING_A_MODIFIER
 
 using Styx;
@@ -16,64 +17,154 @@ namespace Singular.Managers
 {
     internal static class HotkeyDirector
     {
-        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
-        public static extern IntPtr GetActiveWindow();
-        
+        // state of each toggle kept here
 
-        private static HotkeySettings HotkeySettings { get { return SingularSettings.Instance.Hotkeys(); } }
+        #region Fields
+
+        public static Keys[] RegisteredMovementSuspendKeys;
+
+        private static bool _aoeEnabled;
+        private static bool _combatEnabled;
+        private static bool _cooldownEnabled;
+        private static bool _hotkeysRegistered;
+        private static bool _lastIsAoeEnabled;
+        private static bool _lastIsCombatEnabled;
+        private static bool _lastIsCooldownEnabled;
+        private static bool _lastIsMovementEnabled;
+        private static bool _lastIsMovementTemporarilySuspended;
+        private static bool _lastIsPullMoreEnabled;
+        private static Keys _lastMovementTemporarySuspendKey;
+        private static bool _movementEnabled;
+        private static DateTime _movementTemporarySuspendEndtime = DateTime.MinValue;
+        private static bool _pullMoreEnabled;
+
+        #endregion
+
+        #region Properties
 
         /// <summary>
         /// True: if AOE spells are allowed, False: Single target only
         /// </summary>
-        public static bool IsAoeEnabled { get { return _AoeEnabled; } }
-
-        /// <summary>
-        /// True: if PullMore spells are allowed, False: Single target only
-        /// </summary>
-        public static bool IsPullMoreEnabled { get { return _PullMoreEnabled; } }
+        public static bool IsAoeEnabled
+        {
+            get { return _aoeEnabled; }
+        }
 
         /// <summary>
         /// True: allow normal combat, False: CombatBuff and Combat behaviors are suppressed
         /// </summary>
-        public static bool IsCombatEnabled { get { return _CombatEnabled; } }
+        public static bool IsCombatEnabled
+        {
+            get { return _combatEnabled; }
+        }
+
+        public static bool IsCooldownEnabled
+        {
+            get { return _cooldownEnabled; }
+        }
 
         /// <summary>
         /// True: allow normal Bot movement, False: prevent any movement by Bot, Combat Routine, or Plugins
         /// </summary>
-        public static bool IsMovementEnabled { get { return _MovementEnabled && !IsMovementTemporarilySuspended; } }
+        public static bool IsMovementEnabled
+        {
+            get { return _movementEnabled && !IsMovementTemporarilySuspended; }
+        }
 
+        /// <summary>
+        /// True: if PullMore spells are allowed, False: Single target only
+        /// </summary>
+        public static bool IsPullMoreEnabled
+        {
+            get { return _pullMoreEnabled; }
+        }
+
+        private static HotkeySettings HotkeySettings
+        {
+            get { return SingularSettings.Instance.Hotkeys(); }
+        }
 
         private static bool IsMovementTemporarilySuspended
         {
-            get 
-            { 
+            get
+            {
                 // check if not suspended
-                if (_MovementTemporarySuspendEndtime == DateTime.MinValue )
+                if (_movementTemporarySuspendEndtime == DateTime.MinValue)
                     return false;
 
                 // check if still suspended
-                if ( _MovementTemporarySuspendEndtime > DateTime.Now )
+                if (_movementTemporarySuspendEndtime > DateTime.Now)
                     return true;
 
                 // suspend has timed out, so refresh suspend timer if key is still down
                 // -- currently only check last key pressed rather than every suspend key configured
                 // if ( HotkeySettings.SuspendMovementKeys.Any( k => IsKeyDown( k )))
-                if ( IsKeyDown( _lastMovementTemporarySuspendKey ))
+                if (IsKeyDown(_lastMovementTemporarySuspendKey))
                 {
-                    _MovementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
+                    _movementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
                     return true;
                 }
 
-                _MovementTemporarySuspendEndtime = DateTime.MinValue;
+                _movementTemporarySuspendEndtime = DateTime.MinValue;
                 return false;
             }
 
             set
             {
                 if (value)
-                    _MovementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
+                    _movementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
                 else
-                    _MovementTemporarySuspendEndtime = DateTime.MinValue;
+                    _movementTemporarySuspendEndtime = DateTime.MinValue;
+            }
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        public static extern IntPtr GetActiveWindow();
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        public static extern short GetAsyncKeyState(int vkey);
+
+        #endregion
+
+        #region Private Methods
+
+        internal static void AoeKeyHandler()
+        {
+            if (_aoeEnabled != _lastIsAoeEnabled)
+            {
+                _lastIsAoeEnabled = _aoeEnabled;
+                if (_lastIsAoeEnabled)
+                    TellUser("AoE now active!");
+                else
+                    TellUser("AoE disabled... press {0} to enable", HotkeySettings.AoeToggle.ToFormattedString());
+            }
+        }
+
+        internal static void CombatKeyHandler()
+        {
+            if (_combatEnabled != _lastIsCombatEnabled)
+            {
+                _lastIsCombatEnabled = _combatEnabled;
+                if (_lastIsCombatEnabled)
+                    TellUser("Combat now enabled!");
+                else
+                    TellUser("Combat disabled... press {0} to enable", HotkeySettings.CombatToggle.ToFormattedString());
+            }
+        }
+
+        internal static void CooldownKeyHandler()
+        {
+            if (_cooldownEnabled != _lastIsCooldownEnabled)
+            {
+                _lastIsCooldownEnabled = _cooldownEnabled;
+                if (_lastIsCooldownEnabled)
+                    TellUser("Automatic Cooldown usage now active!");
+                else
+                    TellUser("Automatic Cooldown usage disabled... press {0} to enable", HotkeySettings.CooldownToggle.ToFormattedString());
             }
         }
 
@@ -85,7 +176,7 @@ namespace Singular.Managers
         {
             InitKeyStates();
 
-            SingularRoutine.OnBotEvent += (src,arg) =>
+            SingularRoutine.OnBotEvent += (src, arg) =>
             {
                 if (arg.Event == SingularBotEvent.BotStarted)
                     Start(true);
@@ -94,100 +185,29 @@ namespace Singular.Managers
             };
         }
 
-        internal static void Start(bool needReset = false)
+        internal static void MovementKeyHandler()
         {
-            if (needReset)
-                InitKeyStates();
-
-            _HotkeysRegistered = true;
-
-            // Hook the  hotkeys for the appropriate WOW Window...
-            HotkeysManager.Initialize( StyxWoW.Memory.Process.MainWindowHandle);
-
-            // define hotkeys for behaviors when using them as toggles (press once to disable, press again to enable)
-            // .. otherwise, keys are polled for in Pulse()
-            if (HotkeySettings.KeysToggleBehavior)
+            if (_movementEnabled != _lastIsMovementEnabled)
             {
-                // register hotkey for commands with 1:1 key assignment
-                if (HotkeySettings.AoeToggle != Keys.None)
-                    RegisterHotkeyAssignment("AOE", HotkeySettings.AoeToggle, (hk) => { AoeToggle(); });
+                _lastIsMovementEnabled = _movementEnabled;
+                if (_lastIsMovementEnabled)
+                    TellUser("Movement now enabled!");
+                else
+                    TellUser("Movement disabled... press {0} to enable", HotkeySettings.MovementToggle.ToFormattedString());
 
-                if (HotkeySettings.CombatToggle != Keys.None)
-                    RegisterHotkeyAssignment("Combat", HotkeySettings.CombatToggle, (hk) => { CombatToggle(); });
-
-                // register hotkey for commands with 1:1 key assignment
-                if (HotkeySettings.PullMoreToggle != Keys.None)
-                    RegisterHotkeyAssignment("PullMore", HotkeySettings.PullMoreToggle, (hk) => { PullMoreToggle(); });
-
-                // note: important to not check MovementManager if movement disabled here, since MovementManager calls us
-                // .. and the potential for side-effects exists.  check SingularSettings directly for this only
-                if (!SingularSettings.Instance.DisableAllMovement && HotkeySettings.MovementToggle != Keys.None)
-                    RegisterHotkeyAssignment("Movement", HotkeySettings.MovementToggle, (hk) => { MovementToggle(); });
+                MovementManager.Update();
             }
         }
 
-        private static void RegisterHotkeyAssignment(string name, Keys key, Action<Hotkey> callback)
+        internal static void PullMoreKeyHandler()
         {
-            Keys keyCode = key & Keys.KeyCode;
-            ModifierKeys mods = ModifierKeys.NoRepeat;
-
-            if ((key & Keys.Shift) != 0)
-                mods |= ModifierKeys.Shift;
-            if ((key & Keys.Alt) != 0)
-                mods |= ModifierKeys.Alt;
-            if ((key & Keys.Control) != 0)
-                mods |= ModifierKeys.Control;
-
-            Logger.Write( LogColor.Hilite, "Hotkey: To disable {0}, press: [{1}]", name, key.ToFormattedString());
-            HotkeysManager.Register(name, keyCode, mods, callback);
-        }
-
-        private static string ToFormattedString(this Keys key)
-        {
-            string txt = "";
-
-            if ((key & Keys.Shift) != 0)
-                txt += "Shift+";
-            if ((key & Keys.Alt) != 0)
-                txt += "Alt+";
-            if ((key & Keys.Control) != 0)
-                txt += "Ctrl+";
-            txt += (key & Keys.KeyCode).ToString();
-            return txt;
-        }
-
-        internal static void Stop()
-        {
-            if (!_HotkeysRegistered)
-                return;
-
-            _HotkeysRegistered = false;
-
-            // remove hotkeys for commands with 1:1 key assignment          
-            HotkeysManager.Unregister("AOE");
-            HotkeysManager.Unregister("Combat");
-            HotkeysManager.Unregister("Movement");
-
-/* Suspend Movement keys have to be polled for now instead of using HotKey interface
- * since defining a HotKey won't allow the key to pass through to game client window
- * 
-            // remove hotkeys for commands with 1:M key assignment
-            if (_registeredMovementSuspendKeys != null)
+            if (_pullMoreEnabled != _lastIsPullMoreEnabled)
             {
-                foreach (var key in _registeredMovementSuspendKeys)
-                {
-                    HotkeysManager.Unregister("Movement Suspend(" + key.ToString() + ")");
-                }
-            }
-*/
-        }
-
-        internal static void Update()
-        {
-            if (_HotkeysRegistered)
-            {
-                Stop();
-                Start();
+                _lastIsPullMoreEnabled = _pullMoreEnabled;
+                if (_lastIsPullMoreEnabled)
+                    TellUser("PullMore now allowed!");
+                else
+                    TellUser("PullMore disabled... press {0} to enable", HotkeySettings.PullMoreToggle.ToFormattedString());
             }
         }
 
@@ -206,17 +226,22 @@ namespace Singular.Managers
             {
                 if (HotkeySettings.AoeToggle != Keys.None)
                 {
-                    _AoeEnabled = !IsKeyDown(HotkeySettings.AoeToggle);
+                    _aoeEnabled = !IsKeyDown(HotkeySettings.AoeToggle);
                     AoeKeyHandler();
                 }
                 if (HotkeySettings.CombatToggle != Keys.None)
                 {
-                    _CombatEnabled = !IsKeyDown(HotkeySettings.CombatToggle);
+                    _combatEnabled = !IsKeyDown(HotkeySettings.CombatToggle);
                     CombatKeyHandler();
+                }
+                if (HotkeySettings.CooldownToggle != Keys.None)
+                {
+                    _cooldownEnabled = !IsKeyDown(HotkeySettings.CooldownToggle);
+                    CooldownKeyHandler();
                 }
                 if (HotkeySettings.MovementToggle != Keys.None)
                 {
-                    _MovementEnabled = !IsKeyDown(HotkeySettings.MovementToggle);
+                    _movementEnabled = !IsKeyDown(HotkeySettings.MovementToggle);
                     MovementKeyHandler();
                 }
             }
@@ -224,171 +249,151 @@ namespace Singular.Managers
             TemporaryMovementKeyHandler();
         }
 
-        internal static void AoeKeyHandler()
+        internal static void Start(bool needReset = false)
         {
-            if (_AoeEnabled != last_IsAoeEnabled)
+            if (needReset)
+                InitKeyStates();
+
+            _hotkeysRegistered = true;
+
+            // Hook the  hotkeys for the appropriate WOW Window...
+            HotkeysManager.Initialize(StyxWoW.Memory.Process.MainWindowHandle);
+
+            // define hotkeys for behaviors when using them as toggles (press once to disable, press again to enable)
+            // .. otherwise, keys are polled for in Pulse()
+            if (HotkeySettings.KeysToggleBehavior)
             {
-                last_IsAoeEnabled = _AoeEnabled;
-                if (last_IsAoeEnabled)
-                    TellUser("AoE now active!");
-                else
-                    TellUser("AoE disabled... press {0} to enable", HotkeySettings.AoeToggle.ToFormattedString());
+                // register hotkey for commands with 1:1 key assignment
+                if (HotkeySettings.AoeToggle != Keys.None)
+                    RegisterHotkeyAssignment("AOE", HotkeySettings.AoeToggle, hk => AoeToggle());
+
+                if (HotkeySettings.CombatToggle != Keys.None)
+                    RegisterHotkeyAssignment("Combat", HotkeySettings.CombatToggle, hk => CombatToggle());
+
+                if (HotkeySettings.CooldownToggle != Keys.None)
+                    RegisterHotkeyAssignment("Cooldown", HotkeySettings.CooldownToggle, hk => CooldownToggle());
+
+                // register hotkey for commands with 1:1 key assignment
+                if (HotkeySettings.PullMoreToggle != Keys.None)
+                    RegisterHotkeyAssignment("PullMore", HotkeySettings.PullMoreToggle, hk => PullMoreToggle());
+
+                // note: important to not check MovementManager if movement disabled here, since MovementManager calls us
+                // .. and the potential for side-effects exists.  check SingularSettings directly for this only
+                if (!SingularSettings.Instance.DisableAllMovement && HotkeySettings.MovementToggle != Keys.None)
+                    RegisterHotkeyAssignment("Movement", HotkeySettings.MovementToggle, hk => MovementToggle());
             }
         }
 
-        internal static void PullMoreKeyHandler()
+        internal static void Stop()
         {
-            if (_PullMoreEnabled != last_IsPullMoreEnabled)
-            {
-                last_IsPullMoreEnabled = _PullMoreEnabled;
-                if (last_IsPullMoreEnabled)
-                    TellUser("PullMore now allowed!");
-                else
-                    TellUser("PullMore disabled... press {0} to enable", HotkeySettings.PullMoreToggle.ToFormattedString());
-            }
-        }
+            if (!_hotkeysRegistered)
+                return;
 
-        internal static void CombatKeyHandler()
-        {
-            if (_CombatEnabled != last_IsCombatEnabled)
-            {
-                last_IsCombatEnabled = _CombatEnabled;
-                if (last_IsCombatEnabled)
-                    TellUser("Combat now enabled!");
-                else
-                    TellUser("Combat disabled... press {0} to enable", HotkeySettings.CombatToggle.ToFormattedString());
-            }
-        }
+            _hotkeysRegistered = false;
 
-        internal static void MovementKeyHandler()
-        {
-            if (_MovementEnabled != last_IsMovementEnabled)
-            {
-                last_IsMovementEnabled = _MovementEnabled;
-                if (last_IsMovementEnabled)
-                    TellUser("Movement now enabled!");
-                else
-                    TellUser("Movement disabled... press {0} to enable", HotkeySettings.MovementToggle.ToFormattedString() );
+            // remove hotkeys for commands with 1:1 key assignment          
+            HotkeysManager.Unregister("AOE");
+            HotkeysManager.Unregister("Combat");
+            HotkeysManager.Unregister("Cooldown");
+            HotkeysManager.Unregister("PullMore");
+            HotkeysManager.Unregister("Movement");
 
-                MovementManager.Update();
-            }
+            ////Suspend Movement keys have to be polled for now instead of using HotKey interface since defining a HotKey won't allow the key to pass through to game client window
+            //// remove hotkeys for commands with 1:M key assignment
+            //if (_registeredMovementSuspendKeys != null)
+            //{
+            //    foreach (var key in _registeredMovementSuspendKeys)
+            //    {
+            //        HotkeysManager.Unregister("Movement Suspend(" + key.ToString() + ")");
+            //    }
+            //}
         }
 
         internal static void TemporaryMovementKeyHandler()
         {
             // bail out if temporary movement suspensio not enabled
-            if ( !HotkeySettings.SuspendMovement)
+            if (!HotkeySettings.SuspendMovement)
                 return;
 
             // loop through array (ugghhh) polling for keys current state
             foreach (Keys key in HotkeySettings.SuspendMovementKeys)
             {
-                if ( IsKeyDown(key))
+                if (IsKeyDown(key))
                 {
                     MovementTemporary_Suspend(key);
                     break;
                 }
             }
 
-            if (IsMovementTemporarilySuspended != last_IsMovementTemporarilySuspended)
+            if (IsMovementTemporarilySuspended != _lastIsMovementTemporarilySuspended)
             {
-                last_IsMovementTemporarilySuspended = IsMovementTemporarilySuspended;
+                _lastIsMovementTemporarilySuspended = IsMovementTemporarilySuspended;
 
                 // keep these notifications in Log window only
-                if (last_IsMovementTemporarilySuspended)
-                    Logger.Write( LogColor.Hilite, "Bot Movement disabled during user movement...");
-                else
-                    Logger.Write( LogColor.Hilite, "Bot Movement restored!");
+                Logger.Write(LogColor.Hilite, _lastIsMovementTemporarilySuspended ? "Bot Movement disabled during user movement..." : "Bot Movement restored!");
 
                 MovementManager.Update();
             }
         }
 
-        #region Helpers
-
-        private static void TellUser(string template, params object[] args)
+        internal static void Update()
         {
-            string msg = string.Format(template, args);
-            Logger.Write( Color.Yellow, string.Format("Hotkey: " + msg));
-            if ( HotkeySettings.ChatFrameMessage )
-                Lua.DoString(string.Format("print('{0}!')", msg));
+            if (_hotkeysRegistered)
+            {
+                Stop();
+                Start();
+            }
         }
-
-        #endregion
-
-        // track whether keys registered yet
-        private static bool _HotkeysRegistered = false;
-
-        // state of each toggle kept here
-        private static bool _AoeEnabled;
-        private static bool _CombatEnabled;
-        private static bool _MovementEnabled;
-        private static bool _PullMoreEnabled;
-        private static DateTime _MovementTemporarySuspendEndtime = DateTime.MinValue;
-        private static Keys _lastMovementTemporarySuspendKey;
-
-        // save keys used at last Register
-        public static Keys[] _registeredMovementSuspendKeys;
-
-        // state prior to last puls saved here
-        private static bool last_IsAoeEnabled;
-        private static bool last_IsCombatEnabled;
-        private static bool last_IsPullMoreEnabled;
-        private static bool last_IsMovementEnabled;
-        private static bool last_IsMovementTemporarilySuspended; 
 
         // state toggle helpers
         private static bool AoeToggle()
         {
-            _AoeEnabled = _AoeEnabled ? false : true;
+            _aoeEnabled = !_aoeEnabled;
 #if !REACT_TO_HOTKEYS_IN_PULSE
             AoeKeyHandler();
 #endif
-            return (_AoeEnabled);
+            return (_aoeEnabled);
         }
 
-        private static bool PullMoreToggle()
+        private static bool CombatToggle()
         {
-            _PullMoreEnabled = _PullMoreEnabled ? false : true;
-#if !REACT_TO_HOTKEYS_IN_PULSE
-            PullMoreKeyHandler();
-#endif
-            return (_PullMoreEnabled);
-        }
-
-        private static bool CombatToggle() 
-        { 
-            _CombatEnabled = _CombatEnabled ? false : true;
+            _combatEnabled = !_combatEnabled;
 #if !REACT_TO_HOTKEYS_IN_PULSE
             CombatKeyHandler();
 #endif
-            return (_CombatEnabled); 
+            return (_combatEnabled);
         }
 
-        private static bool MovementToggle() 
-        { 
-            _MovementEnabled = _MovementEnabled ? false : true;
-            if ( !_MovementEnabled )
-                StopMoving.Now();
-
-#if !REACT_TO_HOTKEYS_IN_PULSE
-            MovementKeyHandler();
-#endif
-            return (_MovementEnabled); 
-        }
-
-        private static void MovementTemporary_Suspend( Keys key)
+        private static bool CooldownToggle()
         {
-            _lastMovementTemporarySuspendKey = key;
-            if (_MovementEnabled)
-            {
-                if (!IsWowKeyBoardFocusInFrame())
-                    IsMovementTemporarilySuspended = true;
-
+            _cooldownEnabled = !_cooldownEnabled;
 #if !REACT_TO_HOTKEYS_IN_PULSE
-                TemporaryMovementKeyHandler();
+            CooldownKeyHandler();
 #endif
-            }
+            return (_cooldownEnabled);
+        }
+
+        private static void InitKeyStates()
+        {
+            // reset these values so we begin at same state every Start
+            _aoeEnabled = true;
+            _combatEnabled = true;
+            _cooldownEnabled = true;
+            _pullMoreEnabled = true;
+            _movementEnabled = true;
+            _movementTemporarySuspendEndtime = DateTime.MinValue;
+
+            _lastIsAoeEnabled = true;
+            _lastIsCombatEnabled = true;
+            _lastIsCooldownEnabled = true;
+            _lastIsPullMoreEnabled = true;
+            _lastIsMovementEnabled = true;
+            _lastIsMovementTemporarilySuspended = false;
+        }
+
+        private static bool IsKeyDown(Keys key)
+        {
+            return (GetAsyncKeyState((int) key) & 0x8000) != 0;
         }
 
         /// <summary>
@@ -401,33 +406,79 @@ namespace Singular.Managers
             return ret != null;
         }
 
-        private static void InitKeyStates()
+        private static void MovementTemporary_Suspend(Keys key)
         {
-            // reset these values so we begin at same state every Start
-            _AoeEnabled = true;
-            _CombatEnabled = true;
-            _PullMoreEnabled = true;
-            _MovementEnabled = true;
-            _MovementTemporarySuspendEndtime = DateTime.MinValue;
+            _lastMovementTemporarySuspendKey = key;
+            if (_movementEnabled)
+            {
+                if (!IsWowKeyBoardFocusInFrame())
+                    IsMovementTemporarilySuspended = true;
 
-            last_IsAoeEnabled = true;
-            last_IsCombatEnabled = true;
-            last_IsPullMoreEnabled = true;
-            last_IsMovementEnabled = true;
-            last_IsMovementTemporarilySuspended = false;
+#if !REACT_TO_HOTKEYS_IN_PULSE
+                TemporaryMovementKeyHandler();
+#endif
+            }
         }
 
-        private static Dictionary<string, Keys> mapWowKeyToWindows = new Dictionary<string, Keys>
+        private static bool MovementToggle()
         {
-        };
+            _movementEnabled = !_movementEnabled;
+            if (!_movementEnabled)
+                StopMoving.Now();
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
-        public static extern short GetAsyncKeyState(int vkey);
-
-        static bool IsKeyDown(Keys key)
-        {
-            return (GetAsyncKeyState((int) key) & 0x8000) != 0;
+#if !REACT_TO_HOTKEYS_IN_PULSE
+            MovementKeyHandler();
+#endif
+            return (_movementEnabled);
         }
+
+        private static bool PullMoreToggle()
+        {
+            _pullMoreEnabled = _pullMoreEnabled ? false : true;
+#if !REACT_TO_HOTKEYS_IN_PULSE
+            PullMoreKeyHandler();
+#endif
+            return (_pullMoreEnabled);
+        }
+
+        private static void RegisterHotkeyAssignment(string name, Keys key, Action<Hotkey> callback)
+        {
+            Keys keyCode = key & Keys.KeyCode;
+            ModifierKeys mods = ModifierKeys.NoRepeat;
+
+            if ((key & Keys.Shift) != 0)
+                mods |= ModifierKeys.Shift;
+            if ((key & Keys.Alt) != 0)
+                mods |= ModifierKeys.Alt;
+            if ((key & Keys.Control) != 0)
+                mods |= ModifierKeys.Control;
+
+            Logger.Write(LogColor.Hilite, "Hotkey: To disable {0}, press: [{1}]", name, key.ToFormattedString());
+            HotkeysManager.Register(name, keyCode, mods, callback);
+        }
+
+        private static void TellUser(string template, params object[] args)
+        {
+            string msg = string.Format(template, args);
+            Logger.Write(Color.Yellow, string.Format("Hotkey: " + msg));
+            if (HotkeySettings.ChatFrameMessage)
+                Lua.DoString(string.Format("print('{0}!')", msg));
+        }
+
+        private static string ToFormattedString(this Keys key)
+        {
+            string txt = "";
+
+            if ((key & Keys.Shift) != 0)
+                txt += "Shift+";
+            if ((key & Keys.Alt) != 0)
+                txt += "Alt+";
+            if ((key & Keys.Control) != 0)
+                txt += "Ctrl+";
+            txt += (key & Keys.KeyCode).ToString();
+            return txt;
+        }
+
+        #endregion
     }
-
 }

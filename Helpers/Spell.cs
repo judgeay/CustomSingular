@@ -25,61 +25,75 @@ using System.Drawing;
 
 namespace Singular.Helpers
 {
-    enum LagTolerance
+    internal enum LagTolerance
     {
         No = 0,
         Yes
     };
 
-    enum FaceDuring
+    internal enum FaceDuring
     {
         No = 0,
         Yes
     };
 
-    enum HasGcd
+    internal enum HasGcd
     {
         No = 0,
         Yes
     };
 
     public delegate WoWUnit UnitSelectionDelegate(object context);
+
     public delegate WoWObject ObjSelectionDelegate(object context);
+
     public delegate bool SpellFindDelegate(object contact, out SpellFindResults sfr);
 
     public delegate bool CanCastDelegate(SpellFindResults sfr, WoWUnit unit, bool skipWowCheck = false);
 
     public delegate bool SimpleBooleanDelegate(object context);
+
     public delegate string SimpleStringDelegate(object context);
+
     public delegate int SimpleIntDelegate(object context);
+
     public delegate float SimpleFloatDelegate(object context);
-    
+
     public delegate TimeSpan SimpleTimeSpanDelegate(object context);
 
     internal static class Spell
     {
         // type casting method for context dereferencing within Spell class
-        private static CastContext CastContext(this object ctx) { return (CastContext)ctx; }
-        private static CogContext CogContext(this object ctx) { return (CogContext)ctx; }
+        private static CastContext CastContext(this object ctx)
+        {
+            return (CastContext) ctx;
+        }
+
+        private static CogContext CogContext(this object ctx)
+        {
+            return (CogContext) ctx;
+        }
 
         private static SpellFindResults EmptySFR = new SpellFindResults(null);
 
-        private static LocalPlayer Me { get { return StyxWoW.Me; } }
+        private static LocalPlayer Me
+        {
+            get { return StyxWoW.Me; }
+        }
 
         public static void Init()
         {
-            SingularRoutine.OnBotEvent += (src,arg) =>
+            SingularRoutine.OnBotEvent += (src, arg) =>
             {
                 if (arg.Event == SingularBotEvent.BotStarted)
                 {
-                    UndefinedSpells = new Dictionary<string,long>();
+                    UndefinedSpells = new Dictionary<string, long>();
                 }
                 else if (arg.Event == SingularBotEvent.BotStopped)
                 {
                     ListUndefinedSpells();
                 }
             };
-
         }
 
         public static void LogCast(string sname, WoWUnit unit, bool isHeal = false)
@@ -90,7 +104,7 @@ namespace Singular.Helpers
         public static bool CastPrimative(string spellName)
         {
             var result = SpellManager.Cast(spellName);
-            
+
             PreviousGcdSpell = spellName;
 
             return result;
@@ -113,7 +127,7 @@ namespace Singular.Helpers
         private static bool CastPrimative(string spellName, WoWUnit unit)
         {
             var result = SpellManager.Cast(spellName, unit);
-            
+
             PreviousGcdSpell = spellName;
 
             return result;
@@ -127,7 +141,7 @@ namespace Singular.Helpers
         public static bool CastPrimative(WoWSpell spell, WoWUnit unit)
         {
             var result = SpellManager.Cast(spell, unit);
-            
+
             PreviousGcdSpell = spell.Name;
 
             return result;
@@ -175,7 +189,7 @@ namespace Singular.Helpers
             {
                 if (obj.Caster != null && obj.Caster.IsValid && obj.Caster.IsHostile && unit.Location.Distance(obj.Location) <= obj.Radius)
                 {
-                    Logger.Write( LogColor.Hilite, "^Yikes: {0} is standing in {1}", unit.SafeName(), obj.Name);
+                    Logger.Write(LogColor.Hilite, "^Yikes: {0} is standing in {1}", unit.SafeName(), obj.Name);
                     return true;
                 }
             }
@@ -187,7 +201,7 @@ namespace Singular.Helpers
         /// are permitted.  This will be the interface which wraps all settings
         /// toggles which may effect its on/off state
         /// </summary>
-        public static bool UseAOE
+        public static bool UseAoe
         {
             get
             {
@@ -195,6 +209,17 @@ namespace Singular.Helpers
                     return false;
 
                 return HotkeyDirector.IsAoeEnabled && SingularSettings.Instance.AllowAoe;
+            }
+        }
+
+        public static bool UseCooldown
+        {
+            get
+            {
+                if (!SingularRoutine.IsAllowed(CapabilityFlags.DefensiveCooldowns | CapabilityFlags.OffensiveCooldowns))
+                    return false;
+
+                return HotkeyDirector.IsCooldownEnabled && SingularSettings.Instance.AllowAutoCooldownUsage;
             }
         }
 
@@ -237,13 +262,13 @@ namespace Singular.Helpers
 
         public static float MeleeRange
         {
-            get
-            {
-                return StyxWoW.Me.CurrentTarget.MeleeDistance();
-            }
+            get { return StyxWoW.Me.CurrentTarget.MeleeDistance(); }
         }
 
-        public static float SafeMeleeRange { get { return Math.Max(MeleeRange - 1f, 5f); } }
+        public static float SafeMeleeRange
+        {
+            get { return Math.Max(MeleeRange - 1f, 5f); }
+        }
 
         /// <summary>
         /// get the effective distance between two mobs accounting for their 
@@ -298,7 +323,7 @@ namespace Singular.Helpers
                 target = unit;
                 unit = StyxWoW.Me;
             }
-           
+
             return baseSpellRange + target.CombatReach;
         }
 
@@ -306,7 +331,7 @@ namespace Singular.Helpers
         {
             if (spell != null)
             {
-                int time = (int)spell.CastTime;
+                int time = (int) spell.CastTime;
                 if (time == 0)
                     time = spell.BaseDuration;
                 return TimeSpan.FromMilliseconds(time);
@@ -346,7 +371,7 @@ namespace Singular.Helpers
         }
 
         public static bool IsSpellOnCooldown(WoWSpell spell)
-        {           
+        {
             if (spell == null)
                 return true;
 
@@ -410,7 +435,6 @@ namespace Singular.Helpers
         /// <param name="spell"></param>
         /// <param name="unit"></param>
         /// <returns>Minimum spell range</returns>
-
         public static float ActualMinRange(this WoWSpell spell, WoWUnit unit)
         {
             if (spell.MinRange == 0)
@@ -422,7 +446,6 @@ namespace Singular.Helpers
 
         public static double TimeToEnergyCap()
         {
-
             double timetoEnergyCap;
             double playerEnergy;
             double ER_Rate;
@@ -757,7 +780,7 @@ namespace Singular.Helpers
         public static Composite WaitForGcdOrCastOrChannel(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
         {
             return new PrioritySelector(
-                WaitForGlobalCooldown(faceDuring,allow),
+                WaitForGlobalCooldown(faceDuring, allow),
                 WaitForCast(faceDuring, allow),
                 WaitForChannel(faceDuring, allow)
                 );
@@ -776,7 +799,7 @@ namespace Singular.Helpers
         public static Composite HandleOffGCD(Composite tree)
         {
             return new Sequence(
-                new Throttle( TimeSpan.FromMilliseconds(500), tree ),
+                new Throttle(TimeSpan.FromMilliseconds(500), tree),
                 new ActionAlwaysFail()
                 );
         }
@@ -923,7 +946,6 @@ namespace Singular.Helpers
             return Cast(name, ret => true, onUnit, requirements);
         }
 
-
         #endregion
 
         #region Cast - by ID
@@ -1040,7 +1062,7 @@ namespace Singular.Helpers
 
                     return RunStatus.Failure;
                 })
-            );
+                );
         }
 
         #endregion
@@ -1085,8 +1107,8 @@ namespace Singular.Helpers
         public static void DumpDoubleCast()
         {
             int count = _DoubleCastPreventionDict.Count();
-            Logger.WriteDebug("DumpDoubleCast: === {0} @ {1:HH:mm:ss.fff}", count, DateTime.UtcNow );
-            foreach ( var entry in _DoubleCastPreventionDict)
+            Logger.WriteDebug("DumpDoubleCast: === {0} @ {1:HH:mm:ss.fff}", count, DateTime.UtcNow);
+            foreach (var entry in _DoubleCastPreventionDict)
             {
                 DateTime expires = entry.Value;
                 int index = entry.Key.IndexOf('-');
@@ -1166,7 +1188,7 @@ namespace Singular.Helpers
 
         public static Composite Buff(string name, bool myBuff, SimpleBooleanDelegate requirements)
         {
-            return Buff(name, myBuff, ret => StyxWoW.Me.CurrentTarget, requirements );
+            return Buff(name, myBuff, ret => StyxWoW.Me.CurrentTarget, requirements);
         }
 
         public static Composite Buff(string name, UnitSelectionDelegate onUnit, SimpleBooleanDelegate requirements)
@@ -1268,8 +1290,8 @@ namespace Singular.Helpers
                     return !buffFound;
                 },
                 new Sequence(
-                // new Action(ctx => _lastBuffCast = name),
-                    Cast(sp => _buffName, chkMov => true, on => _buffUnit, require, cancel => false /* causes cast to complete */ ),
+                    // new Action(ctx => _lastBuffCast = name),
+                    Cast(sp => _buffName, chkMov => true, on => _buffUnit, require, cancel => false /* causes cast to complete */),
                     new Action(ret => UpdateDoubleCast(_buffName, _buffUnit))
                     )
                 );
@@ -1318,7 +1340,7 @@ namespace Singular.Helpers
                     _buffName = spell.Name;
                     if (DoubleCastContains(_buffUnit, _buffName))
                         return false;
-                    
+
                     if (!spell.CanCast && (sfr.Override == null || !sfr.Original.CanCast))
                     {
                         if (SingularSettings.DebugSpellCasting)
@@ -1333,7 +1355,7 @@ namespace Singular.Helpers
                         hasExpired = _buffUnit.HasAuraExpired(_buffName, expires, myBuff);
                         if (SingularSettings.DebugSpellCasting)
                         {
-                            if (hasExpired )
+                            if (hasExpired)
                                 Logger.WriteDebug("Buff=expired: '{0}')={1}: hasspell={2}, auraleft={3:F1} secs", _buffName, hasExpired, SpellManager.HasSpell(_buffName).ToYN(), _buffUnit.GetAuraTimeLeft(_buffName, true).TotalSeconds);
                             else
                                 Logger.WriteDebug("Buff=present: '{0}')={1}: hasspell={2}, auraleft={3:F1} secs", _buffName, hasExpired, SpellManager.HasSpell(_buffName).ToYN(), _buffUnit.GetAuraTimeLeft(_buffName, true).TotalSeconds);
@@ -1349,13 +1371,12 @@ namespace Singular.Helpers
                     return hasExpired;
                 },
                 new Sequence(
-                // new Action(ctx => _lastBuffCast = name),
-                    Cast(sp => _buffName, chkMov => true, onUnit, require, cancel => false /* causes cast to complete */, gcd: gcd ),
-                    new Action(ret => UpdateDoubleCast( _buffName, _buffUnit))
+                    // new Action(ctx => _lastBuffCast = name),
+                    Cast(sp => _buffName, chkMov => true, onUnit, require, cancel => false /* causes cast to complete */, gcd: gcd),
+                    new Action(ret => UpdateDoubleCast(_buffName, _buffUnit))
                     )
                 );
         }
-
 
         #endregion
 
@@ -1402,7 +1423,7 @@ namespace Singular.Helpers
 
         public static Composite BuffSelf(SimpleStringDelegate name, SimpleBooleanDelegate requirements, int expirSecs, HasGcd gcd = HasGcd.Yes)
         {
-            return Buff(name, expirSecs, on => Me, require: requirements, gcd:gcd);
+            return Buff(name, expirSecs, on => Me, require: requirements, gcd: gcd);
         }
 
         public static Composite BuffSelfAndWait(string name, SimpleBooleanDelegate requirements = null, int expirSecs = 0, CanRunDecoratorDelegate until = null, bool measure = false, HasGcd gcd = HasGcd.Yes)
@@ -1472,7 +1493,7 @@ namespace Singular.Helpers
                 until = u => StyxWoW.Me.HasAura(u as string);
 
             return new PrioritySelector(
-                ctx => 
+                ctx =>
                 {
                     string spellName = name(ctx);
                     SpellFindResults sfr;
@@ -1483,16 +1504,16 @@ namespace Singular.Helpers
                     return spellName;
                 },
                 new Decorator(
-                    req => SpellManager.HasSpell( req as string)
-                        && !Me.HasAura(req as string)
-                        && !DoubleCastContains(Me, req as string),
+                    req => SpellManager.HasSpell(req as string)
+                           && !Me.HasAura(req as string)
+                           && !DoubleCastContains(Me, req as string),
                     new Sequence(
-                        Cast( sp => sp as string, mov => true, on => Me, requirements, cancel => false, LagTolerance.Yes, false, null, gcd: gcd),
+                        Cast(sp => sp as string, mov => true, on => Me, requirements, cancel => false, LagTolerance.Yes, false, null, gcd: gcd),
                         new PrioritySelector(
                             new DynaWait(
                                 time => TimeSpan.FromMilliseconds(Me.Combat ? 500 : 1000),
                                 until,
-                                new Action( r => UpdateDoubleCast( r as string, Me, 3000 ))
+                                new Action(r => UpdateDoubleCast(r as string, Me, 3000))
                                 ),
                             new Action(r =>
                             {
@@ -1598,7 +1619,7 @@ namespace Singular.Helpers
         {
             return new Decorator(
                 req => onUnit(req) != null && onUnit(req).Auras.Values.All(a => a.SpellId != spellId(req)),
-                Cast(spellId, onUnit, requirements) 
+                Cast(spellId, onUnit, requirements)
                 );
         }
 
@@ -1678,7 +1699,7 @@ namespace Singular.Helpers
         public static Composite Cast(string name, UnitSelectionDelegate onUnit,
             SimpleBooleanDelegate requirements, SimpleBooleanDelegate cancel = null, LagTolerance allow = LagTolerance.Yes, HasGcd gcd = HasGcd.Yes)
         {
-            return Cast(n => name, mov => true, onUnit, requirements, cancel, allow, gcd:gcd);
+            return Cast(n => name, mov => true, onUnit, requirements, cancel, allow, gcd: gcd);
         }
 
         public static Composite Cast(string name, SimpleBooleanDelegate checkMovement, UnitSelectionDelegate onUnit,
@@ -1761,11 +1782,9 @@ namespace Singular.Helpers
             if (canCast == null)
                 canCast = CanCastHack;
 
-            Composite comp =  new PrioritySelector(
-
+            Composite comp = new PrioritySelector(
                 // create a CastContext object to save passed in context and other values
                 ctx => new CastContext(ctx, ssd, onUnit, gcd),
-
                 new Sequence(
                     // cast the spell, saving state information including if we queued this cast
                     new Action(ret =>
@@ -1773,7 +1792,7 @@ namespace Singular.Helpers
                         CastContext cctx = ret.CastContext();
 
                         if (cctx.spell == null)
-                            return RunStatus.Failure;   
+                            return RunStatus.Failure;
 
                         if (cctx.unit == null)
                             return RunStatus.Failure;
@@ -1804,7 +1823,7 @@ namespace Singular.Helpers
 
                         if (SingularSettings.DebugSpellCasting)
                             Logger.WriteDebug("Cast('{0}'): dist:{1:F3}, need({2}), hitbox:{3:F3}",
-                                cctx.spell.Name, 
+                                cctx.spell.Name,
                                 cctx.unit.Distance,
                                 cctx.spell.IsMeleeSpell
                                     ? "Melee"
@@ -1821,7 +1840,6 @@ namespace Singular.Helpers
                         SingularRoutine.UpdateDiagnosticCastingState();
                         return RunStatus.Success;
                     }),
-
                     new Action(r =>
                     {
                         if (SingularSettings.DebugSpellCasting)
@@ -1832,8 +1850,8 @@ namespace Singular.Helpers
                         return RunStatus.Success;
                     }),
 
-                // for instant spell, wait for GCD to start
-                // for non-instant spell, wait for .IsCasting / .IsChanneling to start
+                    // for instant spell, wait for GCD to start
+                    // for non-instant spell, wait for .IsCasting / .IsChanneling to start
                     new PrioritySelector(
                         new Wait(
                             TimeSpan.FromMilliseconds(350),
@@ -1843,28 +1861,28 @@ namespace Singular.Helpers
                                 if (gcd == HasGcd.No)
                                 {
                                     if (SingularSettings.DebugSpellCasting)
-                                        Logger.WriteFile("Spell.Cast[{0}]: has no GCD, status GCD={1}, remains={2}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long)GcdTimeLeft.TotalMilliseconds);
+                                        Logger.WriteFile("Spell.Cast[{0}]: has no GCD, status GCD={1}, remains={2}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long) GcdTimeLeft.TotalMilliseconds);
                                     return true;
                                 }
 
                                 if (cctx.spell.IsInstantCast() && GcdTimeLeft.TotalMilliseconds > 650)
                                 {
                                     if (SingularSettings.DebugSpellCasting)
-                                        Logger.WriteFile("Spell.Cast[{0}]: is instant, status GCD={1}, remains={2}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long)GcdTimeLeft.TotalMilliseconds);
+                                        Logger.WriteFile("Spell.Cast[{0}]: is instant, status GCD={1}, remains={2}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long) GcdTimeLeft.TotalMilliseconds);
                                     return true;
                                 }
 
                                 if (Me.CurrentCastTimeLeft.TotalMilliseconds > 750)
                                 {
                                     if (SingularSettings.DebugSpellCasting)
-                                        Logger.WriteFile( "Spell.Cast[{0}]: cast time {1} left, iscasting={2}", cctx.spell.Name, (long)Me.CurrentCastTimeLeft.TotalMilliseconds, IsCasting(allow).ToYN());
+                                        Logger.WriteFile("Spell.Cast[{0}]: cast time {1} left, iscasting={2}", cctx.spell.Name, (long) Me.CurrentCastTimeLeft.TotalMilliseconds, IsCasting(allow).ToYN());
                                     return true;
                                 }
 
                                 if (Me.CurrentChannelTimeLeft.TotalMilliseconds > 750)
                                 {
                                     if (SingularSettings.DebugSpellCasting)
-                                        Logger.WriteFile( "Spell.Cast[{0}]: channel spell and channel has {1} left, ischanneling={2}", cctx.spell.Name, (long)Me.CurrentChannelTimeLeft.TotalMilliseconds, IsChannelling(allow).ToYN());
+                                        Logger.WriteFile("Spell.Cast[{0}]: channel spell and channel has {1} left, ischanneling={2}", cctx.spell.Name, (long) Me.CurrentChannelTimeLeft.TotalMilliseconds, IsChannelling(allow).ToYN());
                                     return true;
                                 }
 
@@ -1872,19 +1890,20 @@ namespace Singular.Helpers
                             },
                             new ActionAlwaysSucceed()
                             ),
-                        new Action( r => {
+                        new Action(r =>
+                        {
                             if (SingularSettings.DebugSpellCasting)
                             {
                                 CastContext cctx = r.CastContext();
-                                Logger.WriteFile( "Spell.Cast[{0}]: timed out failing to detect spell in progress - gcdleft={1}/{2}, castleft={3}/{4}, chanleft={5}/{6}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long)GcdTimeLeft.TotalMilliseconds, IsCasting(allow).ToYN(), (long)Me.CurrentCastTimeLeft.TotalMilliseconds, IsCasting(allow).ToYN(), (long)Me.CurrentChannelTimeLeft.TotalMilliseconds);
+                                Logger.WriteFile("Spell.Cast[{0}]: timed out failing to detect spell in progress - gcdleft={1}/{2}, castleft={3}/{4}, chanleft={5}/{6}", cctx.spell.Name, IsGlobalCooldown(allow).ToYN(), (long) GcdTimeLeft.TotalMilliseconds,
+                                    IsCasting(allow).ToYN(), (long) Me.CurrentCastTimeLeft.TotalMilliseconds, IsCasting(allow).ToYN(), (long) Me.CurrentChannelTimeLeft.TotalMilliseconds);
                             }
                             return RunStatus.Success;
-                            })
+                        })
                         ),
 
-        // now check for one of the possible done casting states
+                    // now check for one of the possible done casting states
                     new PrioritySelector(
-
                         // for cast already ended, assume it has no Global Cooldown
                         new Decorator(
                             ret => !IsGlobalCooldown() && !IsCastingOrChannelling(),
@@ -1955,17 +1974,16 @@ namespace Singular.Helpers
                             Logger.WriteDebug("Spell.Cast(\"{0}\"): aborting, timed out waiting on cast, gcd={1} cast={2} chanl={3}", cctx.spell.Name, IsGlobalCooldown().ToYN(), IsCasting().ToYN(), IsChannelling().ToYN());
                             return RunStatus.Success;
                         })
-
                         ),
 
-                        // made it this far then we are RunStatus.Success, so reset wowunit reference and return
-                        new Action(ret =>
-                        {
-                            CastContext cctx = ret.CastContext();
-                            cctx.unit = null;
-                            cctx.spell = null;
-                            return RunStatus.Success;
-                        })
+                    // made it this far then we are RunStatus.Success, so reset wowunit reference and return
+                    new Action(ret =>
+                    {
+                        CastContext cctx = ret.CastContext();
+                        cctx.unit = null;
+                        cctx.spell = null;
+                        return RunStatus.Success;
+                    })
                     ),
 
                 // cast Sequence failed, so only thing left is to reset cached references and report failure
@@ -1984,7 +2002,7 @@ namespace Singular.Helpers
             // .. of flame shock, it would only throttle this behavior tree instance, not any 
             // .. other trees which also call Spell.Cast("flame shock")
             if (cancel == null)
-                comp = new Throttle( TimeSpan.FromMilliseconds(SingularSettings.Instance.SameSpellThrottle), comp);
+                comp = new Throttle(TimeSpan.FromMilliseconds(SingularSettings.Instance.SameSpellThrottle), comp);
 
             return comp;
         }
@@ -2010,7 +2028,7 @@ namespace Singular.Helpers
             if (spell.IsInstantCast() && !spell.IsChanneled)
             {
                 if (SingularSettings.DebugSpellCasting)
-                    Logger.WriteFile( "MoveWhileCasting[{0}]: true, since instant cast and not a funnel spell", spell.Name );
+                    Logger.WriteFile("MoveWhileCasting[{0}]: true, since instant cast and not a funnel spell", spell.Name);
                 return true;
             }
 
@@ -2023,7 +2041,7 @@ namespace Singular.Helpers
             else if (Me.Class == WoWClass.Hunter)
                 allowMovingWhileCasting = spell.Name == "Steady Shot" || (spell.Name == "Aimed Shot" && TalentManager.HasGlyph("Aimed Shot")) || spell.Name == "Cobra Shot";
             else if (Me.Class == WoWClass.Warlock)
-                allowMovingWhileCasting = (spell.Name == "Incinerate" || spell.Name == "Malefic Grasp" || spell.Name == "Shadow Bolt")/* && ClassSpecific.Warlock.Common.HasTalent(ClassSpecific.Warlock.WarlockTalents.KiljaedensCunning)*/;
+                allowMovingWhileCasting = (spell.Name == "Incinerate" || spell.Name == "Malefic Grasp" || spell.Name == "Shadow Bolt") /* && ClassSpecific.Warlock.Common.HasTalent(ClassSpecific.Warlock.WarlockTalents.KiljaedensCunning)*/;
 
             //            if (!allowMovingWhileCasting && Me.ZoneId == 5723)
             //                allowMovingWhileCasting = Me.HasAura("Molten Feather");
@@ -2033,7 +2051,7 @@ namespace Singular.Helpers
                 allowMovingWhileCasting = HaveAllowMovingWhileCastingAura(spell);
 
                 // we will atleast check spell cooldown... we may still end up wasting buff, but this reduces the chance
-                if (!allowMovingWhileCasting && spell.CooldownTimeLeft == TimeSpan.Zero )
+                if (!allowMovingWhileCasting && spell.CooldownTimeLeft == TimeSpan.Zero)
                 {
                     bool castSuccess = CastBuffToAllowCastingWhileMoving();
                     if (castSuccess)
@@ -2088,13 +2106,13 @@ namespace Singular.Helpers
         /// <returns></returns>
         public static bool HaveAllowMovingWhileCastingAura(WoWSpell spell = null)
         {
-            WoWAura found = Me.GetAllAuras().FirstOrDefault(a => a.ApplyAuraType == (WoWApplyAuraType)330 && (spell == null || GetSpellCastTime(spell) < a.TimeLeft));
+            WoWAura found = Me.GetAllAuras().FirstOrDefault(a => a.ApplyAuraType == (WoWApplyAuraType) 330 && (spell == null || GetSpellCastTime(spell) < a.TimeLeft));
 
             if (SingularSettings.DebugSpellCasting && found != null)
                 Logger.WriteFile(
-                    "MoveWhileCasting[{0}]: true, since we found move buff {1} #{2}", 
-                    spell == null ? "(null)" : spell.Name, 
-                    found.Name, 
+                    "MoveWhileCasting[{0}]: true, since we found move buff {1} #{2}",
+                    spell == null ? "(null)" : spell.Name,
+                    found.Name,
                     found.SpellId
                     );
 
@@ -2153,11 +2171,12 @@ namespace Singular.Helpers
                 );
 #else
             return new PrioritySelector(
-                ctx => {
+                ctx =>
+                {
                     CastContext cc = new CastContext(ctx, ssd, onUnit);
                     CogContext cog = new CogContext(cc, desc => string.Format("on {0} @ {1:F1}%", cc.unit.SafeName(), cc.unit.HealthPercent));
                     return cog;
-                    },
+                },
                 ContextCastOnGround(requirements, waitForSpell)
                 );
 #endif
@@ -2194,7 +2213,7 @@ namespace Singular.Helpers
             return new Decorator(
                 req => requirements(req),
                 new PrioritySelector(
-                    ctx => new CogContext( ctx, ssd, onLocRtrv, tgtDescRtrv),
+                    ctx => new CogContext(ctx, ssd, onLocRtrv, tgtDescRtrv),
                     ContextCastOnGround(null, waitForSpell)
                     )
                 );
@@ -2209,16 +2228,17 @@ namespace Singular.Helpers
         /// <param name="waitForSpell"></param>
         /// <param name="tgtDescRtrv"></param>
         /// <returns></returns>
-        private static Composite ContextCastOnGround( SimpleBooleanDelegate reqd, bool waitForSpell = true)
+        private static Composite ContextCastOnGround(SimpleBooleanDelegate reqd, bool waitForSpell = true)
         {
             SimpleBooleanDelegate requirements = reqd ?? (r => true);
             return new Decorator(
-                req => {
+                req =>
+                {
                     CogContext cog = req.CogContext();
                     if (cog.spell == null || cog.loc == WoWPoint.Empty || !requirements(cog.context))
                         return false;
 
-                    if (!CanCastHack(cog.sfr, null, skipWowCheck:true))
+                    if (!CanCastHack(cog.sfr, null, skipWowCheck: true))
                         return false;
 
                     if (!LocationInRange(cog.name, cog.loc))
@@ -2228,8 +2248,7 @@ namespace Singular.Helpers
                         return false;
 
                     return true;
-                    },    
-           
+                },
                 new Sequence(
                     // if wait requested, wait for spell in progress to be clear
                     new DecoratorContinue(
@@ -2240,7 +2259,7 @@ namespace Singular.Helpers
                                 until => !IsGlobalCooldown() && !IsCastingOrChannelling(),
                                 new Action(r => Logger.WriteDebug("CastOnGround: waitForSpell - beginning"))
                                 ),
-                            new Action( r => 
+                            new Action(r =>
                             {
                                 Logger.WriteDebug("CastOnGround: waitForSpell - failed! other spell in progress?");
                                 return RunStatus.Failure;
@@ -2249,11 +2268,12 @@ namespace Singular.Helpers
                         ),
 
                     // cast spell which needs ground targeting
-                    new Action( ret => {
+                    new Action(ret =>
+                    {
                         CogContext cog = ret.CogContext();
-                        Logger.Write( cog.spell.IsHeal() ? LogColor.SpellHeal : LogColor.SpellNonHeal, "*{0} {1}at {2:F1} yds {3}", cog.name, cog.targetDesc, cog.loc.Distance(StyxWoW.Me.Location), cog.loc);
-                        return CastPrimative(cog.spell) ? RunStatus.Success : RunStatus.Failure; 
-                        }),
+                        Logger.Write(cog.spell.IsHeal() ? LogColor.SpellHeal : LogColor.SpellNonHeal, "*{0} {1}at {2:F1} yds {3}", cog.name, cog.targetDesc, cog.loc.Distance(StyxWoW.Me.Location), cog.loc);
+                        return CastPrimative(cog.spell) ? RunStatus.Success : RunStatus.Failure;
+                    }),
 
                     // confirm spell is on cursor requiring targeting
                     new PrioritySelector(
@@ -2265,13 +2285,13 @@ namespace Singular.Helpers
                         new Action(r =>
                         {
                             Logger.WriteDebug("error: spell {0} not seen as pending on cursor after 1 second", r.CogContext().name);
-                            Lua.DoString("SpellStopTargeting()");   // shouldn't be needed, but handle GetPendingCursorSpell breakage
+                            Lua.DoString("SpellStopTargeting()"); // shouldn't be needed, but handle GetPendingCursorSpell breakage
                             return RunStatus.Failure;
                         })
                         ),
 
                     // click on ground
-                    new Action(ret => 
+                    new Action(ret =>
                     {
                         if (!SpellManager.ClickRemoteLocation(ret.CogContext().loc))
                         {
@@ -2288,8 +2308,8 @@ namespace Singular.Helpers
                             req => !waitForSpell,
                             new ActionAlwaysSucceed()
                             ),
-                        new Wait( 
-                            TimeSpan.FromMilliseconds(500), 
+                        new Wait(
+                            TimeSpan.FromMilliseconds(500),
                             until => IsGlobalCooldown() || IsCastingOrChannelling() || Me.CurrentPendingCursorSpell == null,
                             new Action(r => Logger.WriteDebug("CastOnGround: click successful"))
                             ),
@@ -2315,14 +2335,12 @@ namespace Singular.Helpers
                             ret => !waitForSpell,
                             new ActionAlwaysSucceed()
                             ),
-
                         new Wait(
                             TimeSpan.FromMilliseconds(750),
                             until => IsGlobalCooldown() || IsCastingOrChannelling(),
                             new Action(r => Logger.WriteDebug("CastOnGround({0}): detected cast in progress", r.CogContext().name))
                             ),
-
-                        new Action( ret => 
+                        new Action(ret =>
                             Logger.WriteDebug("CastOnGround({0}): at {1} did not detect spell cast, will assume success -- distance={2:F1} yds, loss={3}, face={4}",
                                 ret.CogContext().name,
                                 ret.CogContext().loc,
@@ -2393,9 +2411,9 @@ namespace Singular.Helpers
         public static bool CanCastHack(SpellFindResults sfr, WoWUnit unit, bool skipWowCheck = false)
         {
             WoWSpell spell = sfr.Override ?? sfr.Original;
-            
+
             // check range
-            if (!CanCastHackInRange( spell, unit))
+            if (!CanCastHackInRange(spell, unit))
                 return false;
 
             // check if movement prevents cast
@@ -2414,7 +2432,7 @@ namespace Singular.Helpers
                 if (baseCooldown >= SingularSettings.Instance.DisableSpellsWithCooldown * 1000)
                 {
                     if (SingularSettings.DebugSpellCasting)
-                        Logger.WriteFile( "CanCast[{0}]: basecooldown of {0} exceeds max allowed user setting of {1} ms", baseCooldown, SingularSettings.Instance.DisableSpellsWithCooldown * 1000);
+                        Logger.WriteFile("CanCast[{0}]: basecooldown of {0} exceeds max allowed user setting of {1} ms", baseCooldown, SingularSettings.Instance.DisableSpellsWithCooldown * 1000);
                     return false;
                 }
             }
@@ -2423,7 +2441,7 @@ namespace Singular.Helpers
             if (!skipWowCheck && !spell.CanCast && (sfr.Override == null || !sfr.Original.CanCast))
             {
                 if (SingularSettings.DebugSpellCasting)
-                    Logger.WriteFile( "CanCast[{0}]: spell specific CanCast failed (#{1})", spell.Name, spell.Id);
+                    Logger.WriteFile("CanCast[{0}]: spell specific CanCast failed (#{1})", spell.Name, spell.Id);
 
                 return false;
             }
@@ -2523,7 +2541,6 @@ namespace Singular.Helpers
                         Logger.WriteFile("CanCast[{0}]: current cast of {1} has {2:F0} ms left", spell.Name, Me.CurrentCastId, Me.CurrentCastTimeLeft.TotalMilliseconds - lat);
                     return true;
                 }
-
             }
 
             if (spell.CooldownTimeLeft.TotalMilliseconds > lat)
@@ -2541,8 +2558,8 @@ namespace Singular.Helpers
             if (unit != null && !spell.IsSelfOnlySpell && !unit.IsMe)
             {
 #if USE_LUA_RANGECHECK
-                // will exercise the IsSpellInRange LUA if it can easily
-                // .. derive a UnitID for the target
+    // will exercise the IsSpellInRange LUA if it can easily
+    // .. derive a UnitID for the target
 
                 string sTarget = null;
 
@@ -2578,7 +2595,7 @@ namespace Singular.Helpers
                     if (spell.IsMeleeSpell && !unit.IsWithinMeleeRange)
                     {
                         if (SingularSettings.DebugSpellCasting)
-                            Logger.WriteFile( "CanCast[{0}]: target @ {1:F1} yds not in melee range", spell.Name, unit.Distance);
+                            Logger.WriteFile("CanCast[{0}]: target @ {1:F1} yds not in melee range", spell.Name, unit.Distance);
                         return false;
                     }
                     else if (spell.HasRange)
@@ -2586,13 +2603,13 @@ namespace Singular.Helpers
                         if (unit.Distance > spell.ActualMaxRange(unit))
                         {
                             if (SingularSettings.DebugSpellCasting)
-                                Logger.WriteFile( "CanCast[{0}]: out of range - further than {1:F1}", spell.Name, spell.ActualMaxRange(unit));
+                                Logger.WriteFile("CanCast[{0}]: out of range - further than {1:F1}", spell.Name, spell.ActualMaxRange(unit));
                             return false;
                         }
                         if (unit.Distance < spell.ActualMinRange(unit))
                         {
                             if (SingularSettings.DebugSpellCasting)
-                                Logger.WriteFile( "CanCast[{0}]: out of range - closer than {1:F1}", spell.Name, spell.ActualMinRange(unit));
+                                Logger.WriteFile("CanCast[{0}]: out of range - closer than {1:F1}", spell.Name, spell.ActualMinRange(unit));
                             return false;
                         }
                     }
@@ -2601,7 +2618,7 @@ namespace Singular.Helpers
                 if (!unit.InLineOfSpellSight)
                 {
                     if (SingularSettings.DebugSpellCasting)
-                        Logger.WriteFile( "CanCast[{0}]: not in spell line of {1}", spell.Name, unit.SafeName());
+                        Logger.WriteFile("CanCast[{0}]: not in spell line of {1}", spell.Name, unit.SafeName());
                     return false;
                 }
             }
@@ -2614,7 +2631,7 @@ namespace Singular.Helpers
             if ((spell.CastTime != 0u || spell.IsChanneled) && Me.IsMoving && !AllowMovingWhileCasting(spell))
             {
                 if (SingularSettings.DebugSpellCasting)
-                    Logger.WriteFile( "CanCast[{0}]: cannot cast while moving", spell.Name);
+                    Logger.WriteFile("CanCast[{0}]: cannot cast while moving", spell.Name);
                 return true;
             }
 
@@ -2650,7 +2667,7 @@ namespace Singular.Helpers
                     new Action(ret =>
                     {
                         WoWUnit unit = onUnit(ret);
-                        if (unit == null || !requirements(ret) || !CanCastHack(canCastName, unit, skipWowCheck:true))
+                        if (unit == null || !requirements(ret) || !CanCastHack(canCastName, unit, skipWowCheck: true))
                             return RunStatus.Failure;
 
                         LogCast(castName, unit);
@@ -2666,10 +2683,10 @@ namespace Singular.Helpers
         {
             return new Decorator(
                 ret => onUnit != null
-                    && onUnit(ret) != null
-                    && castName != null
-                    && !DoubleCastContains(onUnit(ret), castName)
-                    && !onUnit(ret).HasAura(castName),
+                       && onUnit(ret) != null
+                       && castName != null
+                       && !DoubleCastContains(onUnit(ret), castName)
+                       && !onUnit(ret).HasAura(castName),
                 new Sequence(
                     CastHack(castName, onUnit, requirements),
                     new DecoratorContinue(
@@ -2696,7 +2713,8 @@ namespace Singular.Helpers
         public static Composite Resurrect(string spellName)
         {
             return new PrioritySelector(
-                ctx => Unit.ResurrectablePlayers.FirstOrDefault(u => {
+                ctx => Unit.ResurrectablePlayers.FirstOrDefault(u =>
+                {
                     try
                     {
                         if (u == null || !u.IsValid)
@@ -2705,29 +2723,31 @@ namespace Singular.Helpers
                             return false;
                         return true;
                     }
-                    catch { }
+                    catch
+                    {
+                    }
                     return false;
-                    }),
+                }),
                 new Decorator(
                     ctx => ctx != null && SingularRoutine.CurrentWoWContext != WoWContext.Battlegrounds,
                     new Sequence(
-                        Cast(spellName, mov => true, ctx => (WoWUnit)ctx, req => true, cancel => 
+                        Cast(spellName, mov => true, ctx => (WoWUnit) ctx, req => true, cancel =>
+                        {
+                            try
                             {
-                                try
-                                {
-                                    if (!((WoWUnit)cancel).IsAlive)
-                                        return false;
+                                if (!((WoWUnit) cancel).IsAlive)
+                                    return false;
 
-                                    Logger.Write( LogColor.Hilite, "^Rez target brought back by someone else, cancelling....");
-                                }
-                                catch
-                                {
-                                    Logger.Write( LogColor.Hilite, "^Rez target became invalid during cast, cancelling....");
-                                }
+                                Logger.Write(LogColor.Hilite, "^Rez target brought back by someone else, cancelling....");
+                            }
+                            catch
+                            {
+                                Logger.Write(LogColor.Hilite, "^Rez target became invalid during cast, cancelling....");
+                            }
 
-                                return true;
-                            }),
-                        new Action(ctx => Blacklist.Add((WoWPlayer)ctx, BlacklistFlags.Combat, TimeSpan.FromSeconds(30)))
+                            return true;
+                        }),
+                        new Action(ctx => Blacklist.Add((WoWPlayer) ctx, BlacklistFlags.Combat, TimeSpan.FromSeconds(30)))
                         )
                     )
                 );
@@ -2747,7 +2767,7 @@ namespace Singular.Helpers
 #if HONORBUDDY_PENDINGSPELL_WORKING
                 return Me.CurrentPendingCursorSpell;
 #else
-                // offset from SpellIsTargeting LUA
+    // offset from SpellIsTargeting LUA
                 int pendingSpellId = 0;
                 var pendingSpellPtr = StyxWoW.Memory.Read<IntPtr>((IntPtr)0xC9D51C, true);
                 if (pendingSpellPtr != IntPtr.Zero)
@@ -2763,15 +2783,13 @@ namespace Singular.Helpers
         public static int GetCharges(string name)
         {
             SpellFindResults sfr;
-            if ( SpellManager.FindSpell(name, out sfr))
+            if (SpellManager.FindSpell(name, out sfr))
             {
                 WoWSpell spell = sfr.Override ?? sfr.Original;
                 return GetCharges(spell);
             }
             return 0;
         }
-
-
 
         public static int GetCharges(WoWSpell spell)
         {
@@ -2792,7 +2810,7 @@ namespace Singular.Helpers
             if (ret == null || !ret.Any())
             {
                 if (SingularSettings.DebugSpellCasting)
-                    Logger.WriteFile( "IsSpellUsable[{0}]: check failed with null", spellName);
+                    Logger.WriteFile("IsSpellUsable[{0}]: check failed with null", spellName);
                 return false;
             }
 
@@ -2806,7 +2824,7 @@ namespace Singular.Helpers
             if (ret == null || !ret.Any())
             {
                 if (SingularSettings.DebugSpellCasting)
-                    Logger.WriteFile( "IsSpellUsable[#{0}]: check failed with null", spellId);
+                    Logger.WriteFile("IsSpellUsable[#{0}]: check failed with null", spellId);
                 return false;
             }
 
@@ -2814,9 +2832,10 @@ namespace Singular.Helpers
         }
 
         private static Dictionary<string, long> UndefinedSpells { get; set; }
+
         public static string PreviousGcdSpell { get; set; }
 
-        private static void AddUndefinedSpell( string s)
+        private static void AddUndefinedSpell(string s)
         {
             if (!SingularSettings.DebugSpellCasting)
                 return;
@@ -2833,7 +2852,7 @@ namespace Singular.Helpers
                 return;
 
             Logger.WriteDebug("-- Listing {0} Undefined Spells Referenced --", UndefinedSpells.Count());
-            foreach ( var v in UndefinedSpells)
+            foreach (var v in UndefinedSpells)
             {
                 Logger.WriteDebug("   {0}  {1}", v.Key.AlignRight(25), v.Value.ToString().AlignRight(7));
             }
@@ -2847,16 +2866,23 @@ namespace Singular.Helpers
     /// </summary>
     internal class CastContext
     {
+        #region Fields
+
+        internal bool IsSpellBeingQueued;
+        internal object context;
+        internal double distance;
+        internal double health;
         internal string name;
         internal SpellFindResults sfr;
         internal WoWSpell spell;
         internal WoWUnit unit;
-        internal double health;
-        internal double distance;
-        internal bool IsSpellBeingQueued;
-        internal object context;
+
+        #endregion
 
         // always create passing the existing context so it is preserved for delegate usage
+
+        #region Constructors
+
         internal CastContext(object ctx)
         {
             context = ctx;
@@ -2874,7 +2900,7 @@ namespace Singular.Helpers
                 name = spell.Name;
                 context = ctx;
                 unit = onUnit(ctx);
-                    
+
                 // health/dist change quickly, so grab these now where
                 // .. we check requirements so the log message we output
                 // .. later reflects what they were when we were testing
@@ -2887,6 +2913,8 @@ namespace Singular.Helpers
                 }
             }
         }
+
+        #endregion
     }
 
     /// <summary>
@@ -2896,17 +2924,23 @@ namespace Singular.Helpers
     /// </summary>
     internal class CogContext
     {
+        #region Fields
+
+        internal object context;
+        internal WoWPoint loc;
         internal string name;
         internal SpellFindResults sfr;
         internal WoWSpell spell;
-        internal WoWPoint loc;
         internal string targetDesc;
-        internal object context;
+
+        #endregion
 
         // always create passing the existing context so it is preserved for delegate usage
+
+        #region Constructors
+
         internal CogContext(object ctx, SpellFindDelegate ssd, SimpleLocationRetriever locrtrv, SimpleStringDelegate descrtrv)
         {
-
             if (ssd(ctx, out sfr))
             {
                 spell = sfr.Override ?? sfr.Original;
@@ -2942,6 +2976,8 @@ namespace Singular.Helpers
                 }
             }
         }
+
+        #endregion
     }
 
 #if SPELL_BLACKLIST_WERE_NEEDED
@@ -3008,5 +3044,4 @@ namespace Singular.Helpers
     }
 
 #endif
-
 }

@@ -55,7 +55,7 @@ namespace Singular.ClassSpecific.Common
 
         protected static int active_enemies
         {
-            get { return Spell.UseAOE ? active_enemies_list.Count() : 1; }
+            get { return Spell.UseAoe ? active_enemies_list.Count() : 1; }
         }
 
         protected static IEnumerable<WoWUnit> active_enemies_list

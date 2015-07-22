@@ -1206,6 +1206,13 @@ namespace Singular.Settings
         [Description("True: use multi-target damage spells when necessary; False: single target spells on current target only")]
         public bool AllowAoe { get; set; }
 
+        [Setting, ReadOnly(false)]
+        [DefaultValue(true)]
+        [Category("Enemy Control")]
+        [DisplayName("Automatically use cooldowns")]
+        [Description("True: use automatically cooldowns when necessary; False: manual cooldown use")]
+        public bool AllowAutoCooldownUsage { get; set; }
+
         #endregion
 
         #region Class Late-Loading Wrappers

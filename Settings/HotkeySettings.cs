@@ -74,6 +74,13 @@ namespace Singular.Settings
         [DisplayName("Key - Combat")]
         [Description("Enables/Disables All Combat Abilities")]
         public Keys CombatToggle { get; set; }
+        
+        [Setting]
+        [DefaultValue(Keys.None)]
+        [Category("Hotkeys")]
+        [DisplayName("Key - Automatic Cooldown usage")]
+        [Description("Enables/Disables All Automatic Cooldown Usage")]
+        public Keys CooldownToggle { get; set; }
 
         [Setting]
         [DefaultValue(Keys.None)]
@@ -108,6 +115,5 @@ namespace Singular.Settings
         [DisplayName("Suspend Keys")]
         [Description("Keys that will disable ALL movement for # seconds")]
         public Keys[] SuspendMovementKeys { get; set; }
-
     }
 }

@@ -23,25 +23,25 @@ namespace Singular.ClassSpecific
         private const byte NETHER_TEMPEST_DISTANCE = 10;
         private const byte SUPERNOVA_DISTANCE = 8;
 
-        private static readonly Func<Func<bool>, Composite> arcane_barrage = cond => Spell.Cast(MageSpells.arcane_barrage, req => Spell.UseAOE && cond());
+        private static readonly Func<Func<bool>, Composite> arcane_barrage = cond => Spell.Cast(MageSpells.arcane_barrage, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> arcane_blast = cond => Spell.Cast(MageSpells.arcane_blast, req => cond());
         private static readonly Func<Func<bool>, Composite> arcane_brilliance = cond => Spell.BuffSelf(MageSpells.arcane_brilliance, req => !Me.HasPartyBuff(PartyBuffType.SpellPower | PartyBuffType.Crit) && cond());
 
         private static readonly Func<Func<bool>, Composite> arcane_explosion =
-            cond => Spell.Cast(MageSpells.arcane_explosion, req => Spell.UseAOE && EnemiesCountNearTarget(Me, glyph.arcane_explosion.enabled ? ARCANE_EXPLOSION_GLYPH_DISTANCE : ARCANE_EXPLOSION_DISTANCE) >= 2 && cond());
+            cond => Spell.Cast(MageSpells.arcane_explosion, req => Spell.UseAoe && EnemiesCountNearTarget(Me, glyph.arcane_explosion.enabled ? ARCANE_EXPLOSION_GLYPH_DISTANCE : ARCANE_EXPLOSION_DISTANCE) >= 2 && cond());
 
         private static readonly Func<Func<bool>, Composite> arcane_missiles = cond => Spell.Cast(MageSpells.arcane_missiles, req => cond());
-        private static readonly Func<Func<bool>, Composite> arcane_orb = cond => Spell.Cast(MageSpells.arcane_orb, req => Spell.UseAOE && talent.arcane_orb.enabled && cond());
-        private static readonly Func<Func<bool>, Composite> arcane_power = cond => Spell.BuffSelf(MageSpells.arcane_power, req => cond());
-        private static readonly Func<Func<bool>, Composite> cone_of_cold = cond => Spell.Cast(MageSpells.cone_of_cold, req => Spell.UseAOE && cond());
+        private static readonly Func<Func<bool>, Composite> arcane_orb = cond => Spell.Cast(MageSpells.arcane_orb, req => Spell.UseAoe && talent.arcane_orb.enabled && cond());
+        private static readonly Func<Func<bool>, Composite> arcane_power = cond => Spell.BuffSelf(MageSpells.arcane_power, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> cone_of_cold = cond => Spell.Cast(MageSpells.cone_of_cold, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> dalaran_brilliance = cond => Spell.BuffSelf(MageSpells.dalaran_brilliance, req => !Me.HasPartyBuff(PartyBuffType.SpellPower | PartyBuffType.Crit) && cond());
         private static readonly Func<Func<bool>, Composite> evocation = cond => Spell.Cast(MageSpells.evocation, req => cond());
-        private static readonly Func<Func<bool>, Composite> mirror_image = cond => Spell.BuffSelf(MageSpells.mirror_image, req => talent.mirror_image.enabled && cond());
+        private static readonly Func<Func<bool>, Composite> mirror_image = cond => Spell.BuffSelf(MageSpells.mirror_image, req => Spell.UseCooldown && talent.mirror_image.enabled && cond());
 
         private static readonly Func<Func<bool>, Composite> nether_tempest =
-            cond => Spell.Buff(MageSpells.nether_tempest, 1, on => NetherTempestTarget, req => Spell.UseAOE && talent.nether_tempest.enabled && EnemiesCountNearTarget(NetherTempestTarget, NETHER_TEMPEST_DISTANCE) >= 2 && cond());
+            cond => Spell.Buff(MageSpells.nether_tempest, 1, on => NetherTempestTarget, req => Spell.UseAoe && talent.nether_tempest.enabled && EnemiesCountNearTarget(NetherTempestTarget, NETHER_TEMPEST_DISTANCE) >= 2 && cond());
 
-        private static readonly Func<Func<bool>, Composite> presence_of_mind = cond => Spell.BuffSelf(MageSpells.presence_of_mind, req => cond());
+        private static readonly Func<Func<bool>, Composite> presence_of_mind = cond => Spell.BuffSelf(MageSpells.presence_of_mind, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> rune_of_power = cond => Spell.CastOnGround(MageSpells.rune_of_power, on => Me, req => talent.rune_of_power.enabled && cond());
         private static readonly Func<Func<bool>, Composite> supernova = cond => Spell.Buff(MageSpells.supernova, on => NetherTempestTarget, req => talent.supernova.enabled && EnemiesCountNearTarget(SupernovaTarget, SUPERNOVA_DISTANCE) >= 2 && cond());
 
