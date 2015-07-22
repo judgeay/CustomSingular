@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Singular.Helpers;
 using Singular.Managers;
+using Singular.Settings;
 using Styx;
 using Styx.CommonBot;
+using Styx.TreeSharp;
 using Styx.WoWInternals.WoWObjects;
 
 namespace Singular.ClassSpecific.Common
@@ -11,13 +14,39 @@ namespace Singular.ClassSpecific.Common
     public abstract class Common
     {
         // ReSharper disable InconsistentNaming
+
         #region Fields
 
-        private static readonly WoWItemWeaponClass[] _oneHandWeaponClasses = { WoWItemWeaponClass.Axe, WoWItemWeaponClass.Mace, WoWItemWeaponClass.Sword, WoWItemWeaponClass.Dagger, WoWItemWeaponClass.Fist };
+        protected static readonly Func<Composite> use_trinket = () =>
+        {
+            if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never &&
+                SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never)
+            {
+                return new Styx.TreeSharp.Action(ret => RunStatus.Failure);
+            }
+
+            var ps = new PrioritySelector();
+
+            if (SingularSettings.IsTrinketUsageWanted(TrinketUsage.OnCooldownInCombat))
+            {
+                ps.AddChild(new Decorator(
+                    ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && ((StyxWoW.Me.IsMelee() && StyxWoW.Me.CurrentTarget.IsWithinMeleeRange) || StyxWoW.Me.CurrentTarget.SpellDistance() < 40),
+                    Item.UseEquippedTrinket(TrinketUsage.OnCooldownInCombat)));
+            }
+
+            return ps;
+        };
+
+        private static readonly WoWItemWeaponClass[] _oneHandWeaponClasses = {WoWItemWeaponClass.Axe, WoWItemWeaponClass.Mace, WoWItemWeaponClass.Sword, WoWItemWeaponClass.Dagger, WoWItemWeaponClass.Fist};
 
         #endregion
 
         #region Properties
+
+        public static bool t18_class_trinket
+        {
+            get { return StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1).ItemInfo.Id == 124230 || StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2).ItemInfo.Id == 124230; }
+        }
 
         protected static LocalPlayer Me
         {
@@ -46,7 +75,7 @@ namespace Singular.ClassSpecific.Common
                         break;
                 }
 
-                return SingularRoutine.Instance.ActiveEnemies.Where(u => u.Distance < distance);
+                return SingularRoutine.Instance.ActiveEnemies.Where(u => u.Distance <= distance);
             }
         }
 
@@ -63,6 +92,15 @@ namespace Singular.ClassSpecific.Common
         protected static double spell_haste
         {
             get { return StyxWoW.Me.SpellHasteModifier; }
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        protected static int EnemiesCountNearTarget(WoWUnit target, byte distance)
+        {
+            return active_enemies_list.Where(x => target != x).Count(x => target.Location.Distance(x.Location) <= distance);
         }
 
         #endregion
@@ -114,6 +152,20 @@ namespace Singular.ClassSpecific.Common
         {
             // ReSharper disable MemberHidesStaticFromOuterClass
 
+            #region Properties
+
+            public static double distance
+            {
+                get { return StyxWoW.Me.CurrentTarget.Distance; }
+            }
+
+            public static long time_to_die
+            {
+                get { return StyxWoW.Me.CurrentTarget.TimeToDeath(long.MaxValue); }
+            }
+
+            #endregion
+
             #region Types
 
             public static class health
@@ -129,11 +181,6 @@ namespace Singular.ClassSpecific.Common
             }
 
             #endregion
-
-            //public static long time_to_die
-            //{
-            //    get { return StyxWoW.Me.CurrentTarget.TimeToDeath(int.MaxValue); }
-            //}
         }
 
         #endregion

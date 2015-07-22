@@ -55,10 +55,12 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClassSpecific\Common\ActionBase.cs" />
     <Compile Include="ClassSpecific\Common\Base.cs" />
     <Compile Include="ClassSpecific\Common\BuffBase.cs" />
     <Compile Include="ClassSpecific\Common\Common.cs" />
     <Compile Include="ClassSpecific\Common\CooldownBase.cs" />
+    <Compile Include="ClassSpecific\Common\GlyphBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight.cs" />
     <Compile Include="ClassSpecific\Common\DebuffBase.cs" />
     <Compile Include="ClassSpecific\Common\DotBase.cs" />
@@ -126,7 +128,6 @@
     <Content Include="SimC Profiles\dkBlood.txt" />
     <Content Include="SimC Profiles\dkUnholy.txt" />
     <Content Include="SimC Profiles\mageArcane.txt" />
-    <Content Include="SimC Profiles\mageFrost.txt" />
     <Content Include="Singular.xml" />
   </ItemGroup>
   <ItemGroup />

@@ -19,20 +19,16 @@ namespace Singular.ClassSpecific.Common
 
         public double remains
         {
-            get { return Remains(); }
+            get { return Spell.GetSpellCooldown(SpellName).TotalSeconds; }
+        }
+
+        public bool up
+        {
+            get { return remains == 0; }
         }
 
         #endregion
 
         // ReSharper restore InconsistentNaming
-
-        #region Private Methods
-
-        private double Remains()
-        {
-            return Spell.GetSpellCooldown(SpellName).TotalSeconds;
-        }
-
-        #endregion
     }
 }

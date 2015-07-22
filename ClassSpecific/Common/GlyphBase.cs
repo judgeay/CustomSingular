@@ -1,20 +1,14 @@
-using Singular.Managers;
+﻿using Singular.Managers;
 
 namespace Singular.ClassSpecific.Common
 {
-    internal class TalentBase
+    internal class GlyphBase : Base
     {
-        #region Fields
-
-        private readonly int _talent;
-
-        #endregion
-
         #region Constructors
 
-        public TalentBase(int talent)
+        public GlyphBase(string spellName)
+            : base(spellName)
         {
-            _talent = talent;
         }
 
         #endregion
@@ -25,7 +19,7 @@ namespace Singular.ClassSpecific.Common
 
         public bool enabled
         {
-            get { return TalentManager.IsSelected(_talent); }
+            get { return TalentManager.HasGlyph(SpellName); }
         }
 
         #endregion

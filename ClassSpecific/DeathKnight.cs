@@ -18,44 +18,7 @@ namespace Singular.ClassSpecific
     // ReSharper disable CompareOfFloatsByEqualityOperator
     public class DeathKnight : Common.Common
     {
-        #region Enums
-
-        public enum DkTalentsEnum
-        {
-            // ReSharper disable UnusedMember.Local
-            Plaguebearer = 1,
-            PlagueLeech,
-            UnholyBlight,
-
-            Lichborne,
-            AntiMagicZone,
-            Purgatory,
-
-            DeathsAdvance,
-            Chilblains,
-            Asphyxiate,
-
-            BloodTap,
-            RunicEmpowerment,
-            RunicCorruption,
-
-            DeathPact,
-            DeathSiphon,
-            Conversion,
-
-            GorefiendsGrasp,
-            RemorselessWinter,
-            DesecratedGround,
-
-            NecroticPlague,
-            Defile,
-            BreathOfSindragosa
-            // ReSharper restore UnusedMember.Local
-        }
-
-        #endregion
-
-        #region Constant
+        #region Fields
 
         private static readonly Func<Func<bool>, Composite> antimagic_shell = cond => Spell.BuffSelf(DkSpells.antimagic_shell, req => cond());
         private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAOE && cond());
@@ -90,28 +53,44 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> soul_reaper = cond => Spell.Cast(DkSpells.soul_reaper, req => cond());
         private static readonly Func<Func<bool>, Composite> summon_gargoyle = cond => Spell.Cast(DkSpells.summon_gargoyle, req => cond());
         private static readonly Func<Func<bool>, Composite> unholy_blight = cond => Spell.BuffSelfAndWait(DkSpells.unholy_blight, req => talent.unholy_blight.enabled && cond());
-
-        private static readonly Func<Composite> use_trinket = () =>
-        {
-            if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never &&
-                SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never)
-            {
-                return new Action(ret => RunStatus.Failure);
-            }
-
-            var ps = new PrioritySelector();
-
-            if (SingularSettings.IsTrinketUsageWanted(TrinketUsage.OnCooldownInCombat))
-            {
-                ps.AddChild(new Decorator(
-                    ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && ((StyxWoW.Me.IsMelee() && StyxWoW.Me.CurrentTarget.IsWithinMeleeRange) || StyxWoW.Me.CurrentTarget.SpellDistance() < 40),
-                    Item.UseEquippedTrinket(TrinketUsage.OnCooldownInCombat)));
-            }
-
-            return ps;
-        };
-
         private static readonly Func<Func<bool>, Composite> vampiric_blood = cond => Spell.BuffSelf(DkSpells.vampiric_blood, req => cond());
+
+        #endregion
+
+        #region Enums
+
+        public enum DkTalentsEnum
+        {
+            // ReSharper disable UnusedMember.Local
+            Plaguebearer = 1,
+            PlagueLeech,
+            UnholyBlight,
+
+            Lichborne,
+            AntiMagicZone,
+            Purgatory,
+
+            DeathsAdvance,
+            Chilblains,
+            Asphyxiate,
+
+            BloodTap,
+            RunicEmpowerment,
+            RunicCorruption,
+
+            DeathPact,
+            DeathSiphon,
+            Conversion,
+
+            GorefiendsGrasp,
+            RemorselessWinter,
+            DesecratedGround,
+
+            NecroticPlague,
+            Defile,
+            BreathOfSindragosa
+            // ReSharper restore UnusedMember.Local
+        }
 
         #endregion
 
@@ -226,7 +205,7 @@ namespace Singular.ClassSpecific
                     // actions+=/rune_tap,if=health.pct<50&buff.army_of_the_dead.down&buff.dancing_rune_weapon.down&buff.bone_shield.down&buff.vampiric_blood.down&buff.icebound_fortitude.down
                     rune_tap(() => health.pct < 50 && buff.army_of_the_dead.down && buff.dancing_rune_weapon.down && buff.bone_shield.down && buff.vampiric_blood.down && buff.icebound_fortitude.down),
                     // actions+=/dancing_rune_weapon,if=health.pct<80&buff.army_of_the_dead.down&buff.icebound_fortitude.down&buff.bone_shield.down&buff.vampiric_blood.down
-                    dancing_rune_weapon(() => health.pct < 80 && buff.army_of_the_dead.down && buff.icebound_fortitude.down && buff.bone_shield.down && buff.vampiric_blood.down),
+                    dancing_rune_weapon(() => true),
                     // actions+=/death_pact,if=health.pct<50
                     death_pact(() => health.pct < 50),
                     // actions+=/outbreak,if=(!talent.necrotic_plague.enabled&disease.min_remains<8)|!disease.ticking

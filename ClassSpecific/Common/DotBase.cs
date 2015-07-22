@@ -21,12 +21,12 @@ namespace Singular.ClassSpecific.Common
 
         public double remains
         {
-            get { return Remains(); }
+            get { return Remains(StyxWoW.Me.CurrentTarget); }
         }
 
         public bool ticking
         {
-            get { return Ticking(); }
+            get { return remains > 0; }
         }
 
         #endregion
@@ -34,16 +34,6 @@ namespace Singular.ClassSpecific.Common
         // ReSharper restore InconsistentNaming
 
         #region Private Methods
-
-        private double Remains()
-        {
-            return Remains(StyxWoW.Me.CurrentTarget);
-        }
-
-        private bool Ticking()
-        {
-            return Remains() > 0;
-        }
 
         public bool Ticking(WoWUnit target)
         {

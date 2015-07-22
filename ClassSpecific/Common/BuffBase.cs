@@ -25,70 +25,31 @@ namespace Singular.ClassSpecific.Common
 
         public bool down
         {
-            get { return Down(); }
+            get { return StyxWoW.Me.HasAura(SpellName) == false; }
         }
 
         public bool react
         {
-            get { return React(); }
+            get { return SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId); }
         }
 
         public double remains
         {
-            get { return Remains(); }
+            get { return SpellName != null ? StyxWoW.Me.GetAuraTimeLeft(SpellName).TotalSeconds : StyxWoW.Me.GetAuraTimeLeft(SpellId).TotalSeconds; }
         }
 
         public uint stack
         {
-            get { return Stack(); }
+            get { return StyxWoW.Me.GetAuraStacks(SpellName); }
         }
 
         public bool up
         {
-            get { return Up(); }
+            get { return StyxWoW.Me.HasAura(SpellName); }
         }
 
         #endregion
 
         // ReSharper restore InconsistentNaming
-
-        #region Private Methods
-
-        private bool Down()
-        {
-            return StyxWoW.Me.HasAura(SpellName) == false;
-        }
-
-        private bool PetDown()
-        {
-            return !PetUp();
-        }
-
-        private bool PetUp()
-        {
-            return StyxWoW.Me.GotAlivePet && StyxWoW.Me.Pet.ActiveAuras.ContainsKey(SpellName);
-        }
-
-        private bool React()
-        {
-            return StyxWoW.Me.HasAura(SpellId);
-        }
-
-        private double Remains()
-        {
-            return StyxWoW.Me.GetAuraTimeLeft(SpellName).TotalSeconds;
-        }
-
-        private uint Stack()
-        {
-            return StyxWoW.Me.GetAuraStacks(SpellName);
-        }
-
-        private bool Up()
-        {
-            return StyxWoW.Me.HasAura(SpellName) == true;
-        }
-
-        #endregion
     }
 }

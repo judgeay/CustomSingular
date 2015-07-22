@@ -20,20 +20,16 @@ namespace Singular.ClassSpecific.Common
 
         public decimal stack
         {
-            get { return Stack(); }
+            get { return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName); }
+        }
+
+        public double remains
+        {
+            get { return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(SpellName).TotalSeconds; }
         }
 
         #endregion
 
         // ReSharper restore InconsistentNaming
-
-        #region Private Methods
-
-        private decimal Stack()
-        {
-            return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName);
-        }
-
-        #endregion
     }
 }
