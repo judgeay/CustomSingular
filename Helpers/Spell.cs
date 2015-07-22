@@ -214,13 +214,7 @@ namespace Singular.Helpers
 
         public static bool UseCooldown
         {
-            get
-            {
-                if (!SingularRoutine.IsAllowed(CapabilityFlags.DefensiveCooldowns | CapabilityFlags.OffensiveCooldowns))
-                    return false;
-
-                return HotkeyDirector.IsCooldownEnabled && SingularSettings.Instance.AllowAutoCooldownUsage;
-            }
+            get { return HotkeyDirector.IsCooldownEnabled && SingularSettings.Instance.AllowAutoCooldownUsage; }
         }
 
         public static float MeleeDistance(this WoWUnit unit)
