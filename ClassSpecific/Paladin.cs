@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using CommonBehaviors.Actions;
 using Singular.ClassSpecific.Common;
 using Singular.Dynamics;
@@ -18,9 +19,7 @@ namespace Singular.ClassSpecific
         /**
          * @todo SealBase
          * @todo tier set bonuses
-         * @todo holy_prism target choice
-         * @todo cooldownBase::duration ???
-         * @todo gcd.max ???
+         * @todo gcd.max
          **/
 
         #region Fields
@@ -45,7 +44,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> hammer_of_wrath = cond => Spell.Cast(PalSpells.hammer_of_wrath, req => cond());
         private static readonly Func<Func<bool>, Composite> holy_avenger = cond => Spell.BuffSelf(PalSpells.holy_avenger, req => talent.holy_avenger.enabled && Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> holy_light = cond => Spell.Cast(PalSpells.holy_light, on => Me, req => cond());
-        private static readonly Func<Func<bool>, Composite> holy_prism = cond => Spell.Cast(PalSpells.holy_prism, on => Me, req => cond());
+        private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> holy_prism = (target, cond) => Spell.Cast(PalSpells.holy_prism, on => target(), req => cond());
         private static readonly Func<Func<bool>, Composite> judgment = cond => Spell.Cast(PalSpells.judgment, req => cond());
         private static readonly Func<Func<bool>, Composite> lay_on_hands = cond => Spell.Cast(PalSpells.lay_on_hands, on => Me, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> seal_of_command = cond => Spell.BuffSelf(PalSpells.seal_of_command, req => cond());
@@ -225,11 +224,11 @@ namespace Singular.ClassSpecific
                 //actions.cleave+=/exorcism,if=glyph.mass_exorcism.enabled&!set_bonus.tier17_4pc=1
                 exorcism(() => (glyph.mass_exorcism.enabled)), // ADD TIER 17 4P BONUS
                 //actions.cleave+=/judgment,cycle_targets=1,if=last_judgment_target!=target&talent.seraphim.enabled&glyph.double_jeopardy.enabled
-                //judgment(() => (talent.seraphim.enabled && glyph.double_jeopardy.enabled && active_enemies_list.Any(x => last_judgement_target != target))),
+                //judgment(() => (talent.seraphim.enabled && glyph.double_jeopardy.enabled && active_enemies_list.Any(x => last_judgment_target != x))),
                 //actions.cleave+=/judgment,if=talent.seraphim.enabled
                 judgment(() => (talent.seraphim.enabled)),
                 //actions.cleave+=/judgment,cycle_targets=1,if=last_judgment_target!=target&glyph.double_jeopardy.enabled&(holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down))
-                //judgment(() => last_judgment_target != target && glyph.double_jeopardy.enabled && (holy_power <= 3 || (holy_power = 4 && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down))),
+                //judgment(() => active_enemies_list.Any(x => last_judgment_target != x) && glyph.double_jeopardy.enabled && (holy_power <= 3 || (holy_power == 4 && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down))),
                 //actions.cleave+=/judgment,if=holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down)
                 judgment(() => (holy_power <= 3 || (holy_power == 4) && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down)),
                 //actions.cleave+=/divine_storm,if=buff.divine_crusader.react&buff.final_verdict.up
@@ -257,7 +256,7 @@ namespace Singular.ClassSpecific
                 //actions.cleave+=/final_verdict,if=holy_power>=3&buff.final_verdict.down
                 final_verdict(() => (holy_power >= 3 && buff.final_verdict.down)),
                 //actions.cleave+=/holy_prism,target=self
-                holy_prism(() => true),
+                holy_prism(() => Me, () => true),
                 new ActionAlwaysFail()
                 );
         }
@@ -362,7 +361,7 @@ namespace Singular.ClassSpecific
                 //actions.single+=/templars_verdict,if=holy_power>=3&(!talent.seraphim.enabled|cooldown.seraphim.remains>gcd*6)
                 templars_verdict(() => (holy_power >= 3 && (!talent.seraphim.enabled || cooldown.seraphim.remains > gcd * 6))),
                 //actions.single+=/holy_prism
-                holy_prism(() => (true)),
+                holy_prism(() => Me.CurrentTarget, () => true),
                 new ActionAlwaysFail()
                 );
         }

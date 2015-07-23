@@ -110,6 +110,99 @@ namespace Singular.ClassSpecific.Common
             }
         }
 
+        public static class set_bonus
+        {
+
+            #region fields
+
+            private static readonly WoWInventorySlot[] SetPartsSlots = {
+                WoWInventorySlot.Chest,
+                WoWInventorySlot.Hands,
+                WoWInventorySlot.Head,
+                WoWInventorySlot.Legs,
+                WoWInventorySlot.Shoulder
+            };
+
+            private static readonly Dictionary<WoWClass, uint[]> t17Sets = new Dictionary<WoWClass, uint[]>
+            {
+                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Paladin, new uint[] {115566, 115567, 115568, 115569, 115565}},
+                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+            };
+
+            private static readonly Dictionary<WoWClass, uint[]> t18Sets = new Dictionary<WoWClass, uint[]>
+            {
+                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Paladin, new uint[] {124318, 124328, 124333, 124339, 124345}},
+                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+            };
+
+            #endregion
+
+            #region Private Methods
+
+            private static int count(params Dictionary<WoWClass, uint[]> Sets)
+            {
+                if (!Sets.ContainsKey(Me.Class)) return 0;
+                var ids = Sets[Me.Class];
+
+                return SetPartsSlots.Select(woWInventorySlot => StyxWoW.Me.Inventory.GetItemBySlot((uint)woWInventorySlot)).Count(item => item != null && ids.Contains(item.ItemInfo.Id));
+            }
+
+            #endregion
+
+            #region Public Methods
+
+            public static bool tier17_2p
+            {
+                get {
+                    return count(t17Sets) >= 2;
+                }
+            }
+
+            public static bool tier17_4p
+            {
+                get
+                {
+                    return count(t17Sets) >= 4;
+                }
+            }
+
+            public static bool tier18_2p
+            {
+                get
+                {
+                    return count(t17Sets) >= 2;
+                }
+            }
+
+            public static bool tier18_4p
+            {
+                get
+                {
+                    return count(t17Sets) >= 4;
+                }
+            }
+
+            #endregion
+        }
+
         protected static LocalPlayer Me
         {
             get { return StyxWoW.Me; }
