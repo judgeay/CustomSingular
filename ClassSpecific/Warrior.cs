@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using CommonBehaviors.Actions;
 using Singular.ClassSpecific.Common;
 using Singular.Dynamics;
@@ -102,29 +103,30 @@ namespace Singular.ClassSpecific
 
         private const byte HEROIC_LEAP_DISTANCE = 40;
         private const byte HEROIC_LEAP_GLYPH_DISTANCE = 25;
+        private const byte REND_DISTANCE = 5;
         private const byte WHIRLWIND_DISTANCE = 8;
         private const byte WHIRLWIND_GLYPH_DISTANCE = 12;
 
         private static readonly Func<Func<bool>, Composite> avatar = cond => Spell.BuffSelfAndWait(WarriorSpells.avatar, req => Spell.UseCooldown && cond());
         private static readonly Func<Composite> battle_shout = () => Spell.Cast(WarriorSpells.battle_shout, ret => !Me.HasAura(WarriorSpells.battle_shout) && !Me.HasMyAura(WarriorSpells.commanding_shout) && !Me.HasPartyBuff(PartyBuffType.AttackPower));
-        private static readonly Func<Func<bool>, Composite> bladestorm = cond => Spell.Cast(WarriorSpells.bladestorm, req => cond());
+        private static readonly Func<Func<bool>, Composite> bladestorm = cond => Spell.Cast(WarriorSpells.bladestorm, req => Spell.UseCooldown && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> bloodbath = cond => Spell.BuffSelfAndWait(WarriorSpells.bloodbath, req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> colossus_smash = cond => Spell.Cast(WarriorSpells.colossus_smash, req => cond());
         private static readonly Func<Composite> commanding_shout = () => Spell.Cast(WarriorSpells.commanding_shout, ret => !Me.HasAura(WarriorSpells.battle_shout) && !Me.HasMyAura(WarriorSpells.commanding_shout) && !Me.HasPartyBuff(PartyBuffType.Stamina));
-        private static readonly Func<Func<bool>, Composite> dragon_roar = cond => Spell.Cast(WarriorSpells.dragon_roar, req => cond());
+        private static readonly Func<Func<bool>, Composite> dragon_roar = cond => Spell.Cast(WarriorSpells.dragon_roar, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> execute = cond => Spell.Cast(WarriorSpells.execute, req => cond());
         private static readonly Func<Func<bool>, Composite> heroic_throw = cond => Spell.Cast(WarriorSpells.heroic_throw, req => cond());
         private static readonly Func<Func<bool>, Composite> impending_victory = cond => Spell.Cast(WarriorSpells.impending_victory, req => cond());
         private static readonly Func<Func<bool>, Composite> mortal_strike = cond => Spell.Cast(WarriorSpells.mortal_strike, req => cond());
-        private static readonly Func<Func<bool>, Composite> ravager = cond => Spell.CastOnGround(WarriorSpells.ravager, on => Me.CurrentTarget, req => cond());
+        private static readonly Func<Func<bool>, Composite> ravager = cond => Spell.CastOnGround(WarriorSpells.ravager, on => Me.CurrentTarget, req => Spell.UseCooldown && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> recklessness = cond => Spell.BuffSelfAndWait(WarriorSpells.recklessness, req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
-        private static readonly Func<Func<bool>, Composite> rend = cond => Spell.Cast(WarriorSpells.rend, req => cond());
+        private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> rend = (target, cond) => Spell.Cast(WarriorSpells.rend, on => target(), req => target() != null && cond());
         private static readonly Func<Func<bool>, Composite> shockwave = cond => Spell.Cast(WarriorSpells.shockwave, req => cond());
         private static readonly Func<Func<bool>, Composite> siegebreaker = cond => Spell.Cast(WarriorSpells.siegebreaker, req => cond());
         private static readonly Func<Func<bool>, Composite> slam = cond => Spell.Cast(WarriorSpells.slam, req => cond());
         private static readonly Func<Func<bool>, Composite> storm_bolt = cond => Spell.Cast(WarriorSpells.storm_bolt, req => cond());
-        private static readonly Func<Func<bool>, Composite> sweeping_strikes = cond => Spell.BuffSelfAndWait(WarriorSpells.sweeping_strikes, req => cond(), gcd: HasGcd.No);
-        private static readonly Func<Func<bool>, Composite> thunder_clap = cond => Spell.Cast(WarriorSpells.thunder_clap, req => cond());
+        private static readonly Func<Func<bool>, Composite> sweeping_strikes = cond => Spell.BuffSelfAndWait(WarriorSpells.sweeping_strikes, req => Spell.UseAoe && cond(), gcd: HasGcd.No);
+        private static readonly Func<Func<bool>, Composite> thunder_clap = cond => Spell.Cast(WarriorSpells.thunder_clap, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> whirlwind = cond => Spell.Cast(WarriorSpells.whirlwind, req => cond());
 
         #endregion
@@ -265,11 +267,11 @@ namespace Singular.ClassSpecific
                 //actions.aoe=sweeping_strikes
                 sweeping_strikes(() => true),
                 //actions.aoe+=/rend,if=dot.rend.remains<5.4&target.time_to_die>4
-                rend(() => dot.rend.remains < 5.4 && target.time_to_die > 4),
+                rend(() => target.current, () => dot.rend.remains < 5.4 && target.time_to_die > 4),
                 //actions.aoe+=/rend,cycle_targets=1,max_cycle_targets=2,if=dot.rend.remains<5.4&target.time_to_die>8&!buff.colossus_smash_up.up&talent.taste_for_blood.enabled
-                rend(() => dot.rend.remains < 5.4 && target.time_to_die > 8 && !buff.colossus_smash_up.up && talent.taste_for_blood.enabled),
+                rend(() => Enemies(REND_DISTANCE).Take(2).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent > 8 && !buff.colossus_smash_up.up && talent.taste_for_blood.enabled), () => true),
                 //actions.aoe+=/rend,cycle_targets=1,if=dot.rend.remains<5.4&target.time_to_die-remains>18&!buff.colossus_smash_up.up&spell_targets.whirlwind<=8
-                rend(() => dot.rend.remains < 5.4 && target.time_to_die - dot.rend.remains > 18 && !buff.colossus_smash_up.up && spell_targets.whirlwind <= 8),
+                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent - dot.rend.remains > 18 && !buff.colossus_smash_up.up && spell_targets.whirlwind <= 8), () => true),
                 //actions.aoe+=/ravager,if=buff.bloodbath.up|cooldown.colossus_smash.remains<4
                 ravager(() => buff.bloodbath.up || cooldown.colossus_smash.remains < 4),
                 //actions.aoe+=/bladestorm,if=((debuff.colossus_smash.up|cooldown.colossus_smash.remains>3)&target.health.pct>20)|(target.health.pct<20&rage<30&cooldown.colossus_smash.remains>4)
@@ -291,7 +293,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/thunder_clap,if=(target.health.pct>20|spell_targets.whirlwind>=9)&glyph.resonating_power.enabled
                 thunder_clap(() => (target.health.pct > 20 || spell_targets.whirlwind >= 9) && glyph.resonating_power.enabled),
                 //actions.aoe+=/rend,cycle_targets=1,if=dot.rend.remains<5.4&target.time_to_die>8&!buff.colossus_smash_up.up&spell_targets.whirlwind>=9&rage<50&!talent.taste_for_blood.enabled
-                rend(() => dot.rend.remains < 5.4 && target.time_to_die > 8 && !buff.colossus_smash_up.up && spell_targets.whirlwind >= 9 && rage < 50 && !talent.taste_for_blood.enabled),
+                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent > 8 && !buff.colossus_smash_up.up && spell_targets.whirlwind >= 9 && rage < 50 && !talent.taste_for_blood.enabled), () => true),
                 //actions.aoe+=/whirlwind,if=target.health.pct>20|spell_targets.whirlwind>=9
                 whirlwind(() => target.health.pct > 20 || spell_targets.whirlwind >= 9),
                 //actions.aoe+=/siegebreaker
@@ -324,7 +326,7 @@ namespace Singular.ClassSpecific
         {
             return new PrioritySelector(
                 //actions.single=rend,if=target.time_to_die>4&dot.rend.remains<5.4
-                rend(() => target.time_to_die > 4 && dot.rend.remains < 5.4),
+                rend(() => target.current, () => target.time_to_die > 4 && dot.rend.remains < 5.4),
                 //actions.single+=/ravager,if=cooldown.colossus_smash.remains<4&(!raid_event.adds.exists|raid_event.adds.in>55)
                 //actions.single+=/colossus_smash,if=debuff.colossus_smash.down
                 colossus_smash(() => debuff.colossus_smash.down),

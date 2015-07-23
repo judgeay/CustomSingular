@@ -140,6 +140,11 @@ namespace Singular.ClassSpecific.Common
 
         #region Private Methods
 
+        protected static IOrderedEnumerable<WoWUnit> Enemies(byte distance)
+        {
+            return active_enemies_list.Where(x => x.Distance <= distance).OrderBy(x => x.Distance);
+        }
+
         protected static int EnemiesCountNearTarget(WoWUnit target, byte distance)
         {
             return active_enemies_list.Where(x => target != x).Count(x => target.Location.Distance(x.Location) <= distance);
