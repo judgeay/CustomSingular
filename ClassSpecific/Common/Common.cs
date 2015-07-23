@@ -45,7 +45,53 @@ namespace Singular.ClassSpecific.Common
 
         public static bool t18_class_trinket
         {
-            get { return StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1).ItemInfo.Id == 124230 || StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2).ItemInfo.Id == 124230; }
+            get
+            {
+                int classTrinketId;
+                switch (Me.Class)
+                {
+                    case WoWClass.DeathKnight:
+                        classTrinketId = 124513;
+                        break;
+                    case WoWClass.Druid:
+                        classTrinketId = 124514;
+                        break;
+                    case WoWClass.Hunter:
+                        classTrinketId = 124515;
+                        break;
+                    case WoWClass.Mage:
+                        classTrinketId = 124516;
+                        break;
+                    case WoWClass.Monk:
+                        classTrinketId = 124517;
+                        break;
+                    case WoWClass.Paladin:
+                        classTrinketId = 124518;
+                        break;
+                    case WoWClass.Priest:
+                        classTrinketId = 124519;
+                        break;
+                    case WoWClass.Rogue:
+                        classTrinketId = 124520;
+                        break;
+                    case WoWClass.Shaman:
+                        classTrinketId = 124521;
+                        break;
+                    case WoWClass.Warlock:
+                        classTrinketId = 124522;
+                        break;
+                    case WoWClass.Warrior:
+                        classTrinketId = 124523;
+                        break;
+                    default:
+                        classTrinketId = 0;
+                        break;
+                }
+
+                if (classTrinketId == 0) return false;
+
+                return StyxWoW.Me.Inventory.GetItemBySlot((uint)WoWInventorySlot.Trinket1).ItemInfo.Id == classTrinketId || StyxWoW.Me.Inventory.GetItemBySlot((uint)WoWInventorySlot.Trinket2).ItemInfo.Id == classTrinketId;
+            }
         }
 
         protected static LocalPlayer Me
