@@ -43,6 +43,21 @@ namespace Singular.ClassSpecific.Common
             return ps;
         };
 
+        private static readonly Dictionary<WoWClass, uint> T18ClassTrinketIds = new Dictionary<WoWClass, uint>
+        {
+            {WoWClass.DeathKnight, 124513}, // Reaper's Harvest
+            {WoWClass.Druid, 124514}, // Seed of Creation
+            {WoWClass.Hunter, 124515}, // Talisman of the Master Tracker
+            {WoWClass.Mage, 124516}, // Tome of Shifting Words
+            {WoWClass.Monk, 124517}, // Sacred Draenic Incense
+            {WoWClass.Paladin, 124518}, // Libram of Vindication
+            {WoWClass.Priest, 124519}, // Repudiation of War
+            {WoWClass.Rogue, 124520}, // Bleeding Hollow Toxin Vessel
+            {WoWClass.Shaman, 124521}, // Core of the Primal Elements
+            {WoWClass.Warlock, 124522}, // Fragment of the Dark Star
+            {WoWClass.Warrior, 124523}, // Worldbreaker's Resolve
+        };
+
         private static readonly WoWItemWeaponClass[] _oneHandWeaponClasses = {WoWItemWeaponClass.Axe, WoWItemWeaponClass.Mace, WoWItemWeaponClass.Sword, WoWItemWeaponClass.Dagger, WoWItemWeaponClass.Fist};
 
         #endregion
@@ -53,48 +68,8 @@ namespace Singular.ClassSpecific.Common
         {
             get
             {
-                int classTrinketId;
-                switch (Me.Class)
-                {
-                    case WoWClass.DeathKnight:
-                        classTrinketId = 124513;
-                        break;
-                    case WoWClass.Druid:
-                        classTrinketId = 124514;
-                        break;
-                    case WoWClass.Hunter:
-                        classTrinketId = 124515;
-                        break;
-                    case WoWClass.Mage:
-                        classTrinketId = 124516;
-                        break;
-                    case WoWClass.Monk:
-                        classTrinketId = 124517;
-                        break;
-                    case WoWClass.Paladin:
-                        classTrinketId = 124518;
-                        break;
-                    case WoWClass.Priest:
-                        classTrinketId = 124519;
-                        break;
-                    case WoWClass.Rogue:
-                        classTrinketId = 124520;
-                        break;
-                    case WoWClass.Shaman:
-                        classTrinketId = 124521;
-                        break;
-                    case WoWClass.Warlock:
-                        classTrinketId = 124522;
-                        break;
-                    case WoWClass.Warrior:
-                        classTrinketId = 124523;
-                        break;
-                    default:
-                        classTrinketId = 0;
-                        break;
-                }
-
-                if (classTrinketId == 0) return false;
+                if (!T18ClassTrinketIds.ContainsKey(Me.Class)) return false;
+                var classTrinketId = T18ClassTrinketIds[Me.Class];
 
                 var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
                 var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
@@ -108,99 +83,6 @@ namespace Singular.ClassSpecific.Common
 
                 return false;
             }
-        }
-
-        public static class set_bonus
-        {
-
-            #region fields
-
-            private static readonly WoWInventorySlot[] SetPartsSlots = {
-                WoWInventorySlot.Chest,
-                WoWInventorySlot.Hands,
-                WoWInventorySlot.Head,
-                WoWInventorySlot.Legs,
-                WoWInventorySlot.Shoulder
-            };
-
-            private static readonly Dictionary<WoWClass, uint[]> t17Sets = new Dictionary<WoWClass, uint[]>
-            {
-                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Paladin, new uint[] {115566, 115567, 115568, 115569, 115565}},
-                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
-            };
-
-            private static readonly Dictionary<WoWClass, uint[]> t18Sets = new Dictionary<WoWClass, uint[]>
-            {
-                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Paladin, new uint[] {124318, 124328, 124333, 124339, 124345}},
-                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
-            };
-
-            #endregion
-
-            #region Private Methods
-
-            private static int count(params Dictionary<WoWClass, uint[]> Sets)
-            {
-                if (!Sets.ContainsKey(Me.Class)) return 0;
-                var ids = Sets[Me.Class];
-
-                return SetPartsSlots.Select(woWInventorySlot => StyxWoW.Me.Inventory.GetItemBySlot((uint)woWInventorySlot)).Count(item => item != null && ids.Contains(item.ItemInfo.Id));
-            }
-
-            #endregion
-
-            #region Public Methods
-
-            public static bool tier17_2p
-            {
-                get {
-                    return count(t17Sets) >= 2;
-                }
-            }
-
-            public static bool tier17_4p
-            {
-                get
-                {
-                    return count(t17Sets) >= 4;
-                }
-            }
-
-            public static bool tier18_2p
-            {
-                get
-                {
-                    return count(t17Sets) >= 2;
-                }
-            }
-
-            public static bool tier18_4p
-            {
-                get
-                {
-                    return count(t17Sets) >= 4;
-                }
-            }
-
-            #endregion
         }
 
         protected static LocalPlayer Me
@@ -262,6 +144,88 @@ namespace Singular.ClassSpecific.Common
         #endregion
 
         #region Types
+
+        public static class set_bonus
+        {
+            #region fields
+
+            private static readonly WoWInventorySlot[] _setPartsSlots =
+            {
+                WoWInventorySlot.Chest,
+                WoWInventorySlot.Hands,
+                WoWInventorySlot.Head,
+                WoWInventorySlot.Legs,
+                WoWInventorySlot.Shoulder
+            };
+
+            private static readonly Dictionary<WoWClass, uint[]> _t17Sets = new Dictionary<WoWClass, uint[]>
+            {
+                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Paladin, new uint[] {115566, 115567, 115568, 115569, 115565}},
+                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+            };
+
+            private static readonly Dictionary<WoWClass, uint[]> _t18Sets = new Dictionary<WoWClass, uint[]>
+            {
+                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Paladin, new uint[] {124318, 124328, 124333, 124339, 124345}},
+                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+            };
+
+            #endregion
+
+            #region Properties
+
+            public static bool tier17_2p
+            {
+                get { return SetPartsCount(_t17Sets) >= 2; }
+            }
+
+            public static bool tier17_4p
+            {
+                get { return SetPartsCount(_t17Sets) >= 4; }
+            }
+
+            public static bool tier18_2p
+            {
+                get { return SetPartsCount(_t18Sets) >= 2; }
+            }
+
+            public static bool tier18_4p
+            {
+                get { return SetPartsCount(_t18Sets) >= 4; }
+            }
+
+            #endregion
+
+            #region Private Methods
+
+            private static int SetPartsCount(IReadOnlyDictionary<WoWClass, uint[]> set)
+            {
+                if (!set.ContainsKey(Me.Class)) return 0;
+                var ids = set[Me.Class];
+
+                return _setPartsSlots.Select(woWInventorySlot => StyxWoW.Me.Inventory.GetItemBySlot((uint) woWInventorySlot)).Count(item => item != null && ids.Contains(item.ItemInfo.Id));
+            }
+
+            #endregion
+        }
 
         protected static class health
         {
