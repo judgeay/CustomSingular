@@ -160,32 +160,32 @@ namespace Singular.ClassSpecific.Common
 
             private static readonly Dictionary<WoWClass, uint[]> _t17Sets = new Dictionary<WoWClass, uint[]>
             {
-                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Paladin, new uint[] {115566, 115567, 115568, 115569, 115565}},
-                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+                {WoWClass.DeathKnight, new uint[] {115535, 115536, 115537, 115538, 115539}},
+                {WoWClass.Druid, new uint[] {115540, 115541, 115542, 115543, 115544}},
+                {WoWClass.Hunter, new uint[] {115545, 115546, 115547, 115548, 115549}},
+                {WoWClass.Mage, new uint[] {115550, 115551, 115552, 115553, 115554}},
+                {WoWClass.Monk, new uint[] {115555, 115556, 115557, 115558, 115559}},
+                {WoWClass.Paladin, new uint[] {115565, 115566, 115567, 115568, 115569}},
+                {WoWClass.Priest, new uint[] {115560, 115561, 115562, 115563, 115564}},
+                {WoWClass.Rogue, new uint[] {115570, 115571, 115572, 115573, 115574}},
+                {WoWClass.Shaman, new uint[] {115575, 115576, 115577, 115578, 115579}},
+                {WoWClass.Warlock, new uint[] {115585, 115586, 115587, 115588, 115589}},
+                {WoWClass.Warrior, new uint[] {115580, 115581, 115582, 115583, 115584}}
             };
 
             private static readonly Dictionary<WoWClass, uint[]> _t18Sets = new Dictionary<WoWClass, uint[]>
             {
-                {WoWClass.DeathKnight, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Druid, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Hunter, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Mage, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Monk, new uint[] {1, 2, 3, 4, 5}},
+                {WoWClass.DeathKnight, new uint[] {124317, 124327, 124332, 124338, 124344}},
+                {WoWClass.Druid, new uint[] {124246, 124255, 124261, 124267, 124272}},
+                {WoWClass.Hunter, new uint[] {124284, 124292, 124296, 124301, 124307}},
+                {WoWClass.Mage, new uint[] {124154, 124160, 124165, 124171, 124177}},
+                {WoWClass.Monk, new uint[] {124247, 124256, 124262, 124268, 124273}},
                 {WoWClass.Paladin, new uint[] {124318, 124328, 124333, 124339, 124345}},
-                {WoWClass.Priest, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Rogue, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Shaman, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warlock, new uint[] {1, 2, 3, 4, 5}},
-                {WoWClass.Warrior, new uint[] {1, 2, 3, 4, 5}}
+                {WoWClass.Priest, new uint[] {124155, 124161, 124166, 124172, 124178}},
+                {WoWClass.Rogue, new uint[] {124248, 124257, 124263, 124269, 124274}},
+                {WoWClass.Shaman, new uint[] {124293, 124297, 124302, 124303, 124308}},
+                {WoWClass.Warlock, new uint[] {124156, 124162, 124167, 124173, 124179}},
+                {WoWClass.Warrior, new uint[] {124319, 124329, 124334, 124340, 124346}}
             };
 
             #endregion
