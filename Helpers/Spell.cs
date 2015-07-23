@@ -1131,6 +1131,8 @@ namespace Singular.Helpers
         private static readonly Dictionary<string, DateTime> _DoubleCastPreventionDict =
             new Dictionary<string, DateTime>();
 
+        private static string _previousGcdSpell;
+
         #endregion
 
         #region Buff - by name
@@ -2827,7 +2829,22 @@ namespace Singular.Helpers
 
         private static Dictionary<string, long> UndefinedSpells { get; set; }
 
-        public static string PreviousGcdSpell { get; set; }
+        public static string PreviousGcdSpell
+        {
+            get { return _previousGcdSpell; }
+            set
+            {
+                _previousGcdSpell = value;
+
+                if (StyxWoW.Me.Class == WoWClass.Paladin)
+                {
+                    if (PreviousGcdSpell == ClassSpecific.Paladin.PalSpells.judgment)
+                    {
+                        ClassSpecific.Paladin.last_judgment_target = StyxWoW.Me.CurrentTarget;
+                    }
+                }
+            }
+        }
 
         private static void AddUndefinedSpell(string s)
         {

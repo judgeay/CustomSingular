@@ -95,7 +95,7 @@ namespace Singular.ClassSpecific.Common
                 }
 
                 if (classTrinketId == 0) return false;
-                
+
                 var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
                 var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
 
@@ -150,6 +150,7 @@ namespace Singular.ClassSpecific.Common
         {
             get { return Spell.PreviousGcdSpell; }
         }
+
 
         protected static double spell_haste
         {
@@ -215,6 +216,11 @@ namespace Singular.ClassSpecific.Common
             // ReSharper disable MemberHidesStaticFromOuterClass
 
             #region Properties
+
+            public static WoWUnit current
+            {
+                get { return Me.CurrentTarget; }
+            }
 
             public static double distance
             {

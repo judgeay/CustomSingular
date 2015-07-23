@@ -5,6 +5,8 @@ using Singular.Dynamics;
 using Singular.Helpers;
 using Styx;
 using Styx.TreeSharp;
+using Styx.WoWInternals.WoWObjects;
+using Action = Styx.TreeSharp.Action;
 
 namespace Singular.ClassSpecific
 {
@@ -103,6 +105,8 @@ namespace Singular.ClassSpecific
         {
             get { return Me.CurrentHolyPower; }
         }
+
+        public static WoWUnit last_judgment_target { get; set; }
 
         #endregion
 
@@ -225,7 +229,7 @@ namespace Singular.ClassSpecific
                 //actions.cleave+=/judgment,if=talent.seraphim.enabled
                 judgment(() => (talent.seraphim.enabled)),
                 //actions.cleave+=/judgment,cycle_targets=1,if=last_judgment_target!=target&glyph.double_jeopardy.enabled&(holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down))
-                //judgment(() => last_judgment_target != target & glyph.double_jeopardy.enabled & (holy_power <= 3 | (holy_power = 4 & cooldown.crusader_strike.remains >= gcd * 2 & target.health.pct > 35 & buff.avenging_wrath.down))),
+                //judgment(() => last_judgment_target != target && glyph.double_jeopardy.enabled && (holy_power <= 3 || (holy_power = 4 && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down))),
                 //actions.cleave+=/judgment,if=holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down)
                 judgment(() => (holy_power <= 3 || (holy_power == 4) && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down)),
                 //actions.cleave+=/divine_storm,if=buff.divine_crusader.react&buff.final_verdict.up
@@ -318,13 +322,13 @@ namespace Singular.ClassSpecific
                 //actions.single+=/divine_storm,if=buff.divine_crusader.react&(buff.avenging_wrath.up|target.health.pct<35)&!talent.final_verdict.enabled
                 divine_storm(() => (buff.divine_crusader.react && (buff.avenging_wrath.up || target.health.pct < 35) && !talent.final_verdict.enabled)),
                 //actions.single+=/exorcism,if=glyph.mass_exorcism.enabled&spell_targets.exorcism>=2&!glyph.double_jeopardy.enabled&!set_bonus.tier17_4pc=1
-                //exorcism(() => glyph.mass_exorcism.enabled & spell_targets.exorcism >= 2 & !glyph.double_jeopardy.enabled & !set_bonus.tier17_4pc = 1),
+                //exorcism(() => glyph.mass_exorcism.enabled && spell_targets.exorcism >= 2 && !glyph.double_jeopardy.enabled && !set_bonus.tier17_4pc = 1),
                 //actions.single+=/judgment,cycle_targets=1,if=last_judgment_target!=target&talent.seraphim.enabled&glyph.double_jeopardy.enabled
-                //judgment(() => last_judgment_target != target & talent.seraphim.enabled & glyph.double_jeopardy.enabled),
+                judgment(() => last_judgment_target != target.current && talent.seraphim.enabled && glyph.double_jeopardy.enabled),
                 //actions.single+=/judgment,if=talent.seraphim.enabled
                 judgment(() => (talent.seraphim.enabled)),
                 //actions.single+=/judgment,cycle_targets=1,if=last_judgment_target!=target&glyph.double_jeopardy.enabled&(holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down))
-                //judgment(() => last_judgment_target != target & glyph.double_jeopardy.enabled & (holy_power <= 3 | (holy_power = 4 & cooldown.crusader_strike.remains >= gcd * 2 & target.health.pct > 35 & buff.avenging_wrath.down))),
+                judgment(() => last_judgment_target != target.current && glyph.double_jeopardy.enabled && (holy_power <= 3 || (holy_power == 4 && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down))),
                 //actions.single+=/judgment,if=holy_power<=3|(holy_power=4&cooldown.crusader_strike.remains>=gcd*2&target.health.pct>35&buff.avenging_wrath.down)
                 judgment(() => (holy_power <= 3 || (holy_power == 4 && cooldown.crusader_strike.remains >= gcd * 2 && target.health.pct > 35 && buff.avenging_wrath.down))),
                 //actions.single+=/divine_storm,if=buff.divine_crusader.react&buff.final_verdict.up
@@ -336,11 +340,11 @@ namespace Singular.ClassSpecific
                 //actions.single+=/final_verdict,if=holy_power>=4
                 final_verdict(() => (holy_power >= 4)),
                 //actions.single+=/seal_of_truth,if=talent.empowered_seals.enabled&buff.maraads_truth.remains<cooldown.judgment.duration*1.5&buff.liadrins_righteousness.remains>cooldown.judgment.duration*1.5
-                seal_of_truth(() => talent.empowered_seals.enabled & buff.maraads_truth.remains < cooldown.judgment.duration * 1.5 & buff.liadrins_righteousness.remains > cooldown.judgment.duration * 1.5),
+                seal_of_truth(() => talent.empowered_seals.enabled && buff.maraads_truth.remains < cooldown.judgment.duration * 1.5 && buff.liadrins_righteousness.remains > cooldown.judgment.duration * 1.5),
                 //actions.single+=/seal_of_righteousness,if=talent.empowered_seals.enabled&buff.liadrins_righteousness.remains<cooldown.judgment.duration*1.5&buff.maraads_truth.remains>cooldown.judgment.duration*1.5&!buff.bloodlust.up
-                seal_of_righteousness(() => talent.empowered_seals.enabled & buff.liadrins_righteousness.remains < cooldown.judgment.duration * 1.5 & buff.maraads_truth.remains > cooldown.judgment.duration * 1.5 & !buff.bloodlust.up),
+                seal_of_righteousness(() => talent.empowered_seals.enabled && buff.liadrins_righteousness.remains < cooldown.judgment.duration * 1.5 && buff.maraads_truth.remains > cooldown.judgment.duration * 1.5 && !buff.bloodlust.up),
                 //actions.single+=/divine_storm,if=buff.divine_crusader.react&spell_targets.divine_storm=2&holy_power>=4&!talent.final_verdict.enabled
-                divine_storm(() => buff.divine_crusader.react & spell_targets.divine_storm == 2 & holy_power >= 4 & !talent.final_verdict.enabled),
+                divine_storm(() => buff.divine_crusader.react && spell_targets.divine_storm == 2 && holy_power >= 4 && !talent.final_verdict.enabled),
                 //actions.single+=/templars_verdict,if=buff.divine_purpose.react
                 templars_verdict(() => (buff.divine_purpose.react)),
                 //actions.single+=/divine_storm,if=buff.divine_crusader.react&!talent.final_verdict.enabled
