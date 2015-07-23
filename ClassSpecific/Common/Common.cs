@@ -17,6 +17,12 @@ namespace Singular.ClassSpecific.Common
 
         #region Fields
 
+        protected const string bloodlust = "Bloodlust";
+
+        protected static readonly Func<Func<bool>, Composite> arcane_torrent = cond => Spell.Cast("Arcane Torrent", req => Spell.UseCooldown && cond());
+        protected static readonly Func<Func<bool>, Composite> berserking = cond => Spell.Cast("Berserking", req => Spell.UseCooldown && cond());
+        protected static readonly Func<Func<bool>, Composite> blood_fury = cond => Spell.Cast("Blood Fury", req => Spell.UseCooldown && cond());
+
         protected static readonly Func<Composite> use_trinket = () =>
         {
             if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never &&

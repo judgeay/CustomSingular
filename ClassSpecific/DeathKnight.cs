@@ -187,10 +187,13 @@ namespace Singular.ClassSpecific
                     // actions+=/potion,name=draenic_armor,if=buff.potion.down&buff.blood_shield.down&!unholy&!frost
                     // # if=time>10
                     // actions+=/blood_fury
+                    blood_fury(() => true),
                     // # if=time>10
                     // actions+=/berserking
+                    berserking(() => true),
                     // # if=time>10
                     // actions+=/arcane_torrent
+                    arcane_torrent(() => runic_power < 20),
                     // actions+=/antimagic_shell
                     antimagic_shell(() => true),
                     // actions+=/conversion,if=!buff.conversion.up&runic_power>50&health.pct<90

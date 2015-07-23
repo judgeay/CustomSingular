@@ -150,8 +150,11 @@ namespace Singular.ClassSpecific
                     //actions+=/holy_avenger,sync=seraphim,if=talent.seraphim.enabled
                     //actions+=/holy_avenger,if=holy_power<=2&!talent.seraphim.enabled
                     //actions+=/blood_fury
+                    blood_fury(() => true),
                     //actions+=/berserking
+                    berserking(() => true),
                     //actions+=/arcane_torrent
+                    arcane_torrent(() => mana.pct < 20),
                     //actions+=/seraphim
                     //actions+=/wait,sec=cooldown.seraphim.remains,if=talent.seraphim.enabled&cooldown.seraphim.remains>0&cooldown.seraphim.remains<gcd.max&holy_power>=5
                     //actions+=/call_action_list,name=cleave,if=spell_targets.divine_storm>=3
@@ -449,7 +452,7 @@ namespace Singular.ClassSpecific
 
             public static readonly buff blazing_contempt = new buff(PalSpells.blazing_contempt);
 
-            public static readonly buff bloodlust = new buff("Bloodlust");
+            public static readonly buff bloodlust = new buff(Common.Common.bloodlust);
 
             public static readonly buff divine_crusader = new buff(PalSpells.divine_crusader);
 

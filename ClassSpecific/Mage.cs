@@ -299,8 +299,11 @@ namespace Singular.ClassSpecific
                 //actions.cooldowns=arcane_power
                 arcane_power(() => true),
                 //actions.cooldowns+=/blood_fury
+                blood_fury(() => true),
                 //actions.cooldowns+=/berserking
+                berserking(() => true),
                 //actions.cooldowns+=/arcane_torrent
+                arcane_torrent(() => mana.pct < 20),
                 //actions.cooldowns+=/potion,name=draenic_intellect,if=buff.arcane_power.up&(!talent.prismatic_crystal.enabled|pet.prismatic_crystal.active)
                 //actions.cooldowns+=/use_item,slot=finger2
                 new ActionAlwaysFail()
