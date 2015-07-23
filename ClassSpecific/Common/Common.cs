@@ -192,22 +192,22 @@ namespace Singular.ClassSpecific.Common
 
             #region Properties
 
-            public static bool tier17_2p
+            public static bool tier17_2pc
             {
                 get { return SetPartsCount(_t17Sets) >= 2; }
             }
 
-            public static bool tier17_4p
+            public static bool tier17_4pc
             {
                 get { return SetPartsCount(_t17Sets) >= 4; }
             }
 
-            public static bool tier18_2p
+            public static bool tier18_2pc
             {
                 get { return SetPartsCount(_t18Sets) >= 2; }
             }
 
-            public static bool tier18_4p
+            public static bool tier18_4pc
             {
                 get { return SetPartsCount(_t18Sets) >= 4; }
             }

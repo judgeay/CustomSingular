@@ -185,7 +185,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/evocation,interrupt_if=mana.pct>96,if=mana.pct<85-2.5*buff.arcane_charge.stack
                 evocation(() => mana.pct < 85 - 2.5 * buff.arcane_charge.stack),
                 //actions.aoe+=/arcane_missiles,if=set_bonus.tier17_4pc&active_enemies<10&buff.arcane_charge.stack=4&buff.arcane_instability.react
-                arcane_missiles(() => active_enemies < 10 && buff.arcane_charge.stack == 4 && buff.arcane_instability.react),
+                arcane_missiles(() => set_bonus.tier17_4pc && active_enemies < 10 && buff.arcane_charge.stack == 4 && buff.arcane_instability.react),
                 //actions.aoe+=/arcane_missiles,target_if=debuff.mark_of_doom.remains>2*spell_haste+(target.distance%20),if=buff.arcane_missiles.react
                 arcane_missiles(() => debuff.mark_of_doom.remains > 2 * spell_haste + (target.distance % 20) && buff.arcane_missiles.react),
                 //actions.aoe+=/nether_tempest,cycle_targets=1,if=talent.arcane_orb.enabled&buff.arcane_charge.stack=4&ticking&remains<cooldown.arcane_orb.remains
@@ -211,7 +211,7 @@ namespace Singular.ClassSpecific
                 //actions.burn+=/arcane_missiles,if=buff.arcane_missiles.react=3
                 arcane_missiles(() => buff.arcane_missiles.stack == 3),
                 //actions.burn+=/arcane_missiles,if=set_bonus.tier17_4pc&buff.arcane_instability.react&buff.arcane_instability.remains<action.arcane_blast.execute_time
-                arcane_missiles(() => buff.arcane_instability.react && buff.arcane_instability.remains < action.arcane_blast.execute_time),
+                arcane_missiles(() => set_bonus.tier17_4pc && buff.arcane_instability.react && buff.arcane_instability.remains < action.arcane_blast.execute_time),
                 //actions.burn+=/supernova,if=target.time_to_die<8|charges=2
                 supernova(() => target.time_to_die < 8 || action.supernova.charges == 2),
                 //actions.burn+=/nether_tempest,cycle_targets=1,if=target!=pet.prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<3.6))
@@ -251,7 +251,7 @@ namespace Singular.ClassSpecific
                 //actions.conserve+=/arcane_missiles,if=buff.arcane_missiles.react=3|(talent.overpowered.enabled&buff.arcane_power.up&buff.arcane_power.remains<action.arcane_blast.execute_time)
                 arcane_missiles(() => buff.arcane_missiles.stack == 3 || (talent.overpowered.enabled && buff.arcane_power.up && buff.arcane_power.remains < action.arcane_blast.execute_time)),
                 //actions.conserve+=/arcane_missiles,if=set_bonus.tier17_4pc&buff.arcane_instability.react&buff.arcane_instability.remains<action.arcane_blast.execute_time
-                arcane_missiles(() => buff.arcane_instability.react && buff.arcane_instability.remains < action.arcane_blast.execute_time),
+                arcane_missiles(() => set_bonus.tier17_4pc && buff.arcane_instability.react && buff.arcane_instability.remains < action.arcane_blast.execute_time),
                 //actions.conserve+=/nether_tempest,cycle_targets=1,if=target!=pet.prismatic_crystal&buff.arcane_charge.stack=4&(active_dot.nether_tempest=0|(ticking&remains<3.6))
                 nether_tempest(
                     () => /*target!=pet.prismatic_crystal && */
