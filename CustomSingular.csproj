@@ -55,6 +55,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClassSpecific\Paladin.cs" />
     <Compile Include="ClassSpecific\Common\ActionBase.cs" />
     <Compile Include="ClassSpecific\Common\Base.cs" />
     <Compile Include="ClassSpecific\Common\BuffBase.cs" />
