@@ -17,11 +17,15 @@ namespace Singular.ClassSpecific.Common
 
         #region Fields
 
-        protected const string bloodlust = "Bloodlust";
+        public const string ancient_hysteria = "Ancient Hysteria";
+        public const string bloodlust = "Bloodlust";
+        public const string time_warp = "Time Warp";
 
-        protected static readonly Func<Func<bool>, Composite> arcane_torrent = cond => Spell.Cast("Arcane Torrent", req => Spell.UseCooldown && cond());
-        protected static readonly Func<Func<bool>, Composite> berserking = cond => Spell.Cast("Berserking", req => Spell.UseCooldown && cond());
-        protected static readonly Func<Func<bool>, Composite> blood_fury = cond => Spell.Cast("Blood Fury", req => Spell.UseCooldown && cond());
+        public static readonly string[] BloodlustEquivalents = {ancient_hysteria, bloodlust, time_warp};
+
+        protected static readonly Func<Func<bool>, Composite> arcane_torrent = cond => Spell.BuffSelfAndWait("Arcane Torrent", req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
+        protected static readonly Func<Func<bool>, Composite> berserking = cond => Spell.BuffSelfAndWait("Berserking", req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
+        protected static readonly Func<Func<bool>, Composite> blood_fury = cond => Spell.BuffSelfAndWait("Blood Fury", req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
 
         protected static readonly Func<Composite> use_trinket = () =>
         {

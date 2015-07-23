@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using Singular.ClassSpecific;
+using Singular.Managers;
+using Singular.Utilities;
 using Styx;
 using Styx.CommonBot;
 using Styx.WoWInternals;
@@ -173,6 +176,16 @@ namespace Singular
                               || s.AuraType == WoWApplyAuraType.DamageImmunity
                               )
                 );
+        }
+
+        public static bool IsGapCloserAllowed(this WoWUnit unit)
+        {
+            return unit != null &&
+                   MovementManager.IsClassMovementAllowed &&
+                   Spell.UseAoe && !unit.IsPathErrorTarget() &&
+                   !StyxWoW.Me.HasAura(Warrior.WarriorSpells.charge) &&
+                   !unit.HasAnyOfMyAuras(Warrior.WarriorSpells.charge_stun, Warrior.WarriorSpells.warbringer)
+                   && Movement.InLineOfSpellSight(unit);
         }
 
         public static bool IsHeal(this WoWSpell spell)

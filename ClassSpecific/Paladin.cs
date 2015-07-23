@@ -448,43 +448,24 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly buff avenging_wrath = new buff(PalSpells.avenging_wrath);
-
             public static readonly buff benediction_of_kings = new buff(PalSpells.benediction_of_kings);
-
             public static readonly buff benediction_of_might = new buff(PalSpells.benediction_of_might);
-
             public static readonly buff blazing_contempt = new buff(PalSpells.blazing_contempt);
-
             public static readonly buff bloodlust = new buff(Common.Common.bloodlust);
-
             public static readonly buff divine_crusader = new buff(PalSpells.divine_crusader);
-
             public static readonly buff divine_protection = new buff(PalSpells.divine_protection);
-
             public static readonly buff divine_purpose = new buff(PalSpells.divine_purpose);
-
             public static readonly buff divine_shield = new buff(PalSpells.divine_shield);
-
             public static readonly buff final_verdict = new buff(PalSpells.final_verdict);
-
             public static readonly buff focus_of_vengeance = new buff(PalSpells.focus_of_vengeance);
-
             public static readonly buff holy_avenger = new buff(PalSpells.holy_avenger);
-
             public static readonly buff liadrins_righteousness = new buff(PalSpells.liadrins_righteousness);
-
             public static readonly buff maraads_truth = new buff(PalSpells.maraads_truth);
-
             public static readonly buff seal_of_command = new buff(PalSpells.seal_of_command);
-
             public static readonly buff seal_of_insight = new buff(PalSpells.seal_of_insight);
-
             public static readonly buff seal_of_righteousness = new buff(PalSpells.seal_of_righteousness);
-
             public static readonly buff seal_of_truth = new buff(PalSpells.seal_of_truth);
-
             public static readonly buff seraphim = new buff(PalSpells.seraphim);
-
             public static readonly buff wings_of_liberty = new buff(PalSpells.wings_of_liberty);
 
             #endregion
@@ -509,21 +490,13 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly cooldown avenging_wrath = new cooldown(PalSpells.avenging_wrath);
-
             public static readonly cooldown crusader_strike = new cooldown(PalSpells.crusader_strike);
-
             public static readonly cooldown divine_protection = new cooldown(PalSpells.divine_protection);
-
             public static readonly cooldown divine_shield = new cooldown(PalSpells.divine_shield);
-
             public static readonly cooldown execution_sentence = new cooldown(PalSpells.execution_sentence);
-
             public static readonly cooldown judgment = new cooldown(PalSpells.judgment);
-
             public static readonly cooldown lay_on_hands = new cooldown(PalSpells.lay_on_hands);
-
             public static readonly cooldown lights_hammer = new cooldown(PalSpells.lights_hammer);
-
             public static readonly cooldown seraphim = new cooldown(PalSpells.seraphim);
 
             #endregion
@@ -543,7 +516,6 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly debuff censure = new debuff(PalSpells.censure);
-
             public static readonly debuff execution_sentence = new debuff(PalSpells.execution_sentence);
 
             #endregion
@@ -563,7 +535,6 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly dot censure = new dot(PalSpells.censure);
-
             public static readonly dot execution_sentence = new dot(PalSpells.execution_sentence);
 
             #endregion
@@ -583,7 +554,6 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly glyph double_jeopardy = new glyph(PalSpells.double_jeopardy);
-
             public static readonly glyph mass_exorcism = new glyph(PalSpells.mass_exorcism);
 
             #endregion
@@ -603,21 +573,13 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly talent divine_purpose = new talent(PalTalentsEnum.DivinePurpose);
-
             public static readonly talent empowered_seals = new talent(PalTalentsEnum.EmpoweredSeals);
-
             public static readonly talent execution_sentence = new talent(PalTalentsEnum.ExecutionSentence);
-
             public static readonly talent final_verdict = new talent(PalTalentsEnum.FinalVerdict);
-
             public static readonly talent holy_avenger = new talent(PalTalentsEnum.HolyAvenger);
-
             public static readonly talent holy_prism = new talent(PalTalentsEnum.HolyPrism);
-
             public static readonly talent lights_hammer = new talent(PalTalentsEnum.LightsHammer);
-
             public static readonly talent sanctified_wrath = new talent(PalTalentsEnum.SanctifiedWrath);
-
             public static readonly talent seraphim = new talent(PalTalentsEnum.Seraphim);
 
             #endregion

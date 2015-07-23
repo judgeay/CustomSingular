@@ -67,6 +67,7 @@
     <Compile Include="ClassSpecific\Common\DotBase.cs" />
     <Compile Include="ClassSpecific\Mage.cs" />
     <Compile Include="ClassSpecific\Common\TalentBase.cs" />
+    <Compile Include="ClassSpecific\Warrior.cs" />
     <Compile Include="Dynamics\Attributes.cs" />
     <Compile Include="Dynamics\CompositeBuilder.cs" />
     <Compile Include="Dynamics\NoContextAvailable.cs" />
@@ -125,6 +126,7 @@
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="SimC Profiles\warArms.txt" />
     <Content Include="SimC Profiles\dkFrost.txt" />
     <Content Include="SimC Profiles\dkBlood.txt" />
     <Content Include="SimC Profiles\dkUnholy.txt" />

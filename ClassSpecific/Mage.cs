@@ -379,7 +379,6 @@ namespace Singular.ClassSpecific
             #region Fields
 
             public static readonly action arcane_blast = new action(MageSpells.supernova);
-
             public static readonly action supernova = new action(MageSpells.supernova);
 
             #endregion

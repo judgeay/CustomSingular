@@ -1,3 +1,4 @@
+using System.Linq;
 using Singular.Helpers;
 using Styx;
 
@@ -45,7 +46,7 @@ namespace Singular.ClassSpecific.Common
 
         public bool up
         {
-            get { return StyxWoW.Me.HasAura(SpellName); }
+            get { return Common.BloodlustEquivalents.Contains(SpellName) ? Common.BloodlustEquivalents.Any(x => StyxWoW.Me.HasAura(SpellName)) : StyxWoW.Me.HasAura(SpellName); }
         }
 
         #endregion
