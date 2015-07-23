@@ -1,4 +1,5 @@
 using Singular.Helpers;
+using Styx.CommonBot;
 
 namespace Singular.ClassSpecific.Common
 {
@@ -16,6 +17,20 @@ namespace Singular.ClassSpecific.Common
         // ReSharper disable InconsistentNaming
 
         #region Properties
+
+        public double duration
+        {
+            get
+            {
+                SpellFindResults sfr;
+                if (SpellManager.FindSpell(SpellName, out sfr) == false || sfr == null || (sfr.Original == null && sfr.Override == null)) return 0;
+
+                var spell = sfr.Override ?? sfr.Original;
+
+                if (spell.Cooldown) return spell.CooldownTimeLeft.TotalSeconds;
+                return spell.BaseCooldown / 1000.0;
+            }
+        }
 
         public double remains
         {
