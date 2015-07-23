@@ -89,8 +89,18 @@ namespace Singular.ClassSpecific.Common
                 }
 
                 if (classTrinketId == 0) return false;
+                
+                var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
+                var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
 
-                return StyxWoW.Me.Inventory.GetItemBySlot((uint)WoWInventorySlot.Trinket1).ItemInfo.Id == classTrinketId || StyxWoW.Me.Inventory.GetItemBySlot((uint)WoWInventorySlot.Trinket2).ItemInfo.Id == classTrinketId;
+                if (trinket1 != null && trinket2 != null)
+                    return trinket1.ItemInfo.Id == classTrinketId || trinket2.ItemInfo.Id == classTrinketId;
+                if (trinket1 != null)
+                    return trinket1.ItemInfo.Id == classTrinketId;
+                if (trinket2 != null)
+                    return trinket2.ItemInfo.Id == classTrinketId;
+
+                return false;
             }
         }
 
