@@ -23,7 +23,7 @@ namespace Singular.ClassSpecific.Common
             get
             {
                 SpellFindResults sfr;
-                if (SpellManager.FindSpell(SpellName, out sfr) == false || sfr == null || (sfr.Original == null && sfr.Override == null)) return 0;
+                if (SpellManager.FindSpell(SpellName, out sfr) == false || sfr == null || (sfr.Original == null && sfr.Override == null)) return int.MaxValue;
 
                 var spell = sfr.Override ?? sfr.Original;
 
