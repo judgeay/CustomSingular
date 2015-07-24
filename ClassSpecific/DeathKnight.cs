@@ -16,16 +16,18 @@ namespace Singular.ClassSpecific
     // ReSharper disable ClassNeverInstantiated.Global
     // ReSharper disable InconsistentNaming
     // ReSharper disable CompareOfFloatsByEqualityOperator
-    public class DeathKnight : Common.Common
+    public class DeathKnight : ClassSpecificBase
     {
         #region Fields
-		
+
         private const byte BLOOD_BOIL_DISTANCE = 10;
         private const byte BLOOD_BOIL_GLYPH_DISTANCE = 15;
         private const byte DEATH_AND_DECAY_DISTANCE = 10;
         private const byte HOWLING_BLAST_DISTANCE = 10;
 
-        private static readonly Func<Func<bool>, Composite> antimagic_shell = cond => Spell.BuffSelf(DkSpells.antimagic_shell, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> antimagic_shell =
+            cond => Spell.BuffSelf(DkSpells.antimagic_shell, req => Spell.UseCooldown && Unit.NearbyUnfriendlyUnits.Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == StyxWoW.Me.Guid) && cond());
+
         private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && cond());
         private static readonly Func<Func<bool>, Composite> bone_shield = cond => Spell.BuffSelf(DkSpells.bone_shield, req => Spell.UseCooldown && cond());
@@ -39,7 +41,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> death_pact = cond => Spell.BuffSelf(DkSpells.death_pact, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> death_strike = cond => Spell.Cast(DkSpells.death_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> defile = cond => Spell.CastOnGround(DkSpells.defile, on => Me.CurrentTarget, req => talent.defile.enabled && Spell.UseAoe && cond());
-        private static readonly Func<Func<bool>, Composite> empower_rune_weapon = cond => Spell.Cast(DkSpells.empower_rune_weapon, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> empower_rune_weapon = cond => Spell.BuffSelf(DkSpells.empower_rune_weapon, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> festering_strike = cond => Spell.Cast(DkSpells.festering_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> frost_strike = cond => Spell.Cast(DkSpells.frost_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> horn_of_winter = cond => Spell.BuffSelf(DkSpells.horn_of_winter, req => cond());
@@ -283,8 +285,11 @@ namespace Singular.ClassSpecific
                     //actions+=/potion,name=draenic_strength,if=target.time_to_die<=30|(target.time_to_die<=60&buff.pillar_of_frost.up)
                     //actions+=/empower_rune_weapon,if=target.time_to_die<=60&buff.potion.up
                     //actions+=/blood_fury
+                    blood_fury(() => true),
                     //actions+=/berserking
+                    berserking(() => true),
                     //actions+=/arcane_torrent
+                    arcane_torrent(() => true),
                     //actions+=/use_item,slot=trinket2
                     use_trinket(),
                     //actions+=/plague_leech,if=disease.min_remains<1
@@ -309,7 +314,7 @@ namespace Singular.ClassSpecific
             return FrostActionList();
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec)int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec) int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
         public static Composite NormalAndPvPPull()
         {
             return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
@@ -345,8 +350,11 @@ namespace Singular.ClassSpecific
                     //actions+=/deaths_advance,if=movement.remains>2
                     //actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
                     //actions+=/blood_fury,if=!talent.breath_of_sindragosa.enabled
+                    blood_fury(() => !talent.breath_of_sindragosa.enabled),
                     //actions+=/berserking,if=!talent.breath_of_sindragosa.enabled
+                    berserking(() => !talent.breath_of_sindragosa.enabled),
                     //actions+=/arcane_torrent,if=!talent.breath_of_sindragosa.enabled
+                    arcane_torrent(() => !talent.breath_of_sindragosa.enabled),
                     //actions+=/potion,name=draenic_strength,if=(buff.dark_transformation.up&target.time_to_die<=60)&!talent.breath_of_sindragosa.enabled
                     //actions+=/run_action_list,name=unholy
                     new Decorator(UnholyUnholy()),
@@ -593,7 +601,7 @@ namespace Singular.ClassSpecific
                 //actions.single_target_2h+=/howling_blast,if=buff.rime.react&disease.min_remains>5
                 howling_blast(() => buff.rime.react && disease.min_remains > 5),
                 //actions.single_target_2h+=/obliterate,if=blood.frac>=1.5|unholy.frac>=1.6|frost.frac>=1.6|buff.bloodlust.up|cooldown.plague_leech.remains<=4
-                obliterate(() => blood >= 2 || unholy >= 2 || frost >= 2 || cooldown.plague_leech.remains <= 4),
+                obliterate(() => blood >= 2 || unholy >= 2 || frost >= 2 || buff.bloodlust.up || cooldown.plague_leech.remains <= 4),
                 //actions.single_target_2h+=/blood_tap,if=(buff.blood_charge.stack>10&runic_power>=20)|(blood.frac>=1.4|unholy.frac>=1.6|frost.frac>=1.6)
                 blood_tap(() => (buff.blood_charge.stack > 10 && runic_power >= 20) || (blood >= 2 || unholy >= 2 || frost >= 2)),
                 //actions.single_target_2h+=/frost_strike,if=!buff.killing_machine.react
@@ -631,7 +639,9 @@ namespace Singular.ClassSpecific
         {
             return new PrioritySelector(
                 //actions.bos=blood_fury,if=dot.breath_of_sindragosa.ticking
+                blood_fury(() => dot.breath_of_sindragosa.ticking),
                 //actions.bos+=/berserking,if=dot.breath_of_sindragosa.ticking
+                berserking(() => dot.breath_of_sindragosa.ticking),
                 //actions.bos+=/potion,name=draenic_strength,if=dot.breath_of_sindragosa.ticking
                 //actions.bos+=/unholy_blight,if=!disease.ticking
                 unholy_blight(() => !disease.ticking),
@@ -646,6 +656,7 @@ namespace Singular.ClassSpecific
                 //actions.bos+=/festering_strike,if=((blood=2|frost=2)&(((Frost-death)>0)&((Blood-death)>0)))&runic_power<80
                 festering_strike(() => ((blood == 2 || frost == 2) && (((Frost - death) > 0) && ((Blood - death) > 0))) && runic_power < 80),
                 //actions.bos+=/arcane_torrent,if=runic_power<70
+                arcane_torrent(() => runic_power < 70),
                 //actions.bos+=/scourge_strike,if=spell_targets.blood_boil<=3&(runic_power<88&runic_power>30)
                 scourge_strike(() => spell_targets.blood_boil <= 3 && (runic_power < 88 && runic_power > 30)),
                 //actions.bos+=/blood_boil,if=spell_targets.blood_boil>=4&(runic_power<88&runic_power>30)
@@ -682,7 +693,7 @@ namespace Singular.ClassSpecific
                 //actions.unholy+=/breath_of_sindragosa,if=runic_power>75
                 breath_of_sindragosa(() => runic_power > 75),
                 //actions.unholy+=/run_action_list,name=bos,if=dot.breath_of_sindragosa.ticking
-                new Decorator(req => talent.breath_of_sindragosa.enabled && dot.breath_of_sindragosa.ticking, UnholyBos()),
+                new Decorator(UnholyBos(), req => talent.breath_of_sindragosa.enabled && dot.breath_of_sindragosa.ticking),
                 //actions.unholy+=/unholy_blight,if=!disease.min_ticking
                 unholy_blight(() => !disease.min_ticking),
                 //actions.unholy+=/outbreak,cycle_targets=1,if=!talent.necrotic_plague.enabled&(!(dot.blood_plague.ticking|dot.frost_fever.ticking))
@@ -810,8 +821,8 @@ namespace Singular.ClassSpecific
         {
             #region Fields
 
-            private static readonly string[] listBase = { DkSpells.blood_plague, DkSpells.frost_fever };
-            private static readonly string[] listWithNecroticPlague = { DkSpells.necrotic_plague };
+            private static readonly string[] listBase = {DkSpells.blood_plague, DkSpells.frost_fever};
+            private static readonly string[] listWithNecroticPlague = {DkSpells.necrotic_plague};
 
             #endregion
 
@@ -845,17 +856,6 @@ namespace Singular.ClassSpecific
             private static string[] diseaseArray
             {
                 get { return talent.necrotic_plague.enabled ? listWithNecroticPlague : listBase; }
-            }
-
-            #endregion
-
-            #region Public Methods
-
-            public static bool ticking_on(WoWUnit unit)
-            {
-                if (unit == null) return false;
-
-                return unit.HasAllMyAuras(diseaseArray);
             }
 
             #endregion
@@ -909,6 +909,13 @@ namespace Singular.ClassSpecific
                 return min;
             }
 
+            private static bool ticking_on(WoWUnit unit)
+            {
+                if (unit == null) return false;
+
+                return unit.HasAllMyAuras(diseaseArray);
+            }
+
             #endregion
         }
 
@@ -941,6 +948,7 @@ namespace Singular.ClassSpecific
             public static readonly buff army_of_the_dead = new buff(DkSpells.army_of_the_dead);
             public static readonly buff blood_charge = new buff(DkSpells.blood_charge);
             public static readonly buff blood_shield = new buff(DkSpells.blood_shield);
+            public static readonly buff bloodlust = new buff(ClassSpecificBase.bloodlust);
             public static readonly buff bone_shield = new buff(DkSpells.bone_shield);
             public static readonly buff conversion = new buff(DkSpells.conversion);
             public static readonly buff crimson_scourge = new buff(DkSpells.crimson_scourge);
@@ -1053,7 +1061,7 @@ namespace Singular.ClassSpecific
             #region Constructors
 
             private talent(DkTalentsEnum talent)
-                : base((int)talent)
+                : base((int) talent)
             {
             }
 

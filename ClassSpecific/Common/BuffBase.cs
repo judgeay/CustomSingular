@@ -46,7 +46,7 @@ namespace Singular.ClassSpecific.Common
 
         public bool up
         {
-            get { return Common.BloodlustEquivalents.Contains(SpellName) ? Common.BloodlustEquivalents.Any(x => StyxWoW.Me.HasAura(SpellName)) : StyxWoW.Me.HasAura(SpellName); }
+            get { return ClassSpecificBase.BloodlustEquivalents.Contains(SpellName) ? ClassSpecificBase.BloodlustEquivalents.Any(x => StyxWoW.Me.HasAura(SpellName)) : StyxWoW.Me.HasAura(SpellName); }
         }
 
         #endregion

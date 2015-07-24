@@ -8,13 +8,13 @@ using Styx;
 using Styx.CommonBot;
 using Styx.TreeSharp;
 using Styx.WoWInternals.WoWObjects;
+using Action = Styx.TreeSharp.Action;
 
 namespace Singular.ClassSpecific.Common
 {
-    public abstract class Common
+    // ReSharper disable InconsistentNaming
+    public abstract class ClassSpecificBase
     {
-        // ReSharper disable InconsistentNaming
-
         #region Fields
 
         public const string ancient_hysteria = "Ancient Hysteria";
@@ -32,7 +32,7 @@ namespace Singular.ClassSpecific.Common
             if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never &&
                 SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never)
             {
-                return new Styx.TreeSharp.Action(ret => RunStatus.Failure);
+                return new Action(ret => RunStatus.Failure);
             }
 
             var ps = new PrioritySelector();
@@ -63,31 +63,11 @@ namespace Singular.ClassSpecific.Common
         };
 
         private static readonly WoWItemWeaponClass[] _oneHandWeaponClasses = {WoWItemWeaponClass.Axe, WoWItemWeaponClass.Mace, WoWItemWeaponClass.Sword, WoWItemWeaponClass.Dagger, WoWItemWeaponClass.Fist};
+        private static double? _baseGcd;
 
         #endregion
 
         #region Properties
-
-        public static bool t18_class_trinket
-        {
-            get
-            {
-                if (!T18ClassTrinketIds.ContainsKey(Me.Class)) return false;
-                var classTrinketId = T18ClassTrinketIds[Me.Class];
-
-                var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
-                var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
-
-                if (trinket1 != null && trinket2 != null)
-                    return trinket1.ItemInfo.Id == classTrinketId || trinket2.ItemInfo.Id == classTrinketId;
-                if (trinket1 != null)
-                    return trinket1.ItemInfo.Id == classTrinketId;
-                if (trinket2 != null)
-                    return trinket2.ItemInfo.Id == classTrinketId;
-
-                return false;
-            }
-        }
 
         protected static LocalPlayer Me
         {
@@ -125,6 +105,35 @@ namespace Singular.ClassSpecific.Common
             get { return SpellManager.GlobalCooldownLeft.TotalSeconds; }
         }
 
+        protected static double gcd_max
+        {
+            get
+            {
+                if (_baseGcd == null)
+                {
+                    switch (Me.Class)
+                    {
+                        case WoWClass.DeathKnight:
+                        case WoWClass.Hunter:
+                        case WoWClass.Monk:
+                        case WoWClass.Rogue:
+                            _baseGcd = 1;
+                            break;
+                        case WoWClass.Druid:
+                            _baseGcd = Me.Shapeshift == ShapeshiftForm.Cat ? 1 : 1.5;
+                            break;
+                        default:
+                            _baseGcd = 1.5;
+                            break;
+                    }
+                }
+
+                var gcdMax = _baseGcd.Value * Me.SpellHasteModifier;
+
+                return gcdMax < 1 ? 1.0 : gcdMax;
+            }
+        }
+
         protected static string prev_gcd
         {
             get { return Spell.PreviousGcdSpell; }
@@ -134,6 +143,27 @@ namespace Singular.ClassSpecific.Common
         protected static double spell_haste
         {
             get { return StyxWoW.Me.SpellHasteModifier; }
+        }
+
+        protected static bool t18_class_trinket
+        {
+            get
+            {
+                if (!T18ClassTrinketIds.ContainsKey(Me.Class)) return false;
+                var classTrinketId = T18ClassTrinketIds[Me.Class];
+
+                var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
+                var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
+
+                if (trinket1 != null && trinket2 != null)
+                    return trinket1.ItemInfo.Id == classTrinketId || trinket2.ItemInfo.Id == classTrinketId;
+                if (trinket1 != null)
+                    return trinket1.ItemInfo.Id == classTrinketId;
+                if (trinket2 != null)
+                    return trinket2.ItemInfo.Id == classTrinketId;
+
+                return false;
+            }
         }
 
         #endregion
@@ -154,7 +184,48 @@ namespace Singular.ClassSpecific.Common
 
         #region Types
 
-        public static class set_bonus
+        protected static class health
+        {
+            #region Properties
+
+            public static double pct
+            {
+                get { return Me.HealthPercent; }
+            }
+
+            #endregion
+        }
+
+        protected static class main_hand
+        {
+            #region Properties
+
+            public static bool _1h
+            {
+                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass); }
+            }
+
+            public static bool _2h
+            {
+                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) == false; }
+            }
+
+            #endregion
+        }
+
+        protected static class mana
+        {
+            #region Properties
+
+            public static double pct
+            {
+                get { return Me.ManaPercent; }
+            }
+
+            #endregion
+        }
+
+        protected static class set_bonus
         {
             #region fields
 
@@ -231,47 +302,6 @@ namespace Singular.ClassSpecific.Common
                 var ids = set[Me.Class];
 
                 return _setPartsSlots.Select(woWInventorySlot => StyxWoW.Me.Inventory.GetItemBySlot((uint) woWInventorySlot)).Count(item => item != null && ids.Contains(item.ItemInfo.Id));
-            }
-
-            #endregion
-        }
-
-        protected static class health
-        {
-            #region Properties
-
-            public static double pct
-            {
-                get { return Me.HealthPercent; }
-            }
-
-            #endregion
-        }
-
-        protected static class main_hand
-        {
-            #region Properties
-
-            public static bool _1h
-            {
-                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass); }
-            }
-
-            public static bool _2h
-            {
-                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) == false; }
-            }
-
-            #endregion
-        }
-
-        protected static class mana
-        {
-            #region Properties
-
-            public static double pct
-            {
-                get { return Me.ManaPercent; }
             }
 
             #endregion

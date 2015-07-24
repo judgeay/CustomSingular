@@ -59,7 +59,7 @@
     <Compile Include="ClassSpecific\Common\ActionBase.cs" />
     <Compile Include="ClassSpecific\Common\Base.cs" />
     <Compile Include="ClassSpecific\Common\BuffBase.cs" />
-    <Compile Include="ClassSpecific\Common\Common.cs" />
+    <Compile Include="ClassSpecific\Common\ClassSpecificBase.cs" />
     <Compile Include="ClassSpecific\Common\CooldownBase.cs" />
     <Compile Include="ClassSpecific\Common\GlyphBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight.cs" />

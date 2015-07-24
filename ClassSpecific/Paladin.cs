@@ -14,7 +14,7 @@ namespace Singular.ClassSpecific
     // ReSharper disable ClassNeverInstantiated.Global
     // ReSharper disable InconsistentNaming
     // ReSharper disable CompareOfFloatsByEqualityOperator
-    public class Paladin : Common.Common
+    public class Paladin : ClassSpecificBase
     {
         /**
          * @todo SealBase
@@ -27,7 +27,6 @@ namespace Singular.ClassSpecific
         private const byte DIVINE_STORM_DISTANCE = 8;
         private const byte DIVINE_STORM_EMPOWERED_DISTANCE = 12;
         private const byte EXORCISM_DISTANCE = 8;
-        private const byte GCD_MAX = 1;
         private const byte HAMMER_OF_THE_RIGHTEOUS_DISTANCE = 8;
 
         private static readonly Func<Func<bool>, Composite> avenging_wrath = cond => Spell.BuffSelf(PalSpells.avenging_wrath, req => Spell.UseCooldown && cond());
@@ -194,7 +193,7 @@ namespace Singular.ClassSpecific
                 //actions.cleave+=/hammer_of_wrath
                 hammer_of_wrath(() => true),
                 //actions.cleave+=/hammer_of_the_righteous,if=t18_class_trinket=1&buff.focus_of_vengeance.remains<gcd.max*2
-                hammer_of_the_righteous(() => (t18_class_trinket && buff.focus_of_vengeance.remains < GCD_MAX * 2)),
+                hammer_of_the_righteous(() => (t18_class_trinket && buff.focus_of_vengeance.remains < gcd_max * 2)),
                 //actions.cleave+=/judgment,if=talent.empowered_seals.enabled&seal.righteousness&buff.liadrins_righteousness.remains<cooldown.judgment.duration
                 judgment(() => (talent.empowered_seals.enabled && buff.seal_of_righteousness.up && buff.liadrins_righteousness.remains < cooldown.judgment.duration)),
                 //actions.cleave+=/exorcism,if=buff.blazing_contempt.up&holy_power<=2&buff.holy_avenger.down
@@ -283,7 +282,7 @@ namespace Singular.ClassSpecific
                 //actions.single+=/final_verdict,if=buff.divine_purpose.react&buff.divine_purpose.remains<3
                 final_verdict(() => (buff.divine_purpose.react && buff.divine_purpose.remains < 3)),
                 //actions.single+=/crusader_strike,if=t18_class_trinket=1&buff.focus_of_vengeance.remains<gcd.max*2
-                crusader_strike(() => (t18_class_trinket && buff.focus_of_vengeance.remains < GCD_MAX * 2)),
+                crusader_strike(() => (t18_class_trinket && buff.focus_of_vengeance.remains < gcd_max * 2)),
                 //actions.single+=/hammer_of_wrath
                 hammer_of_wrath(() => true),
                 //actions.single+=/exorcism,if=buff.blazing_contempt.up&holy_power<=2&buff.holy_avenger.down
@@ -451,7 +450,7 @@ namespace Singular.ClassSpecific
             public static readonly buff benediction_of_kings = new buff(PalSpells.benediction_of_kings);
             public static readonly buff benediction_of_might = new buff(PalSpells.benediction_of_might);
             public static readonly buff blazing_contempt = new buff(PalSpells.blazing_contempt);
-            public static readonly buff bloodlust = new buff(Common.Common.bloodlust);
+            public static readonly buff bloodlust = new buff(ClassSpecificBase.bloodlust);
             public static readonly buff divine_crusader = new buff(PalSpells.divine_crusader);
             public static readonly buff divine_protection = new buff(PalSpells.divine_protection);
             public static readonly buff divine_purpose = new buff(PalSpells.divine_purpose);

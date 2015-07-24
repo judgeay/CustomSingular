@@ -16,7 +16,7 @@ namespace Singular.ClassSpecific
     // ReSharper disable ClassNeverInstantiated.Global
     // ReSharper disable InconsistentNaming
     // ReSharper disable CompareOfFloatsByEqualityOperator
-    public class Warrior : Common.Common
+    public class Warrior : ClassSpecificBase
     {
         #region Fields
 

@@ -13,13 +13,12 @@ namespace Singular.ClassSpecific
 {
     // ReSharper disable InconsistentNaming
     // ReSharper disable ClassNeverInstantiated.Global
-    public class Mage : Common.Common
+    public class Mage : ClassSpecificBase
     {
         #region Fields
 
         private const byte ARCANE_EXPLOSION_DISTANCE = 10;
         private const byte ARCANE_EXPLOSION_GLYPH_DISTANCE = 15;
-        private const byte GCD_MAX = 1;
         private const byte NETHER_TEMPEST_DISTANCE = 10;
         private const byte SUPERNOVA_DISTANCE = 8;
 
@@ -221,7 +220,7 @@ namespace Singular.ClassSpecific
                 //actions.burn+=/arcane_orb,if=buff.arcane_charge.stack<4
                 arcane_orb(() => buff.arcane_charge.stack < 4),
                 //actions.burn+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd.max|prev_gcd.arcane_orb)
-                arcane_barrage(() => talent.arcane_orb.enabled && active_enemies >= 3 && buff.arcane_charge.stack == 4 && (cooldown.arcane_orb.remains < GCD_MAX || prev_gcd == MageSpells.arcane_orb)),
+                arcane_barrage(() => talent.arcane_orb.enabled && active_enemies >= 3 && buff.arcane_charge.stack == 4 && (cooldown.arcane_orb.remains < gcd_max || prev_gcd == MageSpells.arcane_orb)),
                 //actions.burn+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
                 presence_of_mind(() => mana.pct > 96 && (!talent.prismatic_crystal.enabled || !cooldown.prismatic_crystal.up)),
                 //actions.burn+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
@@ -267,7 +266,7 @@ namespace Singular.ClassSpecific
                 //actions.conserve+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
                 arcane_blast(() => buff.arcane_charge.stack == 4 && mana.pct > 93),
                 //actions.conserve+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd.max|prev_gcd.arcane_orb)
-                arcane_barrage(() => talent.arcane_orb.enabled && active_enemies >= 3 && buff.arcane_charge.stack == 4 && (cooldown.arcane_orb.remains < GCD_MAX || prev_gcd == MageSpells.arcane_orb)),
+                arcane_barrage(() => talent.arcane_orb.enabled && active_enemies >= 3 && buff.arcane_charge.stack == 4 && (cooldown.arcane_orb.remains < gcd_max || prev_gcd == MageSpells.arcane_orb)),
                 //actions.conserve+=/arcane_missiles,if=buff.arcane_charge.stack=4&(!talent.overpowered.enabled|cooldown.arcane_power.remains>10*spell_haste)
                 arcane_missiles(() => buff.arcane_charge.stack == 4 && (!talent.overpowered.enabled || cooldown.arcane_power.remains > 10 * spell_haste)),
                 //actions.conserve+=/supernova,if=mana.pct<96&(buff.arcane_missiles.stack<2|buff.arcane_charge.stack=4)&(buff.arcane_power.up|(charges=1&cooldown.arcane_power.remains>recharge_time))&(!talent.prismatic_crystal.enabled|current_target=pet.prismatic_crystal|(charges=1&cooldown.prismatic_crystal.remains>recharge_time+8))
@@ -318,7 +317,7 @@ namespace Singular.ClassSpecific
                 new Decorator(arcane_start_burn_phase(),
                     req =>
                         buff.arcane_charge.stack >= 4 && (cooldown.prismatic_crystal.up || !talent.prismatic_crystal.enabled) && (cooldown.arcane_power.up || (glyph.arcane_power.enabled && cooldown.arcane_power.remains > 60)) &&
-                        (cooldown.evocation.remains - 2 * buff.arcane_missiles.stack * spell_haste - GCD_MAX * talent.prismatic_crystal.enabled.ToInt()) * 0.75 * (1 - 0.1 * (cooldown.arcane_power.remains < 5).ToInt()) *
+                        (cooldown.evocation.remains - 2 * buff.arcane_missiles.stack * spell_haste - gcd_max * talent.prismatic_crystal.enabled.ToInt()) * 0.75 * (1 - 0.1 * (cooldown.arcane_power.remains < 5).ToInt()) *
                         (1 - 0.1 * (talent.nether_tempest.enabled || talent.supernova.enabled).ToInt()) * (10 % action.arcane_blast.execute_time) <
                         mana.pct - 20 - 2.5 * active_enemies * (9 - active_enemies) + (cooldown.evocation.remains * 1.8 % spell_haste)),
                 //# End of fight burn
