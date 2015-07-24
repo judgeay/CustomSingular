@@ -126,15 +126,17 @@
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="SimC Profiles\warArms.txt" />
-    <Content Include="SimC Profiles\dkFrost.txt" />
-    <Content Include="SimC Profiles\dkBlood.txt" />
-    <Content Include="SimC Profiles\dkUnholy.txt" />
-    <Content Include="SimC Profiles\mageArcane.txt" />
     <Content Include="Singular.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="SimC Profiles\palRet.txt" />
+    <None Include="SimC Profiles\Death_Knight_Blood_T17M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Frost_1h_T18M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Frost_2h_T18M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Unholy_T18M.simc" />
+    <None Include="SimC Profiles\Mage_Arcane_T18M.simc" />
+    <None Include="SimC Profiles\Paladin_Retribution_T18M.simc" />
+    <None Include="SimC Profiles\Shaman_Enhancement_T18M.simc" />
+    <None Include="SimC Profiles\Warrior_Arms_T18M.simc" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
