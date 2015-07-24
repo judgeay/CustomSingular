@@ -69,6 +69,35 @@ namespace Singular.ClassSpecific.Common
 
         #region Properties
 
+        public static double gcd_max
+        {
+            get
+            {
+                if (_baseGcd == null)
+                {
+                    switch (Me.Class)
+                    {
+                        case WoWClass.DeathKnight:
+                        case WoWClass.Hunter:
+                        case WoWClass.Monk:
+                        case WoWClass.Rogue:
+                            _baseGcd = 1;
+                            break;
+                        case WoWClass.Druid:
+                            _baseGcd = Me.Shapeshift == ShapeshiftForm.Cat ? 1 : 1.5;
+                            break;
+                        default:
+                            _baseGcd = 1.5;
+                            break;
+                    }
+                }
+
+                var gcdMax = _baseGcd.Value * Me.SpellHasteModifier;
+
+                return gcdMax < 1 ? 1.0 : gcdMax;
+            }
+        }
+
         protected static LocalPlayer Me
         {
             get { return StyxWoW.Me; }
@@ -103,35 +132,6 @@ namespace Singular.ClassSpecific.Common
         protected static double gcd
         {
             get { return SpellManager.GlobalCooldownLeft.TotalSeconds; }
-        }
-
-        protected static double gcd_max
-        {
-            get
-            {
-                if (_baseGcd == null)
-                {
-                    switch (Me.Class)
-                    {
-                        case WoWClass.DeathKnight:
-                        case WoWClass.Hunter:
-                        case WoWClass.Monk:
-                        case WoWClass.Rogue:
-                            _baseGcd = 1;
-                            break;
-                        case WoWClass.Druid:
-                            _baseGcd = Me.Shapeshift == ShapeshiftForm.Cat ? 1 : 1.5;
-                            break;
-                        default:
-                            _baseGcd = 1.5;
-                            break;
-                    }
-                }
-
-                var gcdMax = _baseGcd.Value * Me.SpellHasteModifier;
-
-                return gcdMax < 1 ? 1.0 : gcdMax;
-            }
         }
 
         protected static string prev_gcd
