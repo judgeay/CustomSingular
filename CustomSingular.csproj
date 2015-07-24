@@ -67,6 +67,7 @@
     <Compile Include="ClassSpecific\Common\DotBase.cs" />
     <Compile Include="ClassSpecific\Mage.cs" />
     <Compile Include="ClassSpecific\Common\TalentBase.cs" />
+    <Compile Include="ClassSpecific\Shaman.cs" />
     <Compile Include="ClassSpecific\Warrior.cs" />
     <Compile Include="Dynamics\Attributes.cs" />
     <Compile Include="Dynamics\CompositeBuilder.cs" />
