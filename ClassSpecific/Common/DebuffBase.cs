@@ -18,14 +18,24 @@ namespace Singular.ClassSpecific.Common
 
         #region Properties
 
-        public decimal stack
+        public bool down
         {
-            get { return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName); }
+            get { return remains == 0; }
         }
 
         public double remains
         {
             get { return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(SpellName).TotalSeconds; }
+        }
+
+        public uint stack
+        {
+            get { return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName); }
+        }
+
+        public bool up
+        {
+            get { return remains > 0; }
         }
 
         #endregion

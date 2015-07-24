@@ -59,7 +59,7 @@
     <Compile Include="ClassSpecific\Common\ActionBase.cs" />
     <Compile Include="ClassSpecific\Common\Base.cs" />
     <Compile Include="ClassSpecific\Common\BuffBase.cs" />
-    <Compile Include="ClassSpecific\Common\Common.cs" />
+    <Compile Include="ClassSpecific\Common\ClassSpecificBase.cs" />
     <Compile Include="ClassSpecific\Common\CooldownBase.cs" />
     <Compile Include="ClassSpecific\Common\GlyphBase.cs" />
     <Compile Include="ClassSpecific\DeathKnight.cs" />
@@ -67,6 +67,8 @@
     <Compile Include="ClassSpecific\Common\DotBase.cs" />
     <Compile Include="ClassSpecific\Mage.cs" />
     <Compile Include="ClassSpecific\Common\TalentBase.cs" />
+    <Compile Include="ClassSpecific\Shaman.cs" />
+    <Compile Include="ClassSpecific\Warrior.cs" />
     <Compile Include="Dynamics\Attributes.cs" />
     <Compile Include="Dynamics\CompositeBuilder.cs" />
     <Compile Include="Dynamics\NoContextAvailable.cs" />
@@ -125,13 +127,18 @@
     <Compile Include="Utilities\Logger.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="SimC Profiles\dkFrost.txt" />
-    <Content Include="SimC Profiles\dkBlood.txt" />
-    <Content Include="SimC Profiles\dkUnholy.txt" />
-    <Content Include="SimC Profiles\mageArcane.txt" />
     <Content Include="Singular.xml" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <None Include="SimC Profiles\Death_Knight_Blood_T17M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Frost_1h_T18M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Frost_2h_T18M.simc" />
+    <None Include="SimC Profiles\Death_Knight_Unholy_T18M.simc" />
+    <None Include="SimC Profiles\Mage_Arcane_T18M.simc" />
+    <None Include="SimC Profiles\Paladin_Retribution_T18M.simc" />
+    <None Include="SimC Profiles\Shaman_Enhancement_T18M.simc" />
+    <None Include="SimC Profiles\Warrior_Arms_T18M.simc" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

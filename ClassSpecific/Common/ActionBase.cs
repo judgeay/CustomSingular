@@ -1,3 +1,4 @@
+using System;
 using Singular.Helpers;
 using Styx.CommonBot;
 
@@ -25,7 +26,11 @@ namespace Singular.ClassSpecific.Common
 
         public double execute_time
         {
-            get { return Spell.GetSpellCastTime(SpellName).TotalSeconds; }
+            get
+            {
+                var cooldown = Spell.GetSpellCastTime(SpellName);
+                return cooldown == TimeSpan.Zero ? ClassSpecificBase.gcd_max : cooldown.TotalSeconds;
+            }
         }
 
         public double recharge_time
