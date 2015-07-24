@@ -168,7 +168,7 @@ namespace Singular.ClassSpecific
                     )));
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.Paladin, WoWSpec.PaladinRetribution, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.Paladin, WoWSpec.PaladinRetribution)]
         public static Composite RetributionInstancePull()
         {
             return RetributionActionList();
