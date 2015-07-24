@@ -18,7 +18,6 @@ namespace Singular.ClassSpecific
     {
         /**
          * @todo SealBase
-         * @todo tier set bonuses
          * @todo gcd.max
          **/
 
@@ -47,6 +46,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> holy_prism = (target, cond) => Spell.Cast(PalSpells.holy_prism, on => target(), req => cond());
         private static readonly Func<Func<bool>, Composite> judgment = cond => Spell.Cast(PalSpells.judgment, req => cond());
         private static readonly Func<Func<bool>, Composite> lay_on_hands = cond => Spell.Cast(PalSpells.lay_on_hands, on => Me, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> lights_hammer = cond => Spell.CastOnGround(PalSpells.lights_hammer, on => Me.CurrentTarget, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> seal_of_command = cond => Spell.BuffSelf(PalSpells.seal_of_command, req => cond());
         private static readonly Func<Func<bool>, Composite> seal_of_insight = cond => Spell.BuffSelf(PalSpells.seal_of_insight, req => cond());
         private static readonly Func<Func<bool>, Composite> seal_of_righteousness = cond => Spell.BuffSelf(PalSpells.seal_of_righteousness, req => cond());
@@ -116,7 +116,7 @@ namespace Singular.ClassSpecific
         {
             return new PrioritySelector(
                 seal_of_truth(() => Me.Specialization == WoWSpec.PaladinRetribution),
-                seal_of_insight(() => Me.Specialization == WoWSpec.PaladinProtection || Me.Specialization == WoWSpec.PaladinHoly),
+                seal_of_insight(() => (Me.Specialization == WoWSpec.PaladinProtection || Me.Specialization == WoWSpec.PaladinHoly)),
                 benediction_of_might(() => !Me.HasPartyBuff(PartyBuffType.Mastery)),
                 benediction_of_kings(() => !Me.HasPartyBuff(PartyBuffType.Stats) && !Me.HasMyAura(PalSpells.benediction_of_might)),
                 new ActionAlwaysFail()
@@ -139,26 +139,40 @@ namespace Singular.ClassSpecific
                     //actions+=/auto_attack,target_if=dot.censure.remains<4
                     //actions+=/speed_of_light,if=movement.distance>5
                     //actions+=/judgment,if=talent.empowered_seals.enabled&time<2
+                    judgment(() => (talent.empowered_seals.enabled)), // ADD COMBAT TIME
                     //actions+=/execution_sentence,if=!talent.seraphim.enabled
+                    execution_sentence(() => (!talent.seraphim.enabled)),
                     //actions+=/execution_sentence,sync=seraphim,if=talent.seraphim.enabled
+                    execution_sentence(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
                     //actions+=/lights_hammer,if=!talent.seraphim.enabled
+                    lights_hammer(() => (!talent.seraphim.enabled)),
                     //actions+=/lights_hammer,sync=seraphim,if=talent.seraphim.enabled
+                    lights_hammer(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
                     //actions+=/use_item,name=thorasus_the_stone_heart_of_draenor,if=buff.avenging_wrath.up
                     //actions+=/avenging_wrath,sync=seraphim,if=talent.seraphim.enabled
+                    avenging_wrath(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
                     //actions+=/avenging_wrath,if=!talent.seraphim.enabled&set_bonus.tier18_4pc=0
+                    avenging_wrath(() => (!talent.seraphim.enabled && !set_bonus.tier18_4pc)),
                     //actions+=/avenging_wrath,if=!talent.seraphim.enabled&time<20&set_bonus.tier18_4pc=1
+                    avenging_wrath(() => (!talent.seraphim.enabled && set_bonus.tier18_4pc)), // ADD COMBAT TIME
                     //actions+=/avenging_wrath,if=prev.execution_sentence&set_bonus.tier18_4pc=1&talent.execution_sentence.enabled&!talent.seraphim.enabled
+                    avenging_wrath(() => (prev_gcd == PalSpells.execution_sentence && set_bonus.tier18_4pc && talent.execution_sentence.enabled && !talent.seraphim.enabled)),
                     //actions+=/avenging_wrath,if=prev.lights_hammer&set_bonus.tier18_4pc=1&talent.lights_hammer.enabled&!talent.seraphim.enabled
+                    avenging_wrath(() => (prev_gcd == PalSpells.lights_hammer && set_bonus.tier18_4pc && talent.lights_hammer.enabled && !talent.seraphim.enabled)),
                     //actions+=/holy_avenger,sync=avenging_wrath,if=!talent.seraphim.enabled
+                    holy_avenger(() => (cooldown.avenging_wrath.up && !talent.seraphim.enabled)),
                     //actions+=/holy_avenger,sync=seraphim,if=talent.seraphim.enabled
+                    holy_avenger(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
                     //actions+=/holy_avenger,if=holy_power<=2&!talent.seraphim.enabled
+                    holy_avenger(() => (holy_power <= 2 && !talent.seraphim.enabled)),
                     //actions+=/blood_fury
                     blood_fury(() => true),
                     //actions+=/berserking
                     berserking(() => true),
                     //actions+=/arcane_torrent
-                    arcane_torrent(() => mana.pct < 20),
+                    arcane_torrent(() => true),
                     //actions+=/seraphim
+                    seraphim(() => (true)),
                     //actions+=/wait,sec=cooldown.seraphim.remains,if=talent.seraphim.enabled&cooldown.seraphim.remains>0&cooldown.seraphim.remains<gcd.max&holy_power>=5
                     //actions+=/call_action_list,name=cleave,if=spell_targets.divine_storm>=3
                     new Decorator(RetributionCleave(), req => spell_targets.divine_storm >= 3),
@@ -222,7 +236,7 @@ namespace Singular.ClassSpecific
                 //actions.cleave+=/crusader_strike,if=holy_power<=3|(holy_power=4&target.health.pct>=35&buff.avenging_wrath.down)
                 crusader_strike(() => (holy_power <= 3 || (holy_power == 4 && target.health.pct >= 35 && buff.avenging_wrath.down))),
                 //actions.cleave+=/exorcism,if=glyph.mass_exorcism.enabled&!set_bonus.tier17_4pc=1
-                exorcism(() => (glyph.mass_exorcism.enabled)), // ADD TIER 17 4P BONUS
+                exorcism(() => (glyph.mass_exorcism.enabled && !set_bonus.tier17_4pc)),
                 //actions.cleave+=/judgment,cycle_targets=1,if=last_judgment_target!=target&talent.seraphim.enabled&glyph.double_jeopardy.enabled
                 //judgment(() => (talent.seraphim.enabled && glyph.double_jeopardy.enabled && active_enemies_list.Any(x => last_judgment_target != x))),
                 //actions.cleave+=/judgment,if=talent.seraphim.enabled
@@ -321,7 +335,7 @@ namespace Singular.ClassSpecific
                 //actions.single+=/divine_storm,if=buff.divine_crusader.react&(buff.avenging_wrath.up|target.health.pct<35)&!talent.final_verdict.enabled
                 divine_storm(() => (buff.divine_crusader.react && (buff.avenging_wrath.up || target.health.pct < 35) && !talent.final_verdict.enabled)),
                 //actions.single+=/exorcism,if=glyph.mass_exorcism.enabled&spell_targets.exorcism>=2&!glyph.double_jeopardy.enabled&!set_bonus.tier17_4pc=1
-                //exorcism(() => glyph.mass_exorcism.enabled && spell_targets.exorcism >= 2 && !glyph.double_jeopardy.enabled && !set_bonus.tier17_4pc = 1),
+                exorcism(() => (glyph.mass_exorcism.enabled && spell_targets.exorcism >= 2 && !glyph.double_jeopardy.enabled && !set_bonus.tier17_4pc)),
                 //actions.single+=/judgment,cycle_targets=1,if=last_judgment_target!=target&talent.seraphim.enabled&glyph.double_jeopardy.enabled
                 judgment(() => last_judgment_target != target.current && talent.seraphim.enabled && glyph.double_jeopardy.enabled),
                 //actions.single+=/judgment,if=talent.seraphim.enabled
