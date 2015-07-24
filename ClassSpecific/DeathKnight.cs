@@ -59,7 +59,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> scourge_strike = cond => Spell.Cast(DkSpells.scourge_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> soul_reaper = cond => Spell.Cast(DkSpells.soul_reaper, req => cond());
         private static readonly Func<Func<bool>, Composite> summon_gargoyle = cond => Spell.Cast(DkSpells.summon_gargoyle, req => Spell.UseCooldown && cond());
-        private static readonly Func<Func<bool>, Composite> unholy_blight = cond => Spell.BuffSelfAndWait(DkSpells.unholy_blight, req => talent.unholy_blight.enabled && cond());
+        private static readonly Func<Func<bool>, Composite> unholy_blight = cond => Spell.Cast(DkSpells.unholy_blight, req => talent.unholy_blight.enabled && cond());
         private static readonly Func<Func<bool>, Composite> vampiric_blood = cond => Spell.BuffSelf(DkSpells.vampiric_blood, req => Spell.UseCooldown && cond());
 
         #endregion
