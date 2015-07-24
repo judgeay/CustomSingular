@@ -241,7 +241,7 @@ namespace Singular.ClassSpecific
                 ;
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.Warrior, WoWSpec.WarriorArms, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.Warrior, WoWSpec.WarriorArms)]
         public static Composite ArmsInstancePull()
         {
             return ArmsActionList();
