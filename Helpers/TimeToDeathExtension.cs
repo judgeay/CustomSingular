@@ -10,13 +10,57 @@ namespace Singular.Helpers
 {
     public static class TimeToDeathExtension
     {
-        public static WoWGuid guid { get; set; }  // guid of mob
+        #region Fields
 
-        private static uint _firstLife;         // life of mob when first seen
-        private static uint _firstLifeMax;      // max life of mob when first seen
-        private static int _firstTime;          // time mob was first seen
-        private static uint _currentLife;       // life of mob now
-        private static int _currentTime;        // time now
+        private static readonly DateTime _timeOrigin = new DateTime(2015, 1, 1); // Refernzdatum (festgelegt)
+
+        private static uint _currentLife; // life of mob now
+        private static int _currentTime; // time now
+        private static uint _firstLife; // life of mob when first seen
+        private static uint _firstLifeMax; // max life of mob when first seen
+        private static int _firstTime; // time mob was first seen
+        private static long _lastReportedTime = -111;
+
+        #endregion
+
+        #region Properties
+
+        /// <summary>
+        /// GUID of mob
+        /// </summary>
+        public static WoWGuid Guid { get; set; }
+
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
+        /// creates behavior to write timetodeath values to debug log.  only
+        /// evaluated if Singular Debug setting is enabled
+        /// </summary>
+        /// <returns></returns>
+        public static Composite CreateWriteDebugTimeToDeath()
+        {
+            return new Action(
+                ret =>
+                {
+                    if (SingularSettings.Debug && StyxWoW.Me.GotTarget())
+                    {
+                        var timeNow = StyxWoW.Me.CurrentTarget.TimeToDeath();
+                        if (timeNow != _lastReportedTime || Guid != StyxWoW.Me.CurrentTargetGuid)
+                        {
+                            _lastReportedTime = timeNow;
+                            Logger.WriteFile("TimeToDeath: {0} (GUID: {1}, Entry: {2}) dies in {3}",
+                                StyxWoW.Me.CurrentTarget.SafeName(),
+                                StyxWoW.Me.CurrentTarget.Guid,
+                                StyxWoW.Me.CurrentTarget.Entry,
+                                _lastReportedTime);
+                        }
+                    }
+
+                    return RunStatus.Failure;
+                });
+        }
 
         /// <summary>
         /// seconds until the target dies.  first call initializes values. subsequent
@@ -35,13 +79,13 @@ namespace Singular.Helpers
 
             if (StyxWoW.Me.CurrentTarget.IsTrainingDummy())
             {
-                return 111;     // pick a magic number since training dummies dont die
+                return 111; // pick a magic number since training dummies dont die
             }
 
             //Fill variables on new target or on target switch, this will loose all calculations from last target
-            if (guid != target.Guid || (guid == target.Guid && target.CurrentHealth == _firstLifeMax))
+            if (Guid != target.Guid || (Guid == target.Guid && target.CurrentHealth == _firstLifeMax))
             {
-                guid = target.Guid;
+                Guid = target.Guid;
                 _firstLife = target.CurrentHealth;
                 _firstLifeMax = target.MaxHealth;
                 _firstTime = ConvDate2Timestam(DateTime.Now);
@@ -49,8 +93,8 @@ namespace Singular.Helpers
             }
             _currentLife = target.CurrentHealth;
             _currentTime = ConvDate2Timestam(DateTime.Now);
-            int timeDiff = _currentTime - _firstTime;
-            uint hpDiff = _firstLife - _currentLife;
+            var timeDiff = _currentTime - _firstTime;
+            var hpDiff = _firstLife - _currentLife;
             if (hpDiff > 0)
             {
                 /*
@@ -62,19 +106,19 @@ namespace Singular.Helpers
                 * 
                 * For those that forgot, http://mathforum.org/library/drmath/view/60822.html
                 */
-                long fullTime = timeDiff * _firstLifeMax / hpDiff;
-                long pastFirstTime = (_firstLifeMax - _firstLife) * timeDiff / hpDiff;
-                long calcTime = _firstTime - pastFirstTime + fullTime - _currentTime;
+                var fullTime = timeDiff * _firstLifeMax / hpDiff;
+                var pastFirstTime = (_firstLifeMax - _firstLife) * timeDiff / hpDiff;
+                var calcTime = _firstTime - pastFirstTime + fullTime - _currentTime;
                 if (calcTime < 1) calcTime = 1;
                 //calc_time is a int value for time to die (seconds) so there's no need to do SecondsToTime(calc_time)
-                long timeToDie = calcTime;
+                var timeToDie = calcTime;
                 //Logging.Write("TimeToDeath: {0} (GUID: {1}, Entry: {2}) dies in {3}, you are dpsing with {4} dps", target.SafeName(), target.Guid, target.Entry, timeToDie, dps);
                 return timeToDie;
             }
             if (hpDiff <= 0)
             {
                 //unit was healed,resetting the initial values
-                guid = target.Guid;
+                Guid = target.Guid;
                 _firstLife = target.CurrentHealth;
                 _firstLifeMax = target.MaxHealth;
                 _firstTime = ConvDate2Timestam(DateTime.Now);
@@ -91,52 +135,15 @@ namespace Singular.Helpers
             return indeterminateValue;
         }
 
+        #endregion
 
-        private static readonly DateTime timeOrigin = new DateTime(2012, 1, 1); // Refernzdatum (festgelegt)
+        #region Private Methods
 
         private static int ConvDate2Timestam(DateTime time)
         {
-#if PREV
-                DateTime baseLine = new DateTime(1970, 1, 1); // Refernzdatum (festgelegt)
-                DateTime date2 = time; // jetztiges Datum / Uhrzeit
-                var ts = new TimeSpan(date2.Ticks - baseLine.Ticks); // das Delta ermitteln
-                // Das Delta als gesammtzahl der sekunden ist der Timestamp
-                return (Convert.ToInt32(ts.TotalSeconds));
-#else
-            return (int)(time - timeOrigin).TotalSeconds;
-#endif
+            return (int)(time - _timeOrigin).TotalSeconds;
         }
 
-        /// <summary>
-        /// creates behavior to write timetodeath values to debug log.  only
-        /// evaluated if Singular Debug setting is enabled
-        /// </summary>
-        /// <returns></returns>
-        public static Composite CreateWriteDebugTimeToDeath()
-        {
-            return new Action(
-                ret =>
-                {
-                    if (SingularSettings.Debug && StyxWoW.Me.GotTarget())
-                    {
-                        long timeNow = StyxWoW.Me.CurrentTarget.TimeToDeath();
-                        if (timeNow != lastReportedTime || guid != StyxWoW.Me.CurrentTargetGuid )
-                        {
-                            lastReportedTime = timeNow;
-                            Logger.WriteFile( "TimeToDeath: {0} (GUID: {1}, Entry: {2}) dies in {3}", 
-                                StyxWoW.Me.CurrentTarget.SafeName(),
-                                StyxWoW.Me.CurrentTarget.Guid,
-                                StyxWoW.Me.CurrentTarget.Entry, 
-                                lastReportedTime);
-                        }
-                    }
-
-                    return RunStatus.Failure;
-                });
-
-        }
-
-        private static long lastReportedTime = -111;
-
+        #endregion
     }
 }
