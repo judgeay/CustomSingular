@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using Singular.Helpers;
 using Singular.Managers;
@@ -202,12 +203,16 @@ namespace Singular.ClassSpecific.Common
 
             public static bool _1h
             {
-                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass); }
+                get
+                {
+                    Logger.Write(Color.SeaGreen, "Try to get main_hand._1h {0}", Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass));
+                    return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass);
+                }
             }
 
             public static bool _2h
             {
-                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass) == false; }
+                get { return _1h == false; }
             }
 
             #endregion
