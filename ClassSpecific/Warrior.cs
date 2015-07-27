@@ -20,87 +20,7 @@ namespace Singular.ClassSpecific
     {
         #region Fields
 
-        public static readonly Func<Composite> heroic_leap = () =>
-        {
-            const float jumpMin = 8.4f;
-
-            if (!SpellManager.HasSpell(WarriorSpells.heroic_leap)) return new ActionAlwaysFail();
-
-            // Leap to close distance
-            // note: use Distance rather than SpellDistance since spell is to point on ground
-            return new PrioritySelector(ctx => Me.CurrentTarget, new Decorator(req => (req as WoWUnit).IsGapCloserAllowed(), Spell.CastOnGround(WarriorSpells.heroic_leap, loc =>
-            {
-                var unit = loc as WoWUnit;
-                if (unit != null)
-                {
-                    var pt = unit.Location;
-                    var distToMob = Me.Location.Distance(pt);
-                    var distToMobReach = distToMob - unit.CombatReach;
-                    var distToJump = distToMobReach;
-                    var comment = "hitbox of";
-
-                    if (distToJump < jumpMin)
-                    {
-                        comment = "too close, now location of";
-                        distToJump = distToMob;
-                        if (distToJump < jumpMin)
-                        {
-                            return WoWPoint.Empty;
-                        }
-                    }
-
-                    if (distToMob >= HeroicLeapDistance)
-                    {
-                        distToJump = distToMobReach - 7; // allow for damage radius
-                        comment = "too far, now 7 yds before hitbox of";
-                        if (distToJump >= HeroicLeapDistance)
-                        {
-                            return WoWPoint.Empty;
-                        }
-                    }
-
-                    var neededFacing = WoWMathHelper.CalculateNeededFacing(Me.Location, pt);
-                    var ptJumpTo = WoWPoint.RayCast(Me.Location, neededFacing, distToJump);
-                    Logger.WriteDiagnostic("HeroicLeap: jump target is {0} {1}", comment, unit.SafeName());
-                    var h = unit.HeightOffTheGround();
-                    var m = unit.MeleeDistance();
-                    if (h > m)
-                    {
-                        Logger.WriteDiagnostic("HeroicLeap: aborting, target is {0:F3} off ground and melee is {1:F3}", h, m);
-                        return WoWPoint.Empty;
-                    }
-                    if (h < -1)
-                    {
-                        Logger.WriteDiagnostic("HeroicLeap: aborting, target appears to be {0:F3} off ground @ {1}", h, ptJumpTo);
-                        return WoWPoint.Empty;
-                    }
-
-                    var ptNew = new WoWPoint {X = ptJumpTo.X, Y = ptJumpTo.Y, Z = ptJumpTo.Z - h};
-                    Logger.WriteDiagnostic("HeroicLeap: adjusting dest, target @ {0} is {1:F3} above ground @ {2}", ptJumpTo, h, ptNew);
-
-                    return ptNew;
-                }
-
-                return WoWPoint.Empty;
-            }, req =>
-            {
-                if (!MovementManager.IsClassMovementAllowed)
-                    return false;
-
-                if (req == null)
-                    return false;
-
-                if (Spell.IsSpellOnCooldown(WarriorSpells.heroic_leap))
-                    return false;
-
-                if (Me.SpellDistance(req as WoWUnit) > (HeroicLeapDistance + 7))
-                    return false;
-
-                return true;
-                // ReSharper disable once PossibleNullReferenceException
-            }, false, desc => String.Format("on {0} @ {1:F1}%", (desc as WoWUnit).SafeName(), (desc as WoWUnit).HealthPercent))));
-        };
-
+        private const byte EXECUTE_DISTANCE = 5;
         private const byte HEROIC_LEAP_DISTANCE = 40;
         private const byte HEROIC_LEAP_GLYPH_DISTANCE = 25;
         private const byte REND_DISTANCE = 5;
@@ -114,7 +34,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> colossus_smash = cond => Spell.Cast(WarriorSpells.colossus_smash, req => cond());
         private static readonly Func<Composite> commanding_shout = () => Spell.Cast(WarriorSpells.commanding_shout, ret => !Me.HasAura(WarriorSpells.battle_shout) && !Me.HasMyAura(WarriorSpells.commanding_shout) && !Me.HasPartyBuff(PartyBuffType.Stamina));
         private static readonly Func<Func<bool>, Composite> dragon_roar = cond => Spell.Cast(WarriorSpells.dragon_roar, req => Spell.UseAoe && cond());
-        private static readonly Func<Func<bool>, Composite> execute = cond => Spell.Cast(WarriorSpells.execute, req => cond());
+        private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> execute = (target, cond) => Spell.Cast(WarriorSpells.execute, on => target(), req => target() != null && cond());
         private static readonly Func<Func<bool>, Composite> heroic_throw = cond => Spell.Cast(WarriorSpells.heroic_throw, req => cond());
         private static readonly Func<Func<bool>, Composite> impending_victory = cond => Spell.Cast(WarriorSpells.impending_victory, req => cond());
         private static readonly Func<Func<bool>, Composite> mortal_strike = cond => Spell.Cast(WarriorSpells.mortal_strike, req => cond());
@@ -257,6 +177,83 @@ namespace Singular.ClassSpecific
                 );
         }
 
+        public static Composite heroic_leap()
+        {
+            const float jumpMin = 8.4f;
+
+            if (!SpellManager.HasSpell(WarriorSpells.heroic_leap)) return new ActionAlwaysFail();
+
+            // Leap to close distance
+            // note: use Distance rather than SpellDistance since spell is to point on ground
+            return new PrioritySelector(ctx => Me.CurrentTarget, new Decorator(req => (req as WoWUnit).IsGapCloserAllowed(), Spell.CastOnGround(WarriorSpells.heroic_leap, loc =>
+            {
+                var unit = loc as WoWUnit;
+                if (unit != null)
+                {
+                    var pt = unit.Location;
+                    var distToMob = Me.Location.Distance(pt);
+                    var distToMobReach = distToMob - unit.CombatReach;
+                    var distToJump = distToMobReach;
+                    var comment = "hitbox of";
+
+                    if (distToJump < jumpMin)
+                    {
+                        comment = "too close, now location of";
+                        distToJump = distToMob;
+                        if (distToJump < jumpMin)
+                        {
+                            return WoWPoint.Empty;
+                        }
+                    }
+
+                    if (distToMob >= HeroicLeapDistance)
+                    {
+                        distToJump = distToMobReach - 7; // allow for damage radius
+                        comment = "too far, now 7 yds before hitbox of";
+                        if (distToJump >= HeroicLeapDistance)
+                        {
+                            return WoWPoint.Empty;
+                        }
+                    }
+
+                    var neededFacing = WoWMathHelper.CalculateNeededFacing(Me.Location, pt);
+                    var ptJumpTo = WoWPoint.RayCast(Me.Location, neededFacing, distToJump);
+                    Logger.WriteDiagnostic("HeroicLeap: jump target is {0} {1}", comment, unit.SafeName());
+                    var h = unit.HeightOffTheGround();
+                    var m = unit.MeleeDistance();
+                    if (h > m)
+                    {
+                        Logger.WriteDiagnostic("HeroicLeap: aborting, target is {0:F3} off ground and melee is {1:F3}", h, m);
+                        return WoWPoint.Empty;
+                    }
+                    if (h < -1)
+                    {
+                        Logger.WriteDiagnostic("HeroicLeap: aborting, target appears to be {0:F3} off ground @ {1}", h, ptJumpTo);
+                        return WoWPoint.Empty;
+                    }
+
+                    var ptNew = new WoWPoint {X = ptJumpTo.X, Y = ptJumpTo.Y, Z = ptJumpTo.Z - h};
+                    Logger.WriteDiagnostic("HeroicLeap: adjusting dest, target @ {0} is {1:F3} above ground @ {2}", ptJumpTo, h, ptNew);
+
+                    return ptNew;
+                }
+
+                return WoWPoint.Empty;
+            }, req =>
+            {
+                if (!MovementManager.IsClassMovementAllowed) return false;
+
+                if (req == null) return false;
+
+                if (Spell.IsSpellOnCooldown(WarriorSpells.heroic_leap)) return false;
+
+                if (Me.SpellDistance(req as WoWUnit) > (HeroicLeapDistance + 7)) return false;
+
+                return true;
+                // ReSharper disable once PossibleNullReferenceException
+            }, false, desc => String.Format("on {0} @ {1:F1}%", (desc as WoWUnit).SafeName(), (desc as WoWUnit).HealthPercent))));
+        }
+
         #endregion
 
         #region Private Methods
@@ -267,11 +264,11 @@ namespace Singular.ClassSpecific
                 //actions.aoe=sweeping_strikes
                 sweeping_strikes(() => true),
                 //actions.aoe+=/rend,if=dot.rend.remains<5.4&target.time_to_die>4
-                rend(() => target.current, () => dot.rend.remains < 5.4 && target.time_to_die > 4),
+                rend(() => Me.CurrentTarget, () => dot.rend.remains < 5.4 && target.time_to_die > 4),
                 //actions.aoe+=/rend,cycle_targets=1,max_cycle_targets=2,if=dot.rend.remains<5.4&target.time_to_die>8&!buff.colossus_smash_up.up&talent.taste_for_blood.enabled
-                rend(() => Enemies(REND_DISTANCE).Take(2).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent > 8 && !buff.colossus_smash_up.up && talent.taste_for_blood.enabled), () => true),
+                rend(() => Enemies(REND_DISTANCE).Take(2).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && time_to_die(x, 8) > 8), () => !buff.colossus_smash_up.up && talent.taste_for_blood.enabled),
                 //actions.aoe+=/rend,cycle_targets=1,if=dot.rend.remains<5.4&target.time_to_die-remains>18&!buff.colossus_smash_up.up&spell_targets.whirlwind<=8
-                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent - dot.rend.remains > 18 && !buff.colossus_smash_up.up && spell_targets.whirlwind <= 8), () => true),
+                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && time_to_die(x, 18) - dot.rend.Remains(x) > 18), () => !buff.colossus_smash_up.up && spell_targets.whirlwind <= 8),
                 //actions.aoe+=/ravager,if=buff.bloodbath.up|cooldown.colossus_smash.remains<4
                 ravager(() => buff.bloodbath.up || cooldown.colossus_smash.remains < 4),
                 //actions.aoe+=/bladestorm,if=((debuff.colossus_smash.up|cooldown.colossus_smash.remains>3)&target.health.pct>20)|(target.health.pct<20&rage<30&cooldown.colossus_smash.remains>4)
@@ -279,7 +276,10 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/colossus_smash,if=dot.rend.ticking
                 colossus_smash(() => dot.rend.ticking),
                 //actions.aoe+=/execute,cycle_targets=1,if=!buff.sudden_death.react&spell_targets.whirlwind<=8&((rage>72&cooldown.colossus_smash.remains>gcd)|rage>80|target.time_to_die<5|debuff.colossus_smash.up)
-                execute(() => !buff.sudden_death.react && spell_targets.whirlwind <= 8 && ((rage > 72 && cooldown.colossus_smash.remains > gcd) || rage > 80 || target.time_to_die < 5 || debuff.colossus_smash.up)),
+                execute(
+                    () =>
+                        Enemies(EXECUTE_DISTANCE).FirstOrDefault(x => !buff.sudden_death.react && spell_targets.whirlwind <= 8 && ((rage > 72 && cooldown.colossus_smash.remains > gcd) || rage > 80 || time_to_die(x, 5) < 5 || debuff.colossus_smash.Up(x))),
+                    () => true),
                 //actions.aoe+=/heroic_charge,cycle_targets=1,if=target.health.pct<20&rage<70&swing.mh.remains>2&debuff.charge.down
                 //# Heroic Charge is an event that makes the warrior heroic leap out of melee range for an instant
                 //#If heroic leap is not available, the warrior will simply run out of melee to charge range, and then charge back in.
@@ -293,7 +293,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/thunder_clap,if=(target.health.pct>20|spell_targets.whirlwind>=9)&glyph.resonating_power.enabled
                 thunder_clap(() => (target.health.pct > 20 || spell_targets.whirlwind >= 9) && glyph.resonating_power.enabled),
                 //actions.aoe+=/rend,cycle_targets=1,if=dot.rend.remains<5.4&target.time_to_die>8&!buff.colossus_smash_up.up&spell_targets.whirlwind>=9&rage<50&!talent.taste_for_blood.enabled
-                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && x.HealthPercent > 8 && !buff.colossus_smash_up.up && spell_targets.whirlwind >= 9 && rage < 50 && !talent.taste_for_blood.enabled), () => true),
+                rend(() => Enemies(REND_DISTANCE).FirstOrDefault(x => dot.rend.Remains(x) < 5.4 && time_to_die(x, 8) > 8), () => !buff.colossus_smash_up.up && spell_targets.whirlwind >= 9 && rage < 50 && !talent.taste_for_blood.enabled),
                 //actions.aoe+=/whirlwind,if=target.health.pct>20|spell_targets.whirlwind>=9
                 whirlwind(() => target.health.pct > 20 || spell_targets.whirlwind >= 9),
                 //actions.aoe+=/siegebreaker
@@ -303,7 +303,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/shockwave
                 shockwave(() => true),
                 //actions.aoe+=/execute,if=buff.sudden_death.react
-                execute(() => buff.sudden_death.react),
+                execute(() => Me.CurrentTarget, () => buff.sudden_death.react),
                 new ActionAlwaysFail()
                 );
         }
@@ -326,7 +326,7 @@ namespace Singular.ClassSpecific
         {
             return new PrioritySelector(
                 //actions.single=rend,if=target.time_to_die>4&dot.rend.remains<5.4
-                rend(() => target.current, () => target.time_to_die > 4 && dot.rend.remains < 5.4),
+                rend(() => Me.CurrentTarget, () => target.time_to_die > 4 && dot.rend.remains < 5.4),
                 //actions.single+=/ravager,if=cooldown.colossus_smash.remains<4&(!raid_event.adds.exists|raid_event.adds.in>55)
                 //actions.single+=/colossus_smash,if=debuff.colossus_smash.down
                 colossus_smash(() => debuff.colossus_smash.down),
@@ -341,9 +341,9 @@ namespace Singular.ClassSpecific
                 siegebreaker(() => true),
                 //actions.single+=/dragon_roar,if=!debuff.colossus_smash.up&(!raid_event.adds.exists|raid_event.adds.in>55|(talent.anger_management.enabled&raid_event.adds.in>40))
                 //actions.single+=/execute,if=buff.sudden_death.react
-                execute(() => buff.sudden_death.react),
+                execute(() => Me.CurrentTarget, () => buff.sudden_death.react),
                 //actions.single+=/execute,if=!buff.sudden_death.react&(rage>72&cooldown.colossus_smash.remains>gcd)|debuff.colossus_smash.up|target.time_to_die<5
-                execute(() => !buff.sudden_death.react && (rage > 72 && cooldown.colossus_smash.remains > gcd) || debuff.colossus_smash.up || target.time_to_die < 5),
+                execute(() => Me.CurrentTarget, () => !buff.sudden_death.react && (rage > 72 && cooldown.colossus_smash.remains > gcd) || debuff.colossus_smash.up || target.time_to_die < 5),
                 //actions.single+=/impending_victory,if=!set_bonus.tier18_4pc&(rage<40&target.health.pct>20&cooldown.colossus_smash.remains>1)
                 impending_victory(() => !set_bonus.tier18_4pc && (rage < 40 && target.health.pct > 20 && cooldown.colossus_smash.remains > 1)),
                 //actions.single+=/slam,if=(rage>20|cooldown.colossus_smash.remains>gcd)&target.health.pct>20&cooldown.colossus_smash.remains>1&!set_bonus.tier18_4pc
@@ -410,6 +410,24 @@ namespace Singular.ClassSpecific
             #endregion
         }
 
+        internal class debuff : DebuffBase
+        {
+            #region Fields
+
+            public static readonly debuff colossus_smash = new debuff(WarriorSpells.colossus_smash);
+
+            #endregion
+
+            #region Constructors
+
+            private debuff(string spell)
+                : base(spell)
+            {
+            }
+
+            #endregion
+        }
+
 
         private class buff : BuffBase
         {
@@ -448,24 +466,6 @@ namespace Singular.ClassSpecific
             #region Constructors
 
             private cooldown(string spell)
-                : base(spell)
-            {
-            }
-
-            #endregion
-        }
-
-        private class debuff : DebuffBase
-        {
-            #region Fields
-
-            public static readonly debuff colossus_smash = new debuff(WarriorSpells.colossus_smash);
-
-            #endregion
-
-            #region Constructors
-
-            private debuff(string spell)
                 : base(spell)
             {
             }

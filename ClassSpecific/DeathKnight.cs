@@ -295,9 +295,9 @@ namespace Singular.ClassSpecific
                     //actions+=/plague_leech,if=disease.min_remains<1
                     plague_leech(() => disease.min_remains < 1),
                     //actions+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35
-                    soul_reaper(() => target.health.pct <= 36),
+                    soul_reaper(() => target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35),
                     //actions+=/blood_tap,if=(target.health.pct-3*(target.health.pct%target.time_to_die)<=35&cooldown.soul_reaper.remains=0)
-                    blood_tap(() => target.health.pct <= 36 && cooldown.soul_reaper.remains == 0),
+                    blood_tap(() => (target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && cooldown.soul_reaper.remains == 0)),
                     //actions+=/run_action_list,name=single_target_2h,if=spell_targets.howling_blast<4&main_hand.2h
                     new Decorator(FrostSingleTarget2h(), req => spell_targets.howling_blast < 4 && main_hand._2h),
                     //actions+=/run_action_list,name=single_target_1h,if=spell_targets.howling_blast<3&main_hand.1h
@@ -392,7 +392,7 @@ namespace Singular.ClassSpecific
                 //actions.bt+=/death_coil,if=runic_power>70
                 death_coil(() => runic_power > 70),
                 //actions.bt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&(blood=2|(blood&!blood.death))
-                soul_reaper(() => target.health.pct <= 36 && (blood == 2 || (blood.ToBool() && !blood_death.ToBool()))),
+                soul_reaper(() => target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && (blood == 2 || (blood.ToBool() && !blood_death.ToBool()))),
                 //actions.bt+=/blood_boil,if=blood=2|(blood&!blood.death)
                 blood_boil(() => blood == 2 || (blood.ToBool() && !blood_death.ToBool())),
                 new ActionAlwaysFail()
@@ -407,7 +407,7 @@ namespace Singular.ClassSpecific
                 //actions.nrt+=/death_coil,if=runic_power>70
                 death_coil(() => runic_power > 70),
                 //actions.nrt+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood>=1
-                soul_reaper(() => target.health.pct <= 36 && blood >= 1),
+                soul_reaper(() => target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && blood >= 1),
                 //actions.nrt+=/blood_boil,if=blood>=1
                 blood_boil(() => blood >= 1),
                 new ActionAlwaysFail()
@@ -422,7 +422,7 @@ namespace Singular.ClassSpecific
                 //actions.rc+=/death_coil,if=runic_power>70
                 death_coil(() => runic_power > 70),
                 //actions.rc+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood>=1
-                soul_reaper(() => target.health.pct <= 36 && blood >= 1),
+                soul_reaper(() => target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && blood >= 1),
                 //actions.rc+=/blood_boil,if=blood=2
                 blood_boil(() => blood == 2),
                 new ActionAlwaysFail()
@@ -437,7 +437,7 @@ namespace Singular.ClassSpecific
                 //actions.re+=/death_coil,if=runic_power>70
                 death_coil(() => runic_power > 70),
                 //actions.re+=/soul_reaper,if=target.health.pct-3*(target.health.pct%target.time_to_die)<=35&blood=2
-                soul_reaper(() => target.health.pct <= 36 && blood == 2),
+                soul_reaper(() => target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && blood == 2),
                 //actions.re+=/blood_boil,if=blood=2
                 blood_boil(() => blood == 2),
                 new ActionAlwaysFail()
@@ -538,7 +538,7 @@ namespace Singular.ClassSpecific
                 //actions.single_target_1h+=/plague_strike,if=!talent.necrotic_plague.enabled&!dot.blood_plague.ticking
                 plague_strike(() => !talent.necrotic_plague.enabled && !dot.blood_plague.ticking),
                 //actions.single_target_1h+=/howling_blast,if=!(target.health.pct-3*(target.health.pct%target.time_to_die)<=35&cooldown.soul_reaper.remains<3)|death+frost>=2
-                howling_blast(() => !(target.health.pct <= 36 && cooldown.soul_reaper.remains < 3) || death + frost >= 2),
+                howling_blast(() => !(target.health.pct - 3 * (target.health.pct / target.time_to_die) <= 35 && cooldown.soul_reaper.remains < 3) || death + frost >= 2),
                 //actions.single_target_1h+=/outbreak,if=talent.necrotic_plague.enabled&debuff.necrotic_plague.stack<=14
                 outbreak(() => talent.necrotic_plague.enabled && debuff.necrotic_plague.stack <= 14),
                 //actions.single_target_1h+=/blood_tap
@@ -685,9 +685,9 @@ namespace Singular.ClassSpecific
                 //actions.unholy=plague_leech,if=((cooldown.outbreak.remains<1)|disease.min_remains<1)&((blood<1&frost<1)|(blood<1&unholy<1)|(frost<1&unholy<1))
                 plague_leech(() => ((cooldown.outbreak.remains < 1) || disease.min_remains < 1) && ((blood < 1 && frost < 1) || (blood < 1 && unholy < 1) || (frost < 1 && unholy < 1))),
                 //actions.unholy+=/soul_reaper,if=(target.health.pct-3*(target.health.pct%target.time_to_die))<=45
-                soul_reaper(() => target.health.pct <= 46),
+                soul_reaper(() => (target.health.pct - 3 * (target.health.pct / target.time_to_die)) <= 45),
                 //actions.unholy+=/blood_tap,if=((target.health.pct-3*(target.health.pct%target.time_to_die))<=45)&cooldown.soul_reaper.remains=0
-                blood_tap(() => (target.health.pct <= 46) && cooldown.soul_reaper.remains == 0),
+                blood_tap(() => ((target.health.pct - 3 * (target.health.pct / target.time_to_die)) <= 45) && cooldown.soul_reaper.remains == 0),
                 //actions.unholy+=/summon_gargoyle
                 summon_gargoyle(() => true),
                 //actions.unholy+=/breath_of_sindragosa,if=runic_power>75

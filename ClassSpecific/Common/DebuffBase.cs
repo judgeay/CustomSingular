@@ -1,5 +1,6 @@
 using Singular.Helpers;
 using Styx;
+using Styx.WoWInternals.WoWObjects;
 
 namespace Singular.ClassSpecific.Common
 {
@@ -20,26 +21,51 @@ namespace Singular.ClassSpecific.Common
 
         public bool down
         {
-            get { return remains == 0; }
+            get { return Down(StyxWoW.Me.CurrentTarget); }
         }
 
         public double remains
         {
-            get { return StyxWoW.Me.CurrentTarget.GetAuraTimeLeft(SpellName).TotalSeconds; }
+            get { return Remains(StyxWoW.Me.CurrentTarget); }
         }
 
         public uint stack
         {
-            get { return StyxWoW.Me.CurrentTarget.GetAuraStacks(SpellName); }
+            get { return Stack(StyxWoW.Me.CurrentTarget); }
         }
 
         public bool up
         {
-            get { return remains > 0; }
+            get { return Up(StyxWoW.Me.CurrentTarget); }
         }
 
         #endregion
 
         // ReSharper restore InconsistentNaming
+
+        #region Public Methods
+
+        public bool Down(WoWUnit target)
+        {
+            // ReSharper disable once CompareOfFloatsByEqualityOperator
+            return Remains(target) == 0;
+        }
+
+        public double Remains(WoWUnit target)
+        {
+            return target != null ? target.GetAuraTimeLeft(SpellName).TotalSeconds : 0;
+        }
+
+        public uint Stack(WoWUnit target)
+        {
+            return target != null ? target.GetAuraStacks(SpellName) : 0;
+        }
+
+        public bool Up(WoWUnit target)
+        {
+            return Remains(target) > 0;
+        }
+
+        #endregion
     }
 }

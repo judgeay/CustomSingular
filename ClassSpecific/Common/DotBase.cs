@@ -33,16 +33,16 @@ namespace Singular.ClassSpecific.Common
 
         // ReSharper restore InconsistentNaming
 
-        #region Private Methods
-
-        public bool Ticking(WoWUnit target)
-        {
-            return Remains(target) > 0;
-        }
+        #region Public Methods
 
         public double Remains(WoWUnit target)
         {
             return target != null ? target.GetAuraTimeLeft(SpellName).TotalSeconds : 0;
+        }
+
+        public bool Ticking(WoWUnit target)
+        {
+            return Remains(target) > 0;
         }
 
         #endregion

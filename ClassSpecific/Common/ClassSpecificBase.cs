@@ -156,12 +156,9 @@ namespace Singular.ClassSpecific.Common
                 var trinket1 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket1);
                 var trinket2 = StyxWoW.Me.Inventory.GetItemBySlot((uint) WoWInventorySlot.Trinket2);
 
-                if (trinket1 != null && trinket2 != null)
-                    return trinket1.ItemInfo.Id == classTrinketId || trinket2.ItemInfo.Id == classTrinketId;
-                if (trinket1 != null)
-                    return trinket1.ItemInfo.Id == classTrinketId;
-                if (trinket2 != null)
-                    return trinket2.ItemInfo.Id == classTrinketId;
+                if (trinket1 != null && trinket2 != null) return trinket1.ItemInfo.Id == classTrinketId || trinket2.ItemInfo.Id == classTrinketId;
+                if (trinket1 != null) return trinket1.ItemInfo.Id == classTrinketId;
+                if (trinket2 != null) return trinket2.ItemInfo.Id == classTrinketId;
 
                 return false;
             }
@@ -179,6 +176,11 @@ namespace Singular.ClassSpecific.Common
         protected static int EnemiesCountNearTarget(WoWUnit target, byte distance)
         {
             return active_enemies_list.Where(x => target != x).Count(x => target.Location.Distance(x.Location) <= distance);
+        }
+
+        protected static int time_to_die(WoWUnit target, int indeterminateValue)
+        {
+            return target.TimeToDeath(indeterminateValue);
         }
 
         #endregion
@@ -328,9 +330,9 @@ namespace Singular.ClassSpecific.Common
                 get { return StyxWoW.Me.CurrentTarget.Distance; }
             }
 
-            public static long time_to_die
+            public static int time_to_die
             {
-                get { return StyxWoW.Me.CurrentTarget.TimeToDeath(long.MaxValue); }
+                get { return StyxWoW.Me.CurrentTarget.TimeToDeath(); }
             }
 
             #endregion
