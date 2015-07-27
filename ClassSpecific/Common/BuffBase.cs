@@ -46,7 +46,12 @@ namespace Singular.ClassSpecific.Common
 
         public bool up
         {
-            get { return ClassSpecificBase.BloodlustEquivalents.Contains(SpellName) ? ClassSpecificBase.BloodlustEquivalents.Any(x => StyxWoW.Me.HasAura(SpellName)) : StyxWoW.Me.HasAura(SpellName); }
+            get
+            {
+                if (SpellName == Warrior.WarriorSpells.colossus_smash) return SingularRoutine.Instance.ActiveEnemies.Any(x => Warrior.debuff.colossus_smash.Up(x));
+                
+                return ClassSpecificBase.BloodlustEquivalents.Contains(SpellName) ? ClassSpecificBase.BloodlustEquivalents.Any(x => StyxWoW.Me.HasAura(SpellName)) : StyxWoW.Me.HasAura(SpellName);
+            }
         }
 
         #endregion
