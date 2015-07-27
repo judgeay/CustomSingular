@@ -186,7 +186,7 @@ namespace Singular.ClassSpecific
                 //actions.aoe+=/arcane_missiles,if=set_bonus.tier17_4pc&active_enemies<10&buff.arcane_charge.stack=4&buff.arcane_instability.react
                 arcane_missiles(() => set_bonus.tier17_4pc && active_enemies < 10 && buff.arcane_charge.stack == 4 && buff.arcane_instability.react),
                 //actions.aoe+=/arcane_missiles,target_if=debuff.mark_of_doom.remains>2*spell_haste+(target.distance%20),if=buff.arcane_missiles.react
-                arcane_missiles(() => debuff.mark_of_doom.remains > 2 * spell_haste + (target.distance % 20) && buff.arcane_missiles.react),
+                arcane_missiles(() => debuff.mark_of_doom.remains > 2 * spell_haste + (target.distance / 20) && buff.arcane_missiles.react),
                 //actions.aoe+=/nether_tempest,cycle_targets=1,if=talent.arcane_orb.enabled&buff.arcane_charge.stack=4&ticking&remains<cooldown.arcane_orb.remains
                 nether_tempest(() => talent.arcane_orb.enabled && buff.arcane_charge.stack == 4 && active_dot.nether_tempest.Ticking(NetherTempestTarget) && active_dot.nether_tempest.Remains(NetherTempestTarget) < cooldown.arcane_orb.remains),
                 //actions.aoe+=/arcane_barrage,if=buff.arcane_charge.stack=4
@@ -262,7 +262,7 @@ namespace Singular.ClassSpecific
                 //actions.conserve+=/presence_of_mind,if=mana.pct>96&(!talent.prismatic_crystal.enabled|!cooldown.prismatic_crystal.up)
                 presence_of_mind(() => mana.pct > 96 && (!talent.prismatic_crystal.enabled || !cooldown.prismatic_crystal.up)),
                 //actions.conserve+=/arcane_missiles,if=buff.arcane_missiles.react&debuff.mark_of_doom.remains>2*spell_haste+(target.distance%20)
-                arcane_missiles(() => buff.arcane_missiles.react && debuff.mark_of_doom.remains > 2 * spell_haste + (target.distance % 20)),
+                arcane_missiles(() => buff.arcane_missiles.react && debuff.mark_of_doom.remains > 2 * spell_haste + (target.distance / 20)),
                 //actions.conserve+=/arcane_blast,if=buff.arcane_charge.stack=4&mana.pct>93
                 arcane_blast(() => buff.arcane_charge.stack == 4 && mana.pct > 93),
                 //actions.conserve+=/arcane_barrage,if=talent.arcane_orb.enabled&active_enemies>=3&buff.arcane_charge.stack=4&(cooldown.arcane_orb.remains<gcd.max|prev_gcd.arcane_orb)
@@ -318,12 +318,12 @@ namespace Singular.ClassSpecific
                     req =>
                         buff.arcane_charge.stack >= 4 && (cooldown.prismatic_crystal.up || !talent.prismatic_crystal.enabled) && (cooldown.arcane_power.up || (glyph.arcane_power.enabled && cooldown.arcane_power.remains > 60)) &&
                         (cooldown.evocation.remains - 2 * buff.arcane_missiles.stack * spell_haste - gcd_max * talent.prismatic_crystal.enabled.ToInt()) * 0.75 * (1 - 0.1 * (cooldown.arcane_power.remains < 5).ToInt()) *
-                        (1 - 0.1 * (talent.nether_tempest.enabled || talent.supernova.enabled).ToInt()) * (10 % action.arcane_blast.execute_time) <
-                        mana.pct - 20 - 2.5 * active_enemies * (9 - active_enemies) + (cooldown.evocation.remains * 1.8 % spell_haste)),
+                        (1 - 0.1 * (talent.nether_tempest.enabled || talent.supernova.enabled).ToInt()) * (10 / action.arcane_blast.execute_time) <
+                        mana.pct - 20 - 2.5 * active_enemies * (9 - active_enemies) + (cooldown.evocation.remains * 1.8 / spell_haste)),
                 //# End of fight burn
                 //actions.init_burn+=/start_burn_phase,if=target.time_to_die*0.75*(1-0.1*(talent.nether_tempest.enabled|talent.supernova.enabled))*(10%action.arcane_blast.execute_time)*1.1<mana.pct-10+(target.time_to_die*1.8%spell_haste)
                 new Decorator(arcane_start_burn_phase(),
-                    req => target.time_to_die * 0.75 * (1 - 0.1 * (talent.nether_tempest.enabled || talent.supernova.enabled).ToInt()) * (10 % action.arcane_blast.execute_time) * 1.1 < mana.pct - 10 + (target.time_to_die * 1.8 % spell_haste)),
+                    req => target.time_to_die * 0.75 * (1 - 0.1 * (talent.nether_tempest.enabled || talent.supernova.enabled).ToInt()) * (10 / action.arcane_blast.execute_time) * 1.1 < mana.pct - 10 + (target.time_to_die * 1.8 / spell_haste)),
                 new ActionAlwaysFail()
                 );
         }

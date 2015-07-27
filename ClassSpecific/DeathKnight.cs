@@ -711,7 +711,7 @@ namespace Singular.ClassSpecific
                 //actions.unholy+=/scourge_strike,if=unholy=2
                 scourge_strike(() => unholy == 2),
                 //actions.unholy+=/festering_strike,if=talent.necrotic_plague.enabled&talent.unholy_blight.enabled&dot.necrotic_plague.remains<cooldown.unholy_blight.remains%2
-                festering_strike(() => talent.necrotic_plague.enabled && talent.unholy_blight.enabled && dot.necrotic_plague.remains < cooldown.unholy_blight.remains % 2),
+                festering_strike(() => talent.necrotic_plague.enabled && talent.unholy_blight.enabled && dot.necrotic_plague.remains < cooldown.unholy_blight.remains / 2),
                 //actions.unholy+=/dark_transformation
                 dark_transformation(() => true),
                 //actions.unholy+=/festering_strike,if=blood=2&frost=2&(((Frost-death)>0)|((Blood-death)>0))
