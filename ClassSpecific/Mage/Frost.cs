@@ -27,6 +27,14 @@ namespace Singular.ClassSpecific.Mage
 
         const int FINGERS_OF_FROST = 44544;
 
+        [Behavior(BehaviorType.Initialize, WoWClass.Mage, WoWSpec.MageFrost)]
+        public static Composite CreateMageFrostInit()
+        {
+            PetManager.NeedsPetSupport = true;
+            return null;
+        }
+
+
         [Behavior(BehaviorType.Rest, WoWClass.Mage, WoWSpec.MageFrost, WoWContext.All, 1)]
         public static Composite CreateMageFrostRest()
         {
@@ -37,7 +45,7 @@ namespace Singular.ClassSpecific.Mage
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
                         new Decorator(
-                            ret => !Me.HasAnyAura("Drink", "Food", "Refreshment"),
+                            ret => !Helpers.Rest.IsEatingOrDrinking,
                             new PrioritySelector(
                                 CreateSummonWaterElemental(),
                                 Common.CreateHealWaterElemental()
@@ -80,7 +88,7 @@ namespace Singular.ClassSpecific.Mage
                 Safers.EnsureTarget(),
                 Common.CreateStayAwayFromFrozenTargetsBehavior(),
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -93,22 +101,19 @@ namespace Singular.ClassSpecific.Mage
 
             #region TRIVIAL MOB FARM SUPPORT
                         new Decorator(
-                            ret => {
-                                if (!SpellManager.HasSpell("Cone of Cold"))
-                                    return false;
-                                WoWUnit careful = Unit.UnfriendlyUnits(50)
-                                    .Where(u => !u.IsPlayer && u.IsTrivial())
-                                    .OrderByDescending(u => u.MaxHealth)
-                                    .FirstOrDefault();
-                                return careful == null;
-                            },
+                            req => Me.CurrentTarget.IsTrivial(),
                             new PrioritySelector(
-                                Spell.Cast("Cone of Cold", mov => false, on => Me.CurrentTarget, req => {
-                                    int count = Clusters.GetClusterCount(Me.CurrentTarget, Unit.UnfriendlyUnits(12), ClusterType.Cone, 12);
-                                    if (count > 1 && Spell.CanCastHack("Cone of Cold", Me.CurrentTarget))
+                                Spell.Cast("Cone of Cold", mov => false, on => Me.CurrentTarget, req => 
+                                {
+                                    IEnumerable<WoWUnit> coneUnits = Clusters.GetConeCluster(Unit.UnfriendlyUnits(12), 12);
+                                    int count = coneUnits.Count();
+                                    if (count > 1 && Spell.CanCastHack("Cone of Cold", Me.CurrentTarget) && coneUnits.Any(u => u.Guid == Me.CurrentTargetGuid))
                                     {
-                                        Logger.Write("^AOE Trivial Pull: casting Cone of Cold");
-                                        return true;
+                                        if (coneUnits.All(u => u.IsTrivial()))
+                                        {
+                                            Logger.Write("^AOE Trivial Pull: casting Cone of Cold");
+                                            return true;
+                                        }
                                     }
                                     return false;
                                 }),
@@ -141,13 +146,16 @@ namespace Singular.ClassSpecific.Mage
                                 Spell.Buff("Living Bomb", 0, on => Me.CurrentTarget, req => true),
                                 Spell.Cast("Ice Lance", ret =>
                                 {
+                                    if (Me.GotTarget && Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost))
+                                        return false;
+
                                     if (!Spell.CanCastHack("Ice Lance", Me.CurrentTarget))
                                         return false;
 
                                     Logger.Write("^Fast Pull: casting Ice Lance for instant cast pull");
                                     return true;
                                 }),
-                                Spell.Cast("Fire Blast", req => !SpellManager.HasSpell("Ice Lance"))
+                                Spell.Cast("Fire Blast", req => !SpellManager.HasSpell("Ice Lance") || Me.CurrentTarget.IsImmune( WoWSpellSchool.Frost))
                                 )
                             ),
             #endregion
@@ -165,10 +173,13 @@ namespace Singular.ClassSpecific.Mage
                                 )
                             ),
 
-                        Spell.Cast("Frostbolt", ret => !Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost)),
+                        Spell.Cast("Frostbolt", ret => Me.GotTarget() && !Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost)),
                         Spell.Cast("Frostfire Bolt"),
                         Spell.Cast("Ice Lance", ret =>
                         {
+                            if (Me.GotTarget && Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost))
+                                return false;
+
                             if (!Spell.CanCastHack("Ice Lance", Me.CurrentTarget))
                                 return false;
 
@@ -178,8 +189,8 @@ namespace Singular.ClassSpecific.Mage
                             Logger.WriteDiagnostic("Ice Lance: casting while moving");
                             return true;
                         }),
-                        Spell.Cast("Fire Blast", req => !SpellManager.HasSpell("Ice Lance"))
 
+                        Spell.Cast("Fire Blast", req => !SpellManager.HasSpell("Ice Lance") || Me.GotTarget() && Me.CurrentTarget.IsImmune( WoWSpellSchool.Frost))
                         )
                     ),
 
@@ -219,9 +230,9 @@ namespace Singular.ClassSpecific.Mage
                 ctx => new ILInfo(ondel(ctx), Me.GetAuraStacks(FINGERS_OF_FROST), ctx),
                 new Decorator(
                 // req => Spell.CanCastHack("Ice Lance", (req as ILInfo).Unit) && ((req as ILInfo).Unit != null && ((req as ILInfo).StacksOfFOF > 0 || (req as ILInfo).Unit.IsTrivial())),
-                    req => ILInfo.Ref(req).Unit != null && ILInfo.Ref(req).StacksOfFOF > 0 && Spell.CanCastHack("Ice Lance", ILInfo.Ref(req).Unit),
+                    req => ILInfo.Ref(req).Unit != null && ILInfo.Ref(req).StacksOfFOF > 0 && Spell.CanCastHack("Ice Lance", ILInfo.Ref(req).Unit) && !ILInfo.Ref(req).Unit.IsImmune(WoWSpellSchool.Frost),
                     new Sequence(
-                        new Action(r => Logger.Write(LogColor.Hilite, "^Fingers of Frost: casting buffed Ice Lance[{0}]", ILInfo.Ref(r).StacksOfFOF)),
+                        new Action(r => Logger.Write(LogColor.Hilite, "^Fingers of Frost[{0}]: casting buffed Ice Lance", ILInfo.Ref(r).StacksOfFOF)),
                         Spell.Cast("Ice Lance", mov => false, o => ILInfo.Ref(o).Unit, r => reqdel(ILInfo.Ref(r).SaveContext)),    // ret => Unit.NearbyUnfriendlyUnits.Count(t => t.Distance <= 10) < 4),
                         Helpers.Common.CreateWaitForLagDuration(
                             until => ILInfo.Ref(until).StacksOfFOF != Me.GetAuraStacks(FINGERS_OF_FROST)
@@ -245,7 +256,7 @@ namespace Singular.ClassSpecific.Mage
             return new Sequence(
                 ctx => new ILInfo(ondel(ctx), Me.GetAuraStacks(FINGERS_OF_FROST), ctx),
                 new Decorator(
-                    req => ILInfo.Ref(req).Unit != null && (ILInfo.Ref(req).StacksOfFOF > 0 || ILInfo.Ref(req).Unit.IsTrivial()) && Spell.CanCastHack("Ice Lance", ILInfo.Ref(req).Unit),
+                    req => ILInfo.Ref(req).Unit != null && (ILInfo.Ref(req).StacksOfFOF > 0 || ILInfo.Ref(req).Unit.IsTrivial()) && Spell.CanCastHack("Ice Lance", ILInfo.Ref(req).Unit) && !ILInfo.Ref(req).Unit.IsImmune(WoWSpellSchool.Frost),
                     new Sequence(
                         Spell.Cast("Ice Lance", o => ((ILInfo)o).Unit, r => reqdel(ILInfo.Ref(r).SaveContext)),
                         Helpers.Common.CreateWaitForLagDuration(
@@ -280,7 +291,7 @@ namespace Singular.ClassSpecific.Mage
                  Common.CreateStayAwayFromFrozenTargetsBehavior(),
                  Helpers.Common.EnsureReadyToAttackFromLongRange(),
                  Movement.CreateFaceTargetBehavior( 5f, false),
-                 Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                 Spell.WaitForCastOrChannel(),
 
                  new Decorator(
                      ret => !Spell.IsGlobalCooldown(),
@@ -294,6 +305,8 @@ namespace Singular.ClassSpecific.Mage
 
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
+
+                        Spell.Buff("Deep Freeze", req => Me.CurrentTarget.IsCasting && Me.CurrentTarget.IsFrozen()),
 
                         // stack buffs for some burst... only every few minutes, but we'll use em if we got em
                         new Decorator(
@@ -337,7 +350,7 @@ namespace Singular.ClassSpecific.Mage
                                             )
                                         )
                                     ),
-                                Spell.Cast("Frozen Orb", req => Spell.UseAOE && Me.IsSafelyFacing(Me.CurrentTarget, 5f) && !Unit.NearbyUnfriendlyUnits.Any(u => u.IsSensitiveDamage() && Me.IsSafelyFacing(u, 20))),
+                                Spell.Cast("Frozen Orb", req => Spell.UseAOE && Me.IsSafelyFacing(Me.CurrentTarget, 5f) && !Unit.UnfriendlyUnits(45).Any(u => Me.IsSafelyFacing(u, 25))),
                                 Spell.Cast(
                                     "Fire Blast", 
                                     ret => !SpellManager.HasSpell("Ice Lance")
@@ -361,19 +374,22 @@ namespace Singular.ClassSpecific.Mage
                         CreateIceLanceFoFBehavior(),
 
                         new PrioritySelector(
-                            ctx => Unit.UnfriendlyUnits(12).FirstOrDefault(u => u.CurrentTargetGuid == Me.Guid && !u.IsCrowdControlled()),
+                            ctx => Unit.UnfriendlyUnits(12)
+                                .FirstOrDefault(
+                                    u => u.CurrentTargetGuid == Me.Guid 
+                                    && (u.IsStressful() || (u.Guid == Me.CurrentTargetGuid && u.TimeToDeath() > 6)) 
+                                    && !u.IsCrowdControlled()
+                                    ),
                             new Decorator(
                                 ret => ret != null,
                                 new Sequence(
                                     new PrioritySelector(
-                                        CastFreeze(on => (WoWUnit) on, req => !Unit.UnfriendlyUnitsNearTarget(12).Any(u => u.IsCrowdControlled())),
-                                        Spell.BuffSelf("Frost Nova", req => !Unit.UnfriendlyUnits(12).Any(u => u.IsCrowdControlled())),
+                                        Spell.Buff("Frost Nova", on => (WoWUnit) on, req => !Unit.UnitsInCombatWithUsOrOurStuff(12).Any(u => u.IsCrowdControlled())),
+                                        CastFreeze(on => (WoWUnit)on, req => !Unit.UnfriendlyUnitsNearTarget(12).Any(u => u.IsCrowdControlled())),
                                         Spell.Cast( 
                                             "Cone of Cold", 
-                                            on => Unit.UnfriendlyUnits(12)
-                                                .Where( u => Me.IsSafelyFacing(u,60f))
-                                                .OrderBy( u => (long) u.Distance2DSqr )
-                                                .FirstOrDefault()
+                                            on => Clusters.GetConeCluster(Unit.UnfriendlyUnits(12), 12f).FirstOrDefault(),
+                                            req => Clusters.GetConeClusterCount(Unit.UnfriendlyUnits(12),12f) > (Me.IsMoving ? 0 : 1)
                                             )
                                         ),
                                     Helpers.Common.CreateWaitForLagDuration()
@@ -392,10 +408,12 @@ namespace Singular.ClassSpecific.Mage
 
                         // on mobs that will live a long time, build up the debuff... otherwise react to procs more quickly
                         // this is the main element that departs from normal instance rotation
-                        Spell.Cast("Frostbolt", 
+                        Spell.Cast(
+                            "Frostbolt", 
                             ret => Me.CurrentTarget.TimeToDeath(20) >= 20
                                 && (!Me.CurrentTarget.HasAura("Frostbolt", 3) || Me.CurrentTarget.HasAuraExpired("Frostbolt", 3)) 
-                                && !Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost)),
+                                && !Me.CurrentTarget.IsImmune(WoWSpellSchool.Frost)
+                            ),
 
                         new Throttle( 1,
                             new Decorator( 
@@ -447,7 +465,7 @@ namespace Singular.ClassSpecific.Mage
                  Safers.EnsureTarget(),
                  Common.CreateStayAwayFromFrozenTargetsBehavior(),
                  Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                 Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                 Spell.WaitForCastOrChannel(),
 
                  new Decorator(
                      ret => !Spell.IsGlobalCooldown(),
@@ -479,7 +497,7 @@ namespace Singular.ClassSpecific.Mage
                             new PrioritySelector(
                                 CastFreeze(on => Me.CurrentTarget),
                                 Spell.BuffSelf(
-                                "Frost Nova",
+                                    "Frost Nova",
                                     ret => Unit.NearbyUnfriendlyUnits.Any(u => u.Distance <= 11 && !u.TreatAsFrozen())
                                     )
                                 )
@@ -563,7 +581,7 @@ namespace Singular.ClassSpecific.Mage
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
                 Movement.CreateFaceTargetBehavior( 5f),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -589,9 +607,10 @@ namespace Singular.ClassSpecific.Mage
                                 // Movement.CreateEnsureMovementStoppedBehavior(5f),
                                 Spell.Cast("Frozen Orb", req => !Unit.NearbyUnfriendlyUnits.Any(u => u.IsSensitiveDamage() && Me.IsSafelyFacing(u, 150))),
                                 Spell.Cast("Ice Lance", ret => Me.HasAura(FINGERS_OF_FROST)),
-                                Spell.Cast(
-                                    "Cone of Cold",
-                                    req => Clusters.GetClusterCount(Me.CurrentTarget, Unit.UnfriendlyUnitsNearTarget(12f), ClusterType.Cone, 12) >= 3
+                                Spell.Cast( 
+                                    "Cone of Cold", 
+                                    on => Clusters.GetConeCluster(Unit.UnfriendlyUnits(12), 12f).FirstOrDefault(),
+                                    req => Clusters.GetConeClusterCount(Unit.UnfriendlyUnits(12),12f) >= 3
                                     ),
 
                                 new Sequence(
@@ -659,8 +678,7 @@ namespace Singular.ClassSpecific.Mage
         public static Composite CreateSummonWaterElemental()
         {
             return new Decorator(
-                ret => SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.PetSummoning)
-                    && !SingularSettings.Instance.DisablePetUsage
+                ret => PetManager.IsPetSummonAllowed    
                     && (!Me.GotAlivePet || Me.Pet.Distance > 40)
                     && PetManager.PetSummonAfterDismountTimer.IsFinished
                     && Spell.CanCastHack("Summon Water Elemental"),
@@ -739,17 +757,24 @@ namespace Singular.ClassSpecific.Mage
                 require = req => true;
 
             return new Sequence(
+                ctx => onUnit(ctx),
                 new Decorator( 
-                    ret => onUnit(ret) != null && require(ret), 
-                    new Action( ret => _locFreeze = onUnit(ret).Location)
+                    req => req != null && (req as WoWUnit).SpellDistance() < 40 && require(req), 
+                    new Action( r => 
+                    {
+                        _locFreeze = (r as WoWUnit).Location;
+                        if (StyxWoW.Me.Location.Distance(_locFreeze) > 45)
+                            _locFreeze = WoWMathHelper.CalculatePointFrom(StyxWoW.Me.Location, _locFreeze, 7f + (r as WoWUnit).CombatReach);
+                        if (StyxWoW.Me.Location.Distance(_locFreeze) > 45)
+                            return RunStatus.Failure;
+                        return RunStatus.Success;
+                    })
                     ),
                 new Throttle( TimeSpan.FromMilliseconds(250),
                     Pet.CastPetActionOnLocation(
                         "Freeze",
                         on => _locFreeze,
-                        ret => Me.Pet.ManaPercent >= 12
-                            && Me.Pet.Location.Distance(_locFreeze) < 45
-                            && !Me.CurrentTarget.TreatAsFrozen()
+                        ret => !Me.CurrentTarget.TreatAsFrozen()
                         )
                     )
                 );

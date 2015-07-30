@@ -167,10 +167,21 @@ namespace Singular.Settings
                             MinMana = 50;
                     }
 
+
                     if (verConfigFile < new Version("4.0.0.4000"))
                     {
                         weSetPullMoreValues = true;
                         SetDefaultPullMoreSettingValues();
+                    }
+
+                    Version ver_4_0_0_4631 = new Version("4.0.0.4631");
+                    if (verConfigFile <= ver_4_0_0_4631)
+                    {
+                        if (StyxWoW.Me.Class == WoWClass.Mage && this.KiteAllow == false)
+                        {
+                            this.KiteAllow = true;
+                            Logger.Write(LogColor.Init, "Settings: set Kiting Allowed to 'true' for Mages upgrading from {0} or earlier", ver_4_0_0_4631);
+                        }
                     }
 
                     ConfigVersion = verSourceCode.ToString();
@@ -190,6 +201,14 @@ namespace Singular.Settings
                         Logger.Write(LogColor.Init, "Settings: default Min Health to {0}% since Death Knight", this.MinHealth);
                     }
 
+                    if (StyxWoW.Me.Class == WoWClass.Mage)
+                    {
+                        if (this.KiteAllow == false)
+                        {
+                            this.KiteAllow = true;
+                            Logger.Write(LogColor.Init, "Settings: default Allow Kiting to true since Mage");
+                        }
+                    }
                 }
             }
 
@@ -422,7 +441,16 @@ namespace Singular.Settings
         {
             get
             {
-                return Debug && Instance.EnableDebugSpellCasting;
+                return Instance.EnableDebugSpellCasting && Debug;
+            }
+        }
+
+        [Browsable(false)]
+        public static bool ShowBehaviorFlagChanges
+        {
+            get
+            {
+                return Instance.EnableShowBehaviorFlagChanges && Debug;
             }
         }
 
@@ -431,7 +459,7 @@ namespace Singular.Settings
         {
             get
             {
-                return false;
+                return false && Debug;
             }
         }
 
@@ -440,7 +468,16 @@ namespace Singular.Settings
         {
             get
             {
-                return Debug && SingularSettings.Instance.EnableDebugTrace;
+                return SingularSettings.Instance.EnableDebugTrace && Debug;
+            }
+        }
+
+        [Browsable(false)]
+        public static bool TraceHeals
+        {
+            get
+            {
+                return SingularSettings.Instance.EnableDebugHealTrace && Debug;
             }
         }
 
@@ -477,22 +514,41 @@ namespace Singular.Settings
         // code should reference SingularSettings.DebugSpellCasting
         //
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Debug")]
         [DisplayName("Debug Spell Casting Detection")]
         [Description("Enables logging of GCD/Cast/Channeling in Singular. Debug Logging setting must also be true")]
         public bool EnableDebugSpellCasting { get; set; }
 
+        // code should reference SingularSettings.ShowBehaviorFlagChanges
+        //
+        [Browsable(false)]
+        [Setting, ReadOnly(false)]
+        [DefaultValue(false)]
+        [Category("Debug")]
+        [DisplayName("Show Behavior Flag Changes")]
+        public bool EnableShowBehaviorFlagChanges { get; set; }
+
         // code should reference SingularSettings.Trace
         //
         [Browsable(false)]
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Debug")]
         [DisplayName("Debug Trace")]
         [Description("EXTREMELY VERBOSE!! Enables logging of entry/exit into each behavior. Only use if instructed or you prefer slower response times!")]
         public bool EnableDebugTrace { get; set; }
+
+        // code should reference SingularSettings.TraceHeals
+        //
+        [Browsable(false)]
+        [Setting, ReadOnly(false)]
+        [DefaultValue(false)]
+        [Category("Debug")]
+        [DisplayName("Debug Heals")]
+        [Description("EXTREMELY VERBOSE!! Enables logging of entry/exit into each Healing Specializations Heal behavior. Only use if instructed or you prefer slower response times!")]
+        public bool EnableDebugHealTrace { get; set; }
 
         // code should reference SingularSettings.Debug
         //
@@ -546,13 +602,6 @@ namespace Singular.Settings
         public AllowMovementType AllowMovement { get; set; }
 
         [Setting, ReadOnly(false)]
-        [DefaultValue(true)]
-        [Category("Movement")]
-        [DisplayName("Move Sideways to Gather Mobs")]
-        [Description("Allow movement to move attacking NPCs in front")]
-        public bool MoveSidewaysToGatherMobs { get; set; }
-
-        [Setting, ReadOnly(false)]
         [DefaultValue(12)]
         [Category("Movement")]
         [DisplayName("Melee Dismount Range")]
@@ -573,12 +622,19 @@ namespace Singular.Settings
         [Description("Allow Singular to move melee classes to keep melee attackers in front.  Works only in Normal (Solo) context")]
         public bool MeleeKeepMobsInFront { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Movement")]
         [DisplayName("Use Cast While Moving Buffs")]
         [Description("True: attempting to use a non-instant while moving will first cast Spiritwalker's Grace, Ice Floes, Kil'Jaedan's Cunning, etc.")]
         public bool UseCastWhileMovingBuffs { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(20)]
+        [Category("Movement")]
+        [DisplayName("Move to Target Timeout (secs)")]
+        [Description("Max time in seconds that player is out of attack distance (5 yds for melee, 40 yds for ranged) and/or line of sight before blacklisting.  Target is blacklisted for Pull if no aggro, and for Combat if aggro present")]
+        public int MoveToTargetTimeout { get; set; }
 
         #endregion 
 
@@ -665,12 +721,19 @@ namespace Singular.Settings
         [Description("Kite if this many mobs in melee range")]
         public int KiteMobCount { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(8)]
         [Category("Avoidance")]
-        [DisplayName("Avoid Distance")]
+        [DisplayName("Kite Avoid Distance")]
         [Description("Only mobs within this distance that are attacking you count towards Disengage/Kite mob counts")]
-        public int AvoidDistance { get; set; }
+        public int KiteAvoidDistance { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(12)]
+        [Category("Avoidance")]
+        [DisplayName("Kite Safe Distance")]
+        [Description("Only mobs within this distance that are attacking you count towards Disengage/Kite mob counts")]
+        public int KiteSafeDistance { get; set; }
 
         [Browsable(false)]
         [Setting,ReadOnly(false)]
@@ -682,6 +745,52 @@ namespace Singular.Settings
 
         #endregion
 
+        #region Category: Death
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(20)]
+        [Category("Death")]
+        [DisplayName("Ressurect: Safe Distance (Normal)")]
+        [Description("Minimum safe distance from enemies when dea")]
+        public int RezSafeDistSolo { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(30)]
+        [Category("Death")]
+        [DisplayName("Ressurect: Safe Distance (PVP)")]
+        [Description("Minimum safe distance from enemies in Battlegrounds -OR- when death from World PVP")]
+        public int RezSafeDistPVP { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(0)]
+        [Category("Death")]
+        [DisplayName("Ressurect: Safe Distance (Instance)")]
+        [Description("Minimum safe distance from enemies in Instances")]
+        public int RezSafeDistInstance { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(15)]
+        [Category("Death")]
+        [DisplayName("Ressurect: Max Wait (seconds)")]
+        [Description("Maximum time (seconds) to wait for all enemies to be Min Safe Distance away")]
+        public int RezMaxWaitTime { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(true)]
+        [Category("Death")]
+        [DisplayName("Res Sickness: Wait")]
+        [Description("Wait for resurrection sickness to wear off.")]
+        public bool ResSicknessWait { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(false)]
+        [Category("Death")]
+        [DisplayName("Res Sickness: Stealth")]
+        [Description("Stealth while waiting for resurrection sickness to wear off.")]
+        public bool ResSicknessStealthDuring { get; set; }
+
+        #endregion
+
         #region Category: General
 
         [Setting,ReadOnly(false)]
@@ -690,20 +799,6 @@ namespace Singular.Settings
         [DisplayName("Use Framelock in Singular")]
         [Description("Force use of Framelock in Singular.  Primarily for use with Botbases that do not support Framelock")]
         public bool UseFrameLock { get; set; }
-
-        [Setting, ReadOnly(false)]
-        [DefaultValue(true)]
-        [Category("General")]
-        [DisplayName("Res Sickness: Wait")]
-        [Description("Wait for resurrection sickness to wear off.")]
-        public bool ResSicknessWait { get; set; }
-
-        [Setting, ReadOnly(false)]
-        [DefaultValue(false)]
-        [Category("General")]
-        [DisplayName("Res Sickness: Stealth")]
-        [Description("Stealth while waiting for resurrection sickness to wear off.")]
-        public bool ResSicknessStealthDuring { get; set; }
 
         [Setting, ReadOnly(false)]
         [DefaultValue(false)]
@@ -964,21 +1059,28 @@ namespace Singular.Settings
 
         #region Category: Items
 
-        [Setting,ReadOnly(true)]
+        [Setting,ReadOnly(false)]
         [DefaultValue(true)]
         [Category("Items")]
         [DisplayName("Use Flasks/Crystals/etc")]
-        [Description("Uses flasks not consumed on use (Alchemist Flasks, Crystal of Insanity, Orialius' Whispering Crystal, others ...?)")]
+        [Description("Uses flasks/items that are not consumed on use (Alchemist Flasks, Crystal of Insanity, and Orialius' Whispering Crystal)")]
         public bool UseAlchemyFlasks { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
         [DefaultValue(false)]
         [Category("Items")]
         [DisplayName("Use Scrolls of ...")]
-        [Description("Uses Scrolls present in bags that temporarily buff a useful stat. Uses those buffing primary stat first, then Scrolls of Stamina")]
+        [Description("Uses Scrolls present in bags that temporarily buff a useful stat. Uses scrolls buffing primary stat first, then Scrolls of Stamina")]
         public bool UseScrolls { get; set; }
 
-        [Setting,ReadOnly(false)]
+        [Setting, ReadOnly(false)]
+        [DefaultValue(false)]
+        [Category("Items")]
+        [DisplayName("Use XP Buff Potions")]
+        [Description("Use Excess Potion of Accelerated Learning")]
+        public bool UseXPBuffPotions { get; set; }
+
+        [Setting, ReadOnly(false)]
         [DefaultValue(TrinketUsage.Never)]
         [Category("Items")]
         [DisplayName("Trinket 1 Usage")]
@@ -1063,12 +1165,20 @@ namespace Singular.Settings
         [Description("Solo Only.  True: when attacked by player, ignore everything else and fight back;  False: attack based upon Targeting priority list.")]
         public bool TargetWorldPvpRegardless { get; set; }
 
+        [Setting, ReadOnly(false)]
+        [DefaultValue(true)]
+        [Category("Targeting")]
+        [DisplayName("Target Enemy Totems")]
+        [Description("Solo Only.  True: kill any totems set by Current Target if NPC;  False: attack based upon Targeting priority list.")]
+        public bool TargetCurrentTargetTotems { get; set; }
+
         #endregion
 
         #region Category: Enemy Control
 
         private PullMoreUsageType _PullMoreAllowed = PullMoreUsageType.Auto;
 
+        [Setting, ReadOnly(false)]
         [DefaultValue(8)]
         [Category("Enemy Control")]
         [DisplayName("Evade Attacks Allowed")]
@@ -1100,24 +1210,21 @@ namespace Singular.Settings
             }
         }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting,ReadOnly(false)]        
         [DefaultValue(PullMoreTargetType.LikeCurrent)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Target Type")]
         [Description("None: disabled, Current: like CurrentTarget; Hostile: any hostile target; Any: any nearby valid target")]
         public PullMoreTargetType PullMoreTargetType { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting,ReadOnly(false)]     
         [DefaultValue(3)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Count")]
         [Description("Pull more until in combat with this many, then finish them off before acquiring more")]
         public int PullMoreMobCount { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting,ReadOnly(false)]        
         [DefaultValue(35)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Dist Melee")]
@@ -1132,16 +1239,14 @@ namespace Singular.Settings
         [Description("For Ranged Characters: Maximum distance of adds which will be pulled")]
         public int PullMoreDistRanged { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting,ReadOnly(false)]        
         [DefaultValue(60)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Health %")]
         [Description("Pull more unless Health % below this")]
         public int PullMoreMinHealth { get; set; }
 
-        [Setting,ReadOnly(false)]
-        
+        [Setting,ReadOnly(false)]       
         [DefaultValue(12)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Tagged Timeout (secs)")]
@@ -1149,7 +1254,6 @@ namespace Singular.Settings
         public int PullMoreTimeOut { get; set; }
 
         [Setting, ReadOnly(false)]
-
         [DefaultValue(45)]
         [Category("Enemy Control")]
         [DisplayName("Pull More Max Time (secs)")]
@@ -1193,11 +1297,18 @@ namespace Singular.Settings
         public CheckTargets InterruptTarget { get; set; }
 
         [Setting, ReadOnly(false)]
-        [DefaultValue(50)]
+        [DefaultValue(8)]
         [Category("Enemy Control")]
-        [DisplayName("Trivial: Mob Max Health %")]
-        [Description("Mob with Max Health less than % of your Max Health considered trivial")]
-        public int TrivialMaxHealthPcnt { get; set; }
+        [DisplayName("Trivial: Mob Level Delta")]
+        [Description("Mob Level that is Delta levels or more below Player Level considered trivial")]
+        public int TrivialLevelsBelow { get; set; }
+
+        [Setting, ReadOnly(false)]
+        [DefaultValue(15)]
+        [Category("Enemy Control")]
+        [DisplayName("Trivial: Mob Elite Delta")]
+        [Description("Elite Mob Level that is Delta levels or more below Player Level considered trivial")]
+        public int TrivialEliteBelow { get; set; }
 
 #if SERIOUS_SUPPORT_IMPLEMENTED
         [Setting, ReadOnly(false)]
@@ -1302,6 +1413,7 @@ namespace Singular.Settings
                 return setting;
             }
         }
+
     }
 
 }

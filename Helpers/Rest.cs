@@ -40,6 +40,14 @@ namespace Singular.Helpers
             get { return Me.GotAlivePet && Me.PetInCombat; }
         }
 
+        public static bool IsEatingOrDrinking
+        {
+            get
+            {
+                return Me.HasAnyAura("Drink", "Food", "Refreshment", "Cannibalize");
+            }
+        }
+
         /// <summary>
         /// implements standard Rest behavior.  self-heal optional and typically used by DPS that have healing spell, 
         /// as healing specs are better served using a spell appropriate to amount of healing needed.  ressurrect
@@ -60,7 +68,7 @@ namespace Singular.Helpers
                         new Decorator(
                             ret =>
                             {
-                                if (Me.HasAnyAura("Drink", "Food", "Refreshment"))
+                                if (IsEatingOrDrinking)
                                     return false;
                                 if (spellHeal == null || Me.HealthPercent > 85)
                                     return false;
@@ -175,21 +183,25 @@ namespace Singular.Helpers
                 // Make sure we're a class with mana, if not, just ignore drinking all together! Other than that... same for food.
                         new Decorator(
                             ret => !Me.Combat
+                                && !Me.Stunned
                                 && !Me.IsSwimming && (Me.PowerType == WoWPowerType.Mana || Me.Class == WoWClass.Druid)
                                 && Me.ManaPercent <= SingularSettings.Instance.MinMana
                                 && !Me.HasAnyAura("Drink", "Refreshment") && Consumable.GetBestDrink(false) != null,
                             new PrioritySelector(
                                 Movement.CreateEnsureMovementStoppedBehavior(reason: "to drink"),
-                                new Sequence(
-                                    new Action(ret =>
-                                    {
-                                        Logger.Write("Drinking @ {0:F1}% mana", Me.ManaPercent);
-                                        Styx.CommonBot.Rest.DrinkImmediate();
-                                    }),
-                                    Helpers.Common.CreateWaitForLagDuration(),
-                                    new PrioritySelector(
-                                        new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Drink", "Refreshment"), new ActionAlwaysSucceed()),
-                                        new Action(r => Logger.WriteDiagnostic("Drinking: failed to see 'Drink' aura"))
+                                new Decorator(
+                                    req => !Me.IsMoving,
+                                    new Sequence(
+                                        new Action(ret =>
+                                        {
+                                            Logger.Write("Drinking @ {0:F1}% mana", Me.ManaPercent);
+                                            Styx.CommonBot.Rest.DrinkImmediate();
+                                        }),
+                                        Helpers.Common.CreateWaitForLagDuration(),
+                                        new PrioritySelector(
+                                            new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Drink", "Refreshment"), new ActionAlwaysSucceed()),
+                                            new Action(r => Logger.WriteDiagnostic("Drinking: failed to see 'Drink' aura"))
+                                            )
                                         )
                                     )
                                 )
@@ -198,24 +210,28 @@ namespace Singular.Helpers
                 // Check if we're allowed to eat (and make sure we have some food. Don't bother going further if we have none.
                         new Decorator(
                             ret => !Me.Combat 
+                                && !Me.Stunned
                                 && !Me.IsSwimming
                                 && Me.PredictedHealthPercent(includeMyHeals: true) <= SingularSettings.Instance.MinHealth
                                 && !Me.HasAnyAura("Food", "Refreshment") && Consumable.GetBestFood(false) != null,
                             new PrioritySelector(
                                 Movement.CreateEnsureMovementStoppedBehavior(reason: "to eat"),
-                                new Sequence(
-                                    new Action(
-                                        ret =>
-                                        {
-                                            float myHealth = Me.PredictedHealthPercent(includeMyHeals: true);
-                                            Logger.WriteDebug("NeedToEat:  predictedhealth @ {0:F1}", myHealth);
-                                            Logger.Write("Eating @ {0:F1}% health", Me.HealthPercent);
-                                            Styx.CommonBot.Rest.FeedImmediate();
-                                        }),
-                                    Helpers.Common.CreateWaitForLagDuration(),
-                                    new PrioritySelector(
-                                        new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Food", "Refreshment"), new ActionAlwaysSucceed()),
-                                        new Action( r => Logger.WriteDiagnostic("Eating: failed to see 'Food' aura"))
+                                new Decorator(
+                                    req => !Me.IsMoving,
+                                    new Sequence(
+                                        new Action(
+                                            ret =>
+                                            {
+                                                float myHealth = Me.PredictedHealthPercent(includeMyHeals: true);
+                                                Logger.WriteDebug("NeedToEat:  predictedhealth @ {0:F1}", myHealth);
+                                                Logger.Write("Eating @ {0:F1}% health", Me.HealthPercent);
+                                                Styx.CommonBot.Rest.FeedImmediate();
+                                            }),
+                                        Helpers.Common.CreateWaitForLagDuration(),
+                                        new PrioritySelector(
+                                            new Wait(TimeSpan.FromMilliseconds(500), until => Me.HasAnyAura("Food", "Refreshment"), new ActionAlwaysSucceed()),
+                                            new Action( r => Logger.WriteDiagnostic("Eating: failed to see 'Food' aura"))
+                                            )
                                         )
                                     )
                                 )

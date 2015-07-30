@@ -16,6 +16,7 @@ using Styx.CommonBot;
 using Styx.WoWInternals;
 using Styx.WoWInternals.WoWObjects;
 using Styx.CommonBot.POI;
+using Styx.CommonBot.Routines;
 
 namespace Singular.GUI
 {
@@ -104,15 +105,14 @@ namespace Singular.GUI
 
             InitializeDebugOutputDropdown();
             chkDebugCasting.Checked = SingularSettings.Instance.EnableDebugSpellCasting;
+            chkShowBehaviorFlags.Checked = SingularSettings.Instance.EnableShowBehaviorFlagChanges;
             chkDebugTrace.Checked = SingularSettings.Instance.EnableDebugTrace;
+            chkDebugTraceHeal.Checked = SingularSettings.Instance.EnableDebugHealTrace;
             chkTraceBuffs.Checked = SingularSettings.Instance.EnableDebugTraceBuffPresence;
             chkDebugLogging_CheckedChanged(this, new EventArgs());
 
             InitializeHealContextDropdown(StyxWoW.Me.Class);
             InitializeForceBehaviorsDropdown();
-
-            if (!timer1.Enabled)
-                timer1.Start();
 
             Screen screen = Screen.FromHandle(this.Handle);
             if (this.Left.Between(0, screen.WorkingArea.Width) && this.Top.Between(0, screen.WorkingArea.Height))
@@ -123,6 +123,9 @@ namespace Singular.GUI
                     this.Height = height;
                 }
             }
+
+            if (Logger.LogMarkIndex > 0)
+                btnLogMark.Text = "LOGMARK! " + Logger.LogMarkIndex;
 
             tabControl1_SelectedIndexChanged(this, new EventArgs());
         }
@@ -144,6 +147,95 @@ namespace Singular.GUI
             if (mi == null)
                 return;
             mi.Invoke(view, new object[] { width });
+        }
+
+        public void UpdateBehaviorFlags()
+        {
+            if (!this.Visible)
+                return;
+
+            SendMessage(chkBFDeath.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFCombat.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFLoot.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFVendor.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFRoam.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFPull.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFRest.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkBFFlightPath.Handle, WM_SETREDRAW, false, (IntPtr)0);
+
+            chkBFDeath.Checked      = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Death) != (Bots.Grind.BehaviorFlags)0;
+            chkBFCombat.Checked     = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Combat) != (Bots.Grind.BehaviorFlags)0;
+            chkBFLoot.Checked       = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Loot) != (Bots.Grind.BehaviorFlags)0;
+            chkBFVendor.Checked     = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Vendor) != (Bots.Grind.BehaviorFlags)0;
+            chkBFRoam.Checked       = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Roam) != (Bots.Grind.BehaviorFlags)0;
+            chkBFPull.Checked       = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Pull) != (Bots.Grind.BehaviorFlags)0;
+            chkBFRest.Checked       = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.Rest) != (Bots.Grind.BehaviorFlags)0;
+            chkBFFlightPath.Checked = (Bots.Grind.LevelBot.BehaviorFlags & Bots.Grind.BehaviorFlags.FlightPath) != (Bots.Grind.BehaviorFlags)0;
+
+            SendMessage(chkBFDeath.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFCombat.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFLoot.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFVendor.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFRoam.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFPull.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFRest.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkBFFlightPath.Handle, WM_SETREDRAW, true, (IntPtr)0);
+        }
+
+        public void UpdateCapabilitiesFlags()
+        {
+            if (!this.Visible)
+                return;
+
+            SendMessage(lblPoi.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFInterrupt.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFTaunt.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFMultiMobPull.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFDefDispel.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFOffDispel.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFKiting.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFSpecialAttacks.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFPetUse.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFPetSummon.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFTargeting.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFAOE.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFGapCloser.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFFacing.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFMoveBehind.Handle, WM_SETREDRAW, false, (IntPtr)0);
+            SendMessage(chkCFMovement.Handle, WM_SETREDRAW, false, (IntPtr)0);
+
+            chkCFInterrupt.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Interrupting);
+            chkCFTaunt.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Taunting);
+            chkCFMultiMobPull.Checked = SingularRoutine.IsAllowed(CapabilityFlags.MultiMobPull);
+            chkCFDefDispel.Checked = SingularRoutine.IsAllowed(CapabilityFlags.DefensiveDispel);
+            chkCFOffDispel.Checked = SingularRoutine.IsAllowed(CapabilityFlags.OffensiveDispel);
+            chkCFKiting.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Kiting);
+            chkCFSpecialAttacks.Checked = SingularRoutine.IsAllowed(CapabilityFlags.SpecialAttacks);
+            chkCFPetUse.Checked = SingularRoutine.IsAllowed(CapabilityFlags.PetUse);
+            chkCFPetSummon.Checked = SingularRoutine.IsAllowed(CapabilityFlags.PetSummoning);
+            chkCFTargeting.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Targeting);
+            chkCFAOE.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Aoe);
+            chkCFGapCloser.Checked = SingularRoutine.IsAllowed(CapabilityFlags.GapCloser);
+            chkCFFacing.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Facing);
+            chkCFMoveBehind.Checked = SingularRoutine.IsAllowed(CapabilityFlags.MoveBehind);
+            chkCFMovement.Checked = SingularRoutine.IsAllowed(CapabilityFlags.Movement);
+
+            SendMessage(lblPoi.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFInterrupt.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFTaunt.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFMultiMobPull.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFDefDispel.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFOffDispel.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFKiting.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFSpecialAttacks.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFPetUse.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFPetSummon.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFTargeting.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFAOE.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFGapCloser.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFFacing.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFMoveBehind.Handle, WM_SETREDRAW, true, (IntPtr)0);
+            SendMessage(chkCFMovement.Handle, WM_SETREDRAW, true, (IntPtr)0);
         }
 
         /// <summary>
@@ -169,6 +261,8 @@ namespace Singular.GUI
                 cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Battleground));
                 cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Instance));
                 cboHealContext.Items.Add(new HealContextItem(HealingContext.Raids, WoWSpec.DruidRestoration, SingularSettings.Instance.Druid().Raid));
+                cboHealContext.Items.Add(new HealContextItem(HealingContext.Battlegrounds, WoWSpec.None, SingularSettings.Instance.Druid().OffhealBattleground));
+                cboHealContext.Items.Add(new HealContextItem(HealingContext.Instances, WoWSpec.None, SingularSettings.Instance.Druid().OffhealPVE));
             }
 
             if (cls == WoWClass.Monk)
@@ -309,12 +403,17 @@ namespace Singular.GUI
         { // prevent an exception from closing HB.
             try
             {
+                // avoid possible timer callback issues
+                timerTargeting.Stop();
+
                 // deal with Debug tab controls individually
                 SingularSettings.Instance.DebugOutput = (DebugOutputDest) GetComboBoxEnum(cboDebugOutput);               
                 SingularSettings.Instance.EnableDebugSpellCasting = chkDebugCasting.Checked;
+                SingularSettings.Instance.EnableShowBehaviorFlagChanges = chkShowBehaviorFlags.Checked;
                 SingularSettings.Instance.EnableDebugTrace = chkDebugTrace.Checked;
+                SingularSettings.Instance.EnableDebugHealTrace = chkDebugTraceHeal.Checked;
                 SingularSettings.Instance.EnableDebugTraceBuffPresence = chkTraceBuffs.Checked;
-                Extensions.ShowPlayerNames = ShowPlayerNames.Checked;
+                // Extensions.ShowPlayerNames = ShowPlayerNames.Checked;
 
                 SingularRoutine.TrainingDummyBehaviors = (WoWContext) GetComboBoxEnum(cboForceUseOf);
 
@@ -356,7 +455,7 @@ namespace Singular.GUI
         public static extern int SendMessage(IntPtr hWnd, Int32 wMsg, bool wParam, IntPtr lParam);
         private const int WM_SETREDRAW = 11; 
 
-        private void timer1_Tick(object sender, EventArgs e)
+        private void timerTargeting_Tick(object sender, EventArgs e)
         {
             // exit quickly if Debug tab not displayed
             if (tabControl1.SelectedTab != tabDebug)
@@ -460,13 +559,18 @@ namespace Singular.GUI
                 lblTargets.Text = sb.ToString();
             }
 
+            UpdateBehaviorFlags();
+            UpdateCapabilitiesFlags();
+
             SendMessage(lblPoi.Handle, WM_SETREDRAW, true, (IntPtr)0);
             SendMessage(lblTargets.Handle, WM_SETREDRAW, true, (IntPtr)0);
             SendMessage(lblTankToStayNear.Handle, WM_SETREDRAW, true, (IntPtr)0);
             SendMessage(lblTargets.Handle, WM_SETREDRAW, true, (IntPtr)0);
             SendMessage(lblAuxTargets.Handle, WM_SETREDRAW, true, (IntPtr)0);
+
             tabDebug.Refresh();
         }
+
 
         // private int lastTried = 0;
 
@@ -482,12 +586,7 @@ namespace Singular.GUI
 
         private void ConfigurationForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            timer1.Stop();
-        }
-
-        private void ShowPlayerNames_CheckedChanged(object sender, EventArgs e)
-        {
-
+            timerTargeting.Stop();
         }
 
         private void cboHealContext_SelectedIndexChanged(object sender, EventArgs e)
@@ -504,8 +603,8 @@ namespace Singular.GUI
         private static int LogMarkIndex = 1;
         private void btnLogMark_Click(object sender, EventArgs e)
         {
-            Logger.Write( Color.HotPink, " LOGMARK # {0} at {1}", LogMarkIndex++, DateTime.Now.ToString("HH:mm:ss.fff"));
-            btnLogMark.Text = "LOGMARK! " + LogMarkIndex;
+            Logger.LogMark();
+            btnLogMark.Text = "LOGMARK! " + Logger.LogMarkIndex;
         }
 
         private void tabControl1_VisibleChanged(object sender, EventArgs e)
@@ -519,6 +618,8 @@ namespace Singular.GUI
                 SetLabelColumnWidth(pgGeneral, 205);
             else if (tabControl1.SelectedIndex == 1)
                 SetLabelColumnWidth(pgClass, 205);
+            else if (tabControl1.SelectedTab.Text == "Group Healing")
+                SetLabelColumnWidth(pgHeal, 205);
         }
 
         private void groupBox2_Enter(object sender, EventArgs e)
@@ -588,6 +689,35 @@ namespace Singular.GUI
         {
             Singular.SingularRoutine.PullMoreQuestTargetsDump();
         }
+
+        private void ConfigurationForm_VisibleChanged(object sender, EventArgs e)
+        {
+            if (this.Visible)
+            {
+                if (!timerTargeting.Enabled)
+                    timerTargeting.Start();
+            }
+            else
+            {
+                if (timerTargeting.Enabled)
+                    timerTargeting.Stop();
+            }
+        }
+
+        private void groupBox4_Enter(object sender, EventArgs e)
+        {
+
+        }
+
+        private void chkShowBehaviorFlags_CheckedChanged(object sender, EventArgs e)
+        {
+            DebugOutputDest dbgdest = (DebugOutputDest)GetComboBoxEnum(cboDebugOutput);
+            if (chkShowBehaviorFlags.Checked && dbgdest == DebugOutputDest.None)
+                chkShowBehaviorFlags.Checked = false;
+
+            chkShowBehaviorFlags.Enabled = (dbgdest != DebugOutputDest.None);
+        }
+
     }
 
     public class CboItem
@@ -616,6 +746,11 @@ namespace Singular.GUI
         public override bool Equals(object obj)
         {
             return ToString() == obj.ToString();
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
         }
 
         public override string ToString()

@@ -10,6 +10,8 @@ using Color = System.Drawing.Color;
 using Styx.Helpers;
 
 using LogLevel = Styx.Common.LogLevel;
+using Singular.Helpers;
+using Styx;
 
 namespace Singular
 {
@@ -23,6 +25,8 @@ namespace Singular
         public static Color Diagnostic = Color.Yellow;
         public static Color Cancel = Color.OrangeRed;
         public static Color Init = Color.Cyan;
+        public static Color Targeting = Color.LightCoral;
+        public static Color Info = Color.LightPink;
     }
 
     public static class Logger
@@ -166,12 +170,32 @@ namespace Singular
         {
             if (SingularSettings.Instance != null && SingularSettings.Instance.DebugOutput == DebugOutputDest.WindowAndFile)
             {
-                System.Windows.Media.Color newColor = System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B); 
+                System.Windows.Media.Color newColor = System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B);
                 Logging.Write(newColor, "(Singular) " + message, args);
             }
             else
             {
                 WriteFile("(Singular) " + message, args);
+            }
+        }
+
+        /// <summary>
+        /// output a diagnostic message.  message is always written to log file, but is also written
+        /// to log window if Debug enabled
+        /// </summary>
+        /// <param name="clr">color of message in window</param>
+        /// <param name="message">message text with embedded parameters</param>
+        /// <param name="args">replacement parameter values</param>
+        public static void WriteTrace(Color clr, string message, params object[] args)
+        {
+            if (SingularSettings.Instance != null && SingularSettings.Instance.DebugOutput == DebugOutputDest.WindowAndFile)
+            {
+                System.Windows.Media.Color newColor = System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B);
+                Logging.Write(newColor, "|Singular| " + message, args);
+            }
+            else
+            {
+                WriteFile("|Singular| " + message, args);
             }
         }
 
@@ -230,6 +254,47 @@ namespace Singular
         }
 
 
+        #region Helpers
+
+        public static void TellUser(string template, params object[] args)
+        {
+            TellUser(Color.LightYellow, template, args);
+        }
+
+        public static void TellUser(Color clr, string template, params object[] args)
+        {
+            TellUser(clr, TimeSpan.FromMilliseconds(SingularSettings.Instance.Hotkeys().ChatFrameMessageDuration), template, args);
+        }
+
+        public static void TellUser(Color clr, TimeSpan ts, string template, params object[] args)
+        {
+            System.Windows.Media.Color newColor = System.Windows.Media.Color.FromArgb(clr.A, clr.R, clr.G, clr.B);
+            const float coef = 0.5f;
+            System.Windows.Media.Color backColor = System.Windows.Media.Color.FromArgb((byte)(clr.A * coef), (byte)(clr.R * coef), (byte)(clr.G * coef), (byte)(clr.B * coef));
+            string msg = string.Format(template, args);
+            Logger.Write(clr, msg);
+            if (SingularSettings.Instance.Hotkeys().ChatFrameMessage)
+            {
+                StyxWoW.Overlay.AddToast(
+                    () => { return msg; },
+                    ts,
+                    newColor,
+                    backColor,
+                    new System.Windows.Media.FontFamily("Consolas")
+                    );
+            }
+        }
+
+        #endregion
+
+
+        public static int LogMarkIndex { get; set; }
+
+        public static void LogMark()
+        {
+            LogMarkIndex++;
+            Logger.Write(Color.HotPink, " LOGMARK # {0} at {1}", LogMarkIndex, DateTime.Now.ToString("HH:mm:ss.fff"));
+        }
     }
 
     public class LogMessage : Action
@@ -250,4 +315,82 @@ namespace Singular
             return RunStatus.Success;
         }
     }
+
+    public class SeqLog : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public SeqLog(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Success, new Action(r => { Logger.Write(msg(r)); return RunStatus.Success; }))
+        {
+        }
+        public SeqLog(double secs, Color clr, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Success, new Action(r => { Logger.Write(clr, msg(r)); return RunStatus.Success; }))
+        {
+        }
+    }
+
+    public class SeqDbg : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public SeqDbg(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Success, new Action(r => { if (SingularSettings.Debug) Logger.WriteDebug(msg(r)); return RunStatus.Success; }))
+        {
+        }
+        public SeqDbg(double secs, Color clr, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Success, new Action(r => { if (SingularSettings.Debug) Logger.WriteDebug(clr, msg(r)); return RunStatus.Success; }))
+        {
+        }
+    }
+
+    public class SeqDiag : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public SeqDiag(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Success, new Action(r => { Logger.WriteDiagnostic(msg(r)); return RunStatus.Success; }))
+        {
+        }
+    }
+
+    public class PriLog : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public PriLog(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Failure, new Action(r => { Logger.Write(msg(r)); return RunStatus.Failure; }))
+        {
+        }
+        public PriLog(double secs, Color clr, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Failure, new Action(r => { Logger.Write(clr, msg(r)); return RunStatus.Failure; }))
+        {
+        }
+    }
+
+    public class PriDbg : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public PriDbg(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Failure, new Action(r => { if (SingularSettings.Debug) Logger.WriteDebug(msg(r)); return RunStatus.Failure; }))
+        {
+        }
+
+        public PriDbg(double secs, Color clr, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Failure, new Action(r => { if (SingularSettings.Debug) Logger.WriteDebug(clr, msg(r)); return RunStatus.Failure; }))
+        {
+        }
+    }
+
+    public class PriDiag : ThrottlePasses
+    {
+        SimpleStringDelegate msg;
+
+        public PriDiag(double secs, SimpleStringDelegate msg)
+            : base(1, TimeSpan.FromSeconds(secs), RunStatus.Failure, new Action(r => { Logger.WriteDiagnostic(msg(r)); return RunStatus.Failure; }))
+        {
+        }
+    }
+
 }

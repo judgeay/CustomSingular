@@ -72,7 +72,10 @@ namespace Singular.ClassSpecific.Shaman
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
 
-                        Common.CreateShamanDpsHealBehavior(),
+                        new Decorator(
+                            ret => !Helpers.Rest.IsEatingOrDrinking,
+                            Common.CreateShamanDpsHealBehavior()
+                            ),
 
                         Rest.CreateDefaultRestBehaviour("Healing Surge", "Ancestral Spirit"),
 
@@ -468,7 +471,7 @@ namespace Singular.ClassSpecific.Shaman
                         new Decorator(
                             ret => MovementManager.IsClassMovementAllowed
                                 && !Me.HasAura("Ghost Wolf")
-                                && Me.IsMoving // (DateTime.Now - GhostWolfRequest).TotalMilliseconds < 1000
+                                && Me.IsMoving // (DateTime.UtcNow - GhostWolfRequest).TotalMilliseconds < 1000
                                 && !Me.OnTaxi && !Me.InVehicle 
                                 && !Utilities.EventHandlers.IsShapeshiftSuppressed,
 
@@ -500,9 +503,10 @@ namespace Singular.ClassSpecific.Shaman
                                 Logger.WriteDebug(Color.MediumVioletRed, "Inconsistancy Error:  Me.HasAura('Maelstrom Weapon', {0}) was False!!!!", maelStacks );
                         }
 
-                        string line = string.Format(".... h={0:F1}%/m={1:F1}%, maelstrom={2}",
+                        string line = string.Format(".... h={0:F1}%/m={1:F1}%, mov={2}, mael={3}",
                             Me.HealthPercent,
                             Me.ManaPercent,
+                            Me.IsMoving.ToYN(),
                             maelStacks
                             );
 
@@ -510,12 +514,16 @@ namespace Singular.ClassSpecific.Shaman
                         if (target == null)
                             line += ", target=(null)";
                         else
-                            line += string.Format(", target={0} @ {1:F1} yds, th={2:F1}%, tmelee={3}, tloss={4}", 
+                            line += string.Format(", target={0} @ {1:F1} yds, th={2:F1}%, tmelee={3}, tface={4}, tloss={5}, flame={6}, frost={7}", 
                                 target.SafeName(), 
-                                target.Distance, 
+                                target.SpellDistance(), 
                                 target.HealthPercent,
-                                target.IsWithinMeleeRange, 
-                                target.InLineOfSpellSight );
+                                target.IsWithinMeleeRange.ToYN(), 
+                                Me.IsSafelyFacing(target,180).ToYN(),
+                                target.InLineOfSpellSight.ToYN(),
+                                (long) target.GetAuraTimeLeft("Flame Shock").TotalMilliseconds,
+                                (long) target.GetAuraTimeLeft("Frost Shock").TotalMilliseconds
+                                );
 
                         Logger.WriteDebug(line);
                         return RunStatus.Failure;

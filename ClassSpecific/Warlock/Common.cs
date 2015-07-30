@@ -51,6 +51,8 @@ namespace Singular.ClassSpecific.Warlock
         [Behavior(BehaviorType.Initialize, WoWClass.Warlock, priority: 9999)]
         public static Composite CreateWarlockInitialize()
         {
+            PetManager.NeedsPetSupport = true;
+
             scenario = new CombatScenario(44, 1.5f);
 
             SpellFindResults sfr;
@@ -85,7 +87,7 @@ namespace Singular.ClassSpecific.Warlock
                     Logger.Write("Warlock: spellentry: {0}", se);
                     Logger.Write("Warlock: internalInfo: {0}", internalInfo);
                 }
-                spell = spell;
+                id = spell.Id;
             }
 
             return new PrioritySelector(
@@ -112,7 +114,7 @@ namespace Singular.ClassSpecific.Warlock
                 //new Decorator(ctx => SingularSettings.Instance.DisablePetUsage && Me.GotAlivePet,
                 //    new Action(ctx => Lua.DoString("PetDismiss()"))),
                 new Decorator(
-                    req => !Me.HasAnyAura("Drink", "Food", "Refreshment") && !Me.Mounted,
+                    req => !Helpers.Rest.IsEatingOrDrinking && !Me.Mounted,
                     new PrioritySelector(
                         // new ThrottlePasses( 5, new Action( r => { Logger.Write( "in Rest()"); return RunStatus.Failure; } )),
                         new Sequence(
@@ -177,7 +179,7 @@ namespace Singular.ClassSpecific.Warlock
                                         new Action( r => {
                                             WoWGameObject obj = r as WoWGameObject;
                                             const int StrafeTime = 250;
-                                            WoWMovement.MovementDirection strafe = (((int)DateTime.Now.Second) & 1) == 0 ? WoWMovement.MovementDirection.StrafeLeft : WoWMovement.MovementDirection.StrafeRight;
+                                            WoWMovement.MovementDirection strafe = (((int)DateTime.UtcNow.Second) & 1) == 0 ? WoWMovement.MovementDirection.StrafeLeft : WoWMovement.MovementDirection.StrafeRight;
                                             Logger.Write( LogColor.Hilite, "Soulwell {0} for {1} ms since too close to Soulwell @ {2:F2} yds", strafe, StrafeTime, obj.Distance);
                                             WoWMovement.Move(strafe, TimeSpan.FromMilliseconds(StrafeTime));
                                         })
@@ -298,12 +300,23 @@ namespace Singular.ClassSpecific.Warlock
                             ),
 */
 
-                        new Decorator(
-                            ret => Unit.NearbyUnitsInCombatWithMeOrMyStuff.Any(u => u.IsWithinMeleeRange),
-                            new PrioritySelector(
-                                Spell.BuffSelf("Blood Horror", ret => Me.HealthPercent > 20),
-                                Spell.BuffSelf("Whiplash"),
-                                CreateVoidwalkerDisarm()
+                        new PrioritySelector(
+                            ctx => Unit.UnfriendlyUnits()
+                                .FirstOrDefault(u => u.CurrentTargetGuid == Me.Guid && u.IsWithinMeleeRange),
+                            new Decorator(
+                                req => req != null,
+                                new PrioritySelector(
+                                    new Decorator(
+                                        req => Me.HealthPercent > 20 && Spell.CanCastHack("Blood Horror", Me),
+                                        new Sequence(
+                                            new SeqLog(1, LogColor.Hilite, s => string.Format("^Blood Horror: due {0} melee attacks", ((WoWUnit)s).SafeName())),
+                                            Spell.BuffSelf("Blood Horror")
+                                            )
+                                        ),
+
+                                    // felllash or whiplash them
+                                    Spell.Buff("Command Demon", req => GetCurrentPet() == WarlockPet.Succubus)
+                                    )
                                 )
                             ),
 
@@ -359,7 +372,7 @@ namespace Singular.ClassSpecific.Warlock
 
                         new Decorator(
                             ret => Unit.NearbyUnfriendlyUnits.Count(u => u.IsTargetingMeOrPet) >= 3
-                                || Me.CurrentTarget.IsBoss()
+                                || (Me.GotTarget() && Me.CurrentTarget.IsBoss())
                                 || Unit.NearbyUnfriendlyUnits.Any(u => u.IsPlayer && u.IsTargetingMeOrPet),
                             new PrioritySelector(
                                 Spell.BuffSelf("Dark Soul: Misery"),
@@ -500,8 +513,7 @@ namespace Singular.ClassSpecific.Warlock
         private static Composite CreateWarlockSummonPet()
         {
             return new Decorator(
-                ret => !SingularSettings.Instance.DisablePetUsage
-                    && SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.PetSummoning) 
+                ret => PetManager.IsPetSummonAllowed
                     && !Me.HasAura( "Grimoire of Sacrifice")        // don't summon pet if this buff active
                     && GetBestPet() != GetCurrentPet()
                     && Spell.CanCastHack( "Summon " + GetBestPet()), 
@@ -639,17 +651,6 @@ namespace Singular.ClassSpecific.Warlock
                             )
                         )
                     )
-                );
-        }
-
-        public static Composite CreateVoidwalkerDisarm()
-        {
-            if (!WarlockSettings.UseDisarm || GetBestPet() != WarlockPet.Voidwalker)
-                return new ActionAlwaysFail();
-
-            return new Decorator(
-                req => GetCurrentPet() == WarlockPet.Voidwalker,
-                PetManager.CastAction( "Disarm", on => Unit.NearbyUnitsInCombatWithMeOrMyStuff.FirstOrDefault(u => u.IsWithinMeleeRange && !Me.CurrentTarget.Disarmed && !Me.CurrentTarget.IsCrowdControlled() && Me.IsSafelyFacing(u, 150)))
                 );
         }
 

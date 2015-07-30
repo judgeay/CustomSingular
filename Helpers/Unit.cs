@@ -1,41 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.InteropServices;
-using Styx;
-using Styx.CommonBot;
-using Styx.WoWInternals;
-using Styx.WoWInternals.WoWObjects;
-using Styx.TreeSharp;
-using Action = Styx.TreeSharp.Action;
-using Rest = Singular.Helpers.Rest;
-using Singular.Settings;
-using Styx.Common;
-using System.Diagnostics;
-using Styx.Common.Helpers;
-using System.Drawing;
-using Styx.WoWInternals.DBC;
-using Styx.CommonBot.POI;
 using System.Text;
-using Singular.Managers;
-using Singular.Utilities;
-using Singular.Dynamics;
+using Styx;
+using Styx.Common.Helpers;
+using Styx.CommonBot;
 using Styx.CommonBot.Profiles;
+using Styx.TreeSharp;
+using Styx.WoWInternals;
+using Styx.WoWInternals.DBC;
+using Styx.WoWInternals.WoWObjects;
+using Action = Styx.TreeSharp.Action;
+using Singular.Dynamics;
+using Singular.Managers;
+using Singular.Settings;
+using Singular.Utilities;
 
 namespace Singular.Helpers
 {
     internal static class Unit
     {
-        public static uint TrivialHealth    { get; set; }
+        public static int TrivialLevel { get; set; }
+        public static int TrivialElite { get; set; }
         public static uint SeriousHealth { get; set; }
 
 
-        [Behavior(BehaviorType.Initialize)]
+        [Behavior(BehaviorType.Initialize, priority: int.MaxValue)]
         public static Composite InitializeUnit()
         {
-            TrivialHealth = (uint) (0.01f * SingularSettings.Instance.TrivialMaxHealthPcnt * StyxWoW.Me.MaxHealth);
+            TrivialLevel = StyxWoW.Me.Level - SingularSettings.Instance.TrivialLevelsBelow;
+            TrivialElite = StyxWoW.Me.Level - SingularSettings.Instance.TrivialEliteBelow;
 
-            Logger.WriteFile("  {0}: {1}", "TrivialHealth", Unit.TrivialHealth);
+            Logger.WriteFile("  {0}: {1}", "TrivialLevel", Unit.TrivialLevel);
+            Logger.WriteFile("  {0}: {1}", "TrivialElite", Unit.TrivialElite);
             Logger.WriteFile("  {0}: {1}", "NeedTankTargeting", TankManager.NeedTankTargeting);
             Logger.WriteFile("  {0}: {1}", "NeedHealTargeting", HealerManager.NeedHealTargeting);
             return null;
@@ -123,16 +123,13 @@ namespace Singular.Helpers
         {
             get
             {
-                WoWGuid[] guids = StyxWoW.Me.GroupInfo.RaidMemberGuids
-                    .Union(StyxWoW.Me.GroupInfo.PartyMemberGuids)
-                    .Union(new[] { StyxWoW.Me.Guid })
-                    .Distinct()
-                    .ToArray();
-
-                return (  // must check inheritance in getobj because of LocalPlayer
-                    from p in ObjectManager.GetObjectsOfType<WoWPlayer>(true, true)
-                    where p.IsFriendly && guids.Any(g => g == p.Guid)
-                    select p).ToList();
+                HashSet<WoWGuid> guids = new HashSet<WoWGuid>( StyxWoW.Me.GroupInfo.RaidMemberGuids);
+                guids.Add(StyxWoW.Me.Guid);
+                List<WoWUnit> list = ObjectManager.ObjectList
+                    .Where(o => IsUnit(o) && guids.Contains(o.Guid))
+                    .Select(o => o.ToUnit())
+                    .ToList();
+                return list;
             }
         }
 
@@ -140,25 +137,31 @@ namespace Singular.Helpers
         {
             get
             {
-                WoWGuid[] guids = StyxWoW.Me.GroupInfo.RaidMemberGuids
-                    .Union(StyxWoW.Me.GroupInfo.PartyMemberGuids)
-                    .Union(new[] { StyxWoW.Me.Guid })
-                    .Distinct()
-                    .ToArray();
-
-                guids = guids
-                    .Union(ObjectManager.GetObjectsOfType<WoWPlayer>(true, true)
-                        .Where(p => p.GotAlivePet && p.IsInMyPartyOrRaid )
-                        .Select(p => p.Pet.Guid))
-                    .ToArray();
-
-                return (  // must check inheritance in getobj because of LocalPlayer
-                    from p in ObjectManager.GetObjectsOfType<WoWUnit>(true, true)
-                    where p.IsFriendly && guids.Any(g => g == p.Guid)
-                    select p).ToList();
+                HashSet<WoWGuid> guids = new HashSet<WoWGuid>( StyxWoW.Me.GroupInfo.RaidMemberGuids );
+                List<WoWUnit> list = ObjectManager.ObjectList
+                    .Where(o => IsUnit(o) && (guids.Contains(o.Guid) || (o.ToUnit().IsPet && guids.Contains(o.ToUnit().SummonedByUnitGuid))))
+                    .Select( o => o.ToUnit())
+                    .ToList();
+                return list;
             }
         }
 
+        public static bool IsUnit(WoWObject o)
+        {
+            if (o != null)
+            {
+                try
+                {
+                    if (o.ToUnit() != null)
+                        return true;
+                }
+                catch
+                {
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// List of WoWPartyMember in your Group. Deals with Party / Raid in a list independent manner and does not restrict distance
@@ -277,7 +280,7 @@ namespace Singular.Helpers
             get { return NearbyUnfriendlyUnits.Where(p => p.Aggro || (p.Combat && p.CurrentTargetGuid == StyxWoW.Me.Guid)); }
         }
 
-        public static IEnumerable<WoWUnit> UnitsInCombatWithMeOrMyStuff(int maxSpellDist)
+        public static IEnumerable<WoWUnit> UnitsInCombatWithMeOrMyStuff(int maxSpellDist = -1)
         {
             return UnfriendlyUnits(maxSpellDist)
                 .Where(
@@ -285,7 +288,7 @@ namespace Singular.Helpers
                         || (p.Combat
                             && (p.TaggedByMe
                                 || (p.GotTarget() && p.IsTargetingMyStuff())
-                                || (p == EventHandlers.AttackingEnemyPlayer && (DateTime.Now - EventHandlers.LastAttackedByEnemyPlayer).TotalSeconds < 15)
+                                || (p == EventHandlers.AttackingEnemyPlayer && EventHandlers.TimeSinceAttackedByEnemyPlayer.TotalSeconds < 15)
                                 )
                             )
                     );
@@ -296,15 +299,15 @@ namespace Singular.Helpers
             get { return NearbyUnfriendlyUnits.Where(p => p.Aggro || (p.Combat && (p.TaggedByMe || (p.GotTarget() && p.IsTargetingMyStuff())))); }
         }
 
-        public static IEnumerable<WoWUnit> UnitsInCombatWithUsOrOurStuff(int maxSpellDist)
+        public static IEnumerable<WoWUnit> UnitsInCombatWithUsOrOurStuff(int maxSpellDist = -1)
         {
             return UnfriendlyUnits(maxSpellDist)
                 .Where(
                     p => p.Aggro 
                         || (p.Combat 
                             && (p.TaggedByMe 
-                                || (p.GotTarget() && p.IsTargetingUs()) 
-                                || (p == EventHandlers.AttackingEnemyPlayer && (DateTime.Now - EventHandlers.LastAttackedByEnemyPlayer).TotalSeconds < 15)
+                                || (p.GotTarget() && p.IsTargetingUs())
+                                || (p == EventHandlers.AttackingEnemyPlayer && EventHandlers.TimeSinceAttackedByEnemyPlayer.TotalSeconds < 15)
                                 )
                             )
                     ); 
@@ -480,8 +483,10 @@ namespace Singular.Helpers
             if (unit == null)
                 return false;
 
-            uint maxh = unit.MaxHealth;
-            return maxh <= TrivialHealth;
+            if (unit.Elite)
+                return unit.Level <= TrivialElite;                
+            
+            return unit.Level <= TrivialLevel;
         }
 
         public static bool IsStressful(this WoWUnit unit)
@@ -496,8 +501,38 @@ namespace Singular.Helpers
                 return true;
 
             uint maxh = unit.MaxHealth;
-            return maxh > StyxWoW.Me.MaxHealth * 2 || unit.Level > (StyxWoW.Me.Level + (unit.Elite ? -10 : 2));
+            return maxh > StyxWoW.Me.MaxHealth * 2 || unit.Level > (StyxWoW.Me.Level + (unit.Elite ? -6 : 2));
         }
+
+        public static bool IsStressfulFight(int minHealth, int minTimeToDeath, int minAttackers, int maxAttackRange)
+        {
+            if (!Unit.ValidUnit(StyxWoW.Me.CurrentTarget))
+                return false;
+
+            int mobCount = Unit.UnitsInCombatWithUsOrOurStuff(maxAttackRange).Count();
+            if (mobCount > 0)
+            {
+                if (mobCount >= minAttackers)
+                    return true;
+
+                if (StyxWoW.Me.HealthPercent <= minHealth)
+                {
+                    if (mobCount > 1)
+                        return true;
+                    if (StyxWoW.Me.CurrentTarget.TimeToDeath(-1) > minTimeToDeath)
+                        return true;
+                    if (StyxWoW.Me.CurrentTarget.IsPlayer)
+                        return true;
+                    if (StyxWoW.Me.CurrentTarget.MaxHealth > (StyxWoW.Me.MaxHealth * 2) && StyxWoW.Me.CurrentTarget.CurrentHealth > StyxWoW.Me.CurrentHealth)
+                        return true;
+                    if (StyxWoW.Me.HealthPercent < minHealth / 2)
+                        return true;
+                }
+            }
+
+            return false;
+        }
+
 
         public static WoWPlayer GetPlayerParent(WoWUnit unit)
         {
@@ -992,8 +1027,8 @@ namespace Singular.Helpers
             get
             {
                 return ObjectManager.GetObjectsOfType<WoWPlayer>(false,false).Where(
-                    p => !p.IsMe && p.IsDead && p.IsFriendly && p.IsInMyPartyOrRaid &&
-                         p.DistanceSqr < 40 * 40 && !Blacklist.Contains(p.Guid, BlacklistFlags.Combat)).ToList();
+                    p => !p.IsMe && p.IsDead && p.IsFriendly && p.IsInMyPartyOrRaid() && p.IsPlayer
+                         && p.DistanceSqr < 40 * 40 && !Blacklist.Contains(p.Guid, BlacklistFlags.Combat)).ToList();
             }
         }
 
@@ -1069,6 +1104,8 @@ namespace Singular.Helpers
             WoWGuid guid = unit == null ? WoWGuid.Empty : unit.Guid;
             if ( guid == _lastIsBossGuid )
                 return _lastIsBossResult;
+
+            _lastIsBossGuid = guid;
 #if SINGULAR_BOSS_DETECT
             _lastIsBossGuid = guid;
             _lastIsBossResult = unit != null && (Lists.BossList.CurrentMapBosses.Contains(unit.Name) || Lists.BossList.BossIds.Contains(unit.Entry));
@@ -1117,6 +1154,12 @@ namespace Singular.Helpers
         public static bool IsTargetingUs(this WoWUnit u)
         {
             return u.IsTargetingMyStuff() || Unit.GroupMemberInfos.Any(m => m.Guid == u.CurrentTargetGuid);
+        }
+
+
+        public static bool IsInMyPartyOrRaid(this WoWUnit u)
+        {
+            return StyxWoW.Me.GroupInfo.RaidMemberGuids.Any(m => m == u.Guid);
         }
 
         public static bool IsSensitiveDamage(this WoWUnit u,  int range = 0)
@@ -1218,7 +1261,7 @@ namespace Singular.Helpers
             return me.GroupInfo.IsInParty || me.GroupInfo.IsInRaid;
         }
 
-        private static string _lastGetPredictedError;
+        //private static string _lastGetPredictedError;
         public static float GetVerifiedGetPredictedHealthPercent(this WoWUnit unit, bool includeMyHeals = false)
         {
             float hbhp = unit.GetPredictedHealthPercent(includeMyHeals);
@@ -1513,6 +1556,52 @@ namespace Singular.Helpers
             return ProfileManager.CurrentProfile != null && ProfileManager.CurrentProfile.AvoidMobs != null && ProfileManager.CurrentProfile.AvoidMobs.Contains(unit.Entry);
         }
 
+
+        public static bool IsFlyingOrUnreachableMob(this WoWUnit unit)
+        {
+            if (!StyxWoW.Me.GotTarget())
+                return false;
+
+            // return immediately if already in melee range
+            if (StyxWoW.Me.CurrentTarget.IsWithinMeleeRange)
+                return false;
+
+            // ignore players above ground
+            if (StyxWoW.Me.CurrentTarget.IsPlayer)
+                return false;
+
+            // check if target appears to be higher than melee range off ground
+            float heightOffGround = StyxWoW.Me.CurrentTarget.HeightOffTheGround();
+            float meleeDist = StyxWoW.Me.CurrentTarget.MeleeDistance();
+            if (heightOffGround > meleeDist)
+            {
+                Logger.Write(LogColor.Hilite, "Ranged Attack: {0} {1:F3} yds above ground using Ranged attack since reach is {2:F3} yds....", StyxWoW.Me.CurrentTarget.SafeName(), heightOffGround, meleeDist);
+                return true;
+            }
+
+            // additional check for off ground
+            double heightCheck = StyxWoW.Me.CurrentTarget.MeleeDistance();
+            if (StyxWoW.Me.CurrentTarget.Distance2DSqr < heightCheck * heightCheck && Math.Abs(StyxWoW.Me.Z - StyxWoW.Me.CurrentTarget.Z) >= heightCheck)
+            {
+                Logger.Write(LogColor.Hilite, "Ranged Attack: {0} appears to be off the ground! using Ranged attack....", StyxWoW.Me.CurrentTarget.SafeName());
+                return true;
+            }
+
+            if ((DateTime.UtcNow - Singular.Utilities.EventHandlers.LastNoPathFailure).TotalSeconds < 3f)
+            {
+                Logger.Write( LogColor.Hilite, "Ranged Attack: No Path Available error just happened, so using Ranged attack ....", StyxWoW.Me.CurrentTarget.SafeName());
+                return true;
+            }
+
+            WoWPoint dest = StyxWoW.Me.CurrentTarget.Location;
+            if (!StyxWoW.Me.CurrentTarget.IsWithinMeleeRange && !Styx.Pathing.Navigator.CanNavigateFully(StyxWoW.Me.Location, dest))
+            {
+                Logger.Write(LogColor.Hilite, "Ranged Attack: {0} is not Fully Pathable! using ranged attack....", StyxWoW.Me.CurrentTarget.SafeName());
+                return true;
+            }
+
+            return false;
+        }
     }
 
     public enum CombatArea
@@ -1607,7 +1696,7 @@ namespace Singular.Helpers
             if (StyxWoW.Me.GotTarget())
                 StyxWoW.Me.TimeToDeath();
 
-            bool worldPvp = (DateTime.Now - EventHandlers.LastAttackedByEnemyPlayer).TotalSeconds < 15;
+            bool worldPvp = EventHandlers.TimeSinceAttackedByEnemyPlayer.TotalSeconds < 15;
             if (worldPvp )
             {
                 WorldPvpRecently = worldPvp;
@@ -1718,11 +1807,11 @@ namespace Singular.Helpers
                 guid = target.Guid;
                 _firstLife = target.CurrentHealth;
                 _firstLifeMax = target.MaxHealth;
-                _firstTime = ConvDate2Timestam(DateTime.Now);
+                _firstTime = ConvDate2Timestam(DateTime.UtcNow);
                 //Lets do a little trick and calculate with seconds / u know Timestamp from unix? we'll do so too
             }
             _currentLife = target.CurrentHealth;
-            _currentTime = ConvDate2Timestam(DateTime.Now);
+            _currentTime = ConvDate2Timestam(DateTime.UtcNow);
             int timeDiff = _currentTime - _firstTime;
             uint hpDiff = _firstLife - _currentLife;
             if (hpDiff > 0)
@@ -1751,7 +1840,7 @@ namespace Singular.Helpers
                 guid = target.Guid;
                 _firstLife = target.CurrentHealth;
                 _firstLifeMax = target.MaxHealth;
-                _firstTime = ConvDate2Timestam(DateTime.Now);
+                _firstTime = ConvDate2Timestam(DateTime.UtcNow);
                 //Lets do a little trick and calculate with seconds / u know Timestamp from unix? we'll do so too
                 //Logging.Write("TimeToDeath: {0} (GUID: {1}, Entry: {2}) was healed, resetting data.", target.SafeName(), target.Guid, target.Entry);
                 return indeterminateValue;

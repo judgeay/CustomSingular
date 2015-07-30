@@ -161,7 +161,7 @@ namespace Singular.ClassSpecific.Warrior
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 Common.CheckIfWeShouldCancelBladestorm(),
 
@@ -244,12 +244,12 @@ namespace Singular.ClassSpecific.Warrior
                         SingleTarget(),
 
                             // Charge if we can
-                        Common.CreateChargeBehavior()
-                        )
-                    ),
+                        Common.CreateChargeBehavior(),
 
-                //Move to Melee
-                Movement.CreateMoveToMeleeBehavior(true)
+                        Common.CreateAttackFlyingOrUnreachableMobs()
+
+                        )
+                    )
                 );
         }
 
@@ -265,7 +265,7 @@ namespace Singular.ClassSpecific.Warrior
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 Common.CheckIfWeShouldCancelBladestorm(),
 

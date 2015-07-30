@@ -24,8 +24,11 @@ namespace Singular.Helpers
 {
     internal static class Safers
     {
-        private static Color targetColor = Color.LightCoral;
+        private static Color targetColor = LogColor.Targeting;
 
+        private static WoWGuid guidPrevTotem { get; set; }
+        private static DateTime timePrevTotem { get; set; }
+        
         private static LocalPlayer Me { get { return StyxWoW.Me; } }
 
         private static DateTime _timeNextInvalidTargetMessage = DateTime.MinValue;
@@ -110,7 +113,7 @@ namespace Singular.Helpers
                                         return Me.CurrentTarget;
 
                                     // if attacked in last 15 seconds, go after them
-                                    if ((DateTime.Now - EventHandlers.LastAttackedByEnemyPlayer).TotalSeconds < 15)
+                                    if (EventHandlers.TimeSinceAttackedByEnemyPlayer.TotalSeconds < 15)
                                     {
                                         WoWUnit ganker = EventHandlers.AttackingEnemyPlayer;
                                         if (Unit.ValidUnit(ganker))
@@ -129,6 +132,37 @@ namespace Singular.Helpers
                                         }
                                     }
                                 }
+                                #endregion
+
+                                #region TOTEM KILLER
+
+                                if (SingularRoutine.CurrentWoWContext == WoWContext.Normal && SingularSettings.Instance.TargetCurrentTargetTotems)
+                                {
+                                    if (Me.GotTarget() && !Me.CurrentTarget.IsPlayer && Unit.ValidUnit(Me.CurrentTarget))
+                                    {
+                                        if (Me.CurrentTarget.IsTotem)
+                                        {
+                                            if (Me.CurrentTarget.SummonedByUnit != null && !Me.CurrentTarget.SummonedByUnit.IsPlayer)
+                                            {
+                                                return Me.CurrentTarget;
+                                            }
+                                        }
+                                        else if ((DateTime.UtcNow - timePrevTotem).TotalSeconds > 15)
+                                        {
+                                            float range = Me.IsMelee() ? 15 : 39;
+                                            WoWUnit totem = ObjectManager.GetObjectsOfType<WoWUnit>(false, false)
+                                                .FirstOrDefault(t => t.IsTotem && guidPrevTotem != t.Guid && t.SummonedByUnitGuid == Me.CurrentTargetGuid && Unit.ValidUnit(t) && t.SpellDistance() < range);
+                                            if (totem != null)
+                                            {
+                                                guidPrevTotem = totem.Guid;
+                                                timePrevTotem = DateTime.UtcNow;
+                                                Logger.Write(targetColor, "Switching to Totem: {0} set by {1}", totem.Name, totem.SummonedUnit.SafeName());
+                                                return totem;
+                                            }
+                                        }
+                                    }
+                                }
+
                                 #endregion
 
 #if ALWAYS_SWITCH_TO_BOTPOI
@@ -441,9 +475,9 @@ namespace Singular.Helpers
 
                                         // And there's nothing left, so just return null, kthx.
                                         // ... but show a message about botbase still calling our Combat behavior with nothing to kill
-                                        if (DateTime.Now >= _timeNextInvalidTargetMessage)
+                                        if (DateTime.UtcNow >= _timeNextInvalidTargetMessage)
                                         {
-                                            _timeNextInvalidTargetMessage = DateTime.Now + TimeSpan.FromSeconds(5);
+                                            _timeNextInvalidTargetMessage = DateTime.UtcNow + TimeSpan.FromSeconds(5);
                                             Logger.Write(targetColor, "Bot TargetList is empty, no targets available");
                                         }
 

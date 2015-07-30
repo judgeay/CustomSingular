@@ -226,15 +226,6 @@ namespace Singular.ClassSpecific.Monk
                 );
         }
 
-        private static int GetBattlegroundRoleWeight(WoWPartyMember o, int p)
-        {
-            if (o.HasRole(WoWPartyMember.GroupRole.Tank))
-                return p * 2;
-            if (o.HasRole(WoWPartyMember.GroupRole.Healer))
-                return p;
-            return 0;
-        }
-
         public static WoWUnit FindStatue()
         {
             const uint JADE_SERPENT_STATUE = 60849;
@@ -305,7 +296,12 @@ namespace Singular.ClassSpecific.Monk
                                     )
                                 ),
 
-                            Spell.Cast(SpinningCraneKick, ret => Spell.UseAOE && Unit.NearbyUnfriendlyUnits.Count(u => u.Distance <= 8) >= MonkSettings.SpinningCraneKickCnt),
+                            Spell.Cast(
+                                SpinningCraneKick, 
+                                req => Spell.UseAOE 
+                                    && Unit.UnitsInCombatWithUsOrOurStuff(8).Count() >= MonkSettings.SpinningCraneKickCnt
+                                    && !Unit.UnfriendlyUnits(8).Any(u => !u.Combat || u.IsPlayer || u.IsCrowdControlled() || u.IsTargetingMyStuff())
+                                ),
 
                             // chi dump
                             Spell.Cast("Tiger Palm", ret => Me.CurrentChi > 0 && Me.HasKnownAuraExpired("Tiger Power")),
@@ -1369,13 +1365,14 @@ namespace Singular.ClassSpecific.Monk
                                         bool surgmistTargetNotPriority = false;
                                         string surgmistTargetMessage = "";
                                         // if channel target out of danger and not a healer/tank, check if a healer/tank needs saving heal
-                                        WoWPartyMember pm = Me.GroupInfo.RaidMembers.FirstOrDefault( p => p.Guid == (req as WoWUnit).Guid);
-                                        if ( pm == null)
+                                        // WoWPartyMember pm = Me.GroupInfo.RaidMembers.FirstOrDefault( p => p.Guid == (req as WoWUnit).Guid);
+
+                                        if ( !Unit.GroupMembers.Any(m => m.Guid == (req as WoWUnit).Guid))
                                         {
                                             surgmistTargetNotPriority = true;
                                             surgmistTargetMessage = "MistweaverWaitForCast: surging mist target {0} not a Raid Member";
                                         }
-                                        else if ( !pm.HasRole(WoWPartyMember.GroupRole.Tank) && !pm.HasRole(WoWPartyMember.GroupRole.Healer))
+                                        else if ( !Group.Tanks.Any(t => t.Guid == (req as WoWUnit).Guid) && !Group.Healers.Any(t => t.Guid == (req as WoWUnit).Guid))
                                         {
                                             surgmistTargetNotPriority = true;
                                             surgmistTargetMessage = "MistweaverWaitForCast: surging mist target {0} not a Tank or Healer";
@@ -1443,16 +1440,13 @@ namespace Singular.ClassSpecific.Monk
         {
             return new PrioritySelector(
                 new Decorator(
-                    req => RangedAttacks,
+                    req => RangedAttacks || SingularRoutine.CurrentWoWContext != WoWContext.Normal,
                     Helpers.Common.EnsureReadyToAttackFromLongRange()
-                    )
-/*
-                ,
+                    ),
                 new Decorator(
                     req => !RangedAttacks,
                     Helpers.Common.EnsureReadyToAttackFromMelee()
                     )
- */ 
                 );
         }
 
@@ -1527,7 +1521,7 @@ namespace Singular.ClassSpecific.Monk
             return unit.HasMyAura("Life Cocoon") || !unit.HasAnyAura("Life Cocoon", "Water Shield", "Lightning Shield");
         }
 
-        private static WoWUnit _targetHeal;
+        //private static WoWUnit _targetHeal;
 
         public static Composite CreateMistweaverMonkHealingOriginal(bool selfOnly)
         {

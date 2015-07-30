@@ -125,8 +125,18 @@ namespace Singular.ClassSpecific.Warrior
         public static Composite CreateWarriorLossOfControlBehavior()
         {
             return new PrioritySelector(
-                Spell.BuffSelf("Berserker Rage", ret => Me.Fleeing || (Me.Stunned && Me.HasAuraWithMechanic(Styx.WoWInternals.WoWSpellMechanic.Sapped))),
-                // StyxWoW.Me.HasAuraWithMechanic(WoWSpellMechanic.Fleeing, WoWSpellMechanic.Sapped, WoWSpellMechanic.Incapacitated, WoWSpellMechanic.Horrified)),
+                Spell.BuffSelfAndWait(
+                    "Berserker Rage",
+                    req =>
+                    {
+                        if (Me.HasAuraWithMechanic(WoWSpellMechanic.Fleeing, WoWSpellMechanic.Sapped, WoWSpellMechanic.Incapacitated, WoWSpellMechanic.Turned))
+                            return true;
+                        if (Me.Fleeing)
+                            return true;
+                        return false;
+                    },
+                    gcd: HasGcd.No
+                    ),
 
                 CreateWarriorEnragedRegeneration()
                 );
@@ -203,7 +213,7 @@ namespace Singular.ClassSpecific.Warrior
                                 stance = WarriorStance.GladiatorStance;
                             else if (SingularRoutine.CurrentWoWContext == WoWContext.Battlegrounds)
                                 stance = WarriorStance.GladiatorStance;
-                            else if (Me.Role != WoWPartyMember.GroupRole.Tank)
+                            else if (!Group.MeIsTank)
                                 stance = WarriorStance.GladiatorStance;
                             else 
                                 stance = WarriorStance.DefensiveStance;
@@ -481,60 +491,35 @@ namespace Singular.ClassSpecific.Warrior
                     if (!Me.GotTarget())
                         return false;
 
-                    if (Me.CurrentTarget.IsPlayer)
-                        return false;
-
-                    if (Me.CurrentTarget.IsFlying)
-                    {
-                        float heightOffGround = Me.CurrentTarget.HeightOffTheGround();
-                        float meleeDist = Me.CurrentTarget.MeleeDistance();
-                        if (heightOffGround > meleeDist)
-                        {
-                            Logger.Write(LogColor.Hilite, "Ranged Attack: {0} is Flying {1:F3} yds off ground! using Ranged attack since can only reach {2:F3} yds....", Me.CurrentTarget.SafeName(), heightOffGround, meleeDist);
-                            return true;
-                        }
-                    }
-
-                    if ((DateTime.Now - Singular.Utilities.EventHandlers.LastNoPathFailure).TotalSeconds < 1f)
-                    {
-                        Logger.Write( LogColor.Hilite, "Ranged Attack: No Path Available error just happened, so using Ranged attack ....", Me.CurrentTarget.SafeName());
-                        return true;
-                    }
-/*
-                    if (Me.CurrentTarget.IsAboveTheGround())
-                    {
-                    Logger.Write( LogColor.Hilite, "{0} is {1:F1) yds above the ground! using Ranged attack....", Me.CurrentTarget.SafeName(), Me.CurrentTarget.HeightOffTheGround());
-                    return true;
-                    }
-*/
-                    double heightCheck = Me.CurrentTarget.MeleeDistance();
-                    if (Me.CurrentTarget.Distance2DSqr < heightCheck * heightCheck && Math.Abs(Me.Z - Me.CurrentTarget.Z) >= heightCheck )
-                    {
-                        Logger.Write( LogColor.Hilite, "Ranged Attack: {0} appears to be off the ground! using Ranged attack....", Me.CurrentTarget.SafeName());
-                        return true;
-                    }
-                    
-                    WoWPoint dest = Me.CurrentTarget.Location;
-                    if (!Me.CurrentTarget.IsWithinMeleeRange && !Styx.Pathing.Navigator.CanNavigateFully(Me.Location, dest))
-                    {
-                        Logger.Write( LogColor.Hilite, "Ranged Attack: {0} is not Fully Pathable! using ranged attack....", Me.CurrentTarget.SafeName());
-                        return true;
-                    }
-
-                    return false;
+                    return Me.CurrentTarget.IsFlyingOrUnreachableMob();
                 },
                 new Decorator( 
                     req => !Me.CurrentTarget.IsWithinMeleeRange ,
-                    new PrioritySelector(
-                        Spell.Cast("Heroic Throw"),
-                        new Sequence(
-                            new PrioritySelector(
-                                Movement.CreateEnsureMovementStoppedBehavior( 27f, on => Me.CurrentTarget, reason: "To cast Throw"),
-                                new ActionAlwaysSucceed()
-                                ),
-                            new Wait( 1, until => !Me.IsMoving, new ActionAlwaysSucceed()),
-                            Spell.Cast("Throw")
-                            )
+                    new Sequence(
+                        new PrioritySelector(
+                            Spell.Cast("Taunt"),
+                            Spell.Cast("Heroic Throw"),
+                            Spell.Cast("Whirlwind", req => !Spell.UseAOE && Me.CurrentTarget.SpellDistance() < 8 + _DistanceWindAndThunder),
+                            Spell.Cast("Shockwave", req => !Spell.UseAOE && Me.CurrentTarget.SpellDistance() < 10 && Me.IsSafelyFacing(Me.CurrentTarget, 60)),
+                            Spell.Cast("Dragon Roar", req => !Spell.UseAOE && Me.CurrentTarget.SpellDistance() < 8),
+                            Spell.Cast("Thunder Clap", req => !Spell.UseAOE && Me.CurrentTarget.SpellDistance() < 8 + _DistanceWindAndThunder),
+                            Spell.Cast("Storm Bolt"),
+                            new Sequence(
+                                new PrioritySelector(
+                                    Movement.CreateEnsureMovementStoppedBehavior( 27f, on => Me.CurrentTarget, reason: "To cast Throw"),
+                                    new ActionAlwaysSucceed()
+                                    ),
+                                new Wait( 1, until => !Me.IsMoving, new ActionAlwaysSucceed()),
+                                Spell.Cast("Throw")
+                                )
+                            ),
+                        new Action( r => 
+                        {
+                            if (Me.CurrentTarget.TimeToDeath(99) < 40)
+                            {
+                                SingularRoutine.TargetTimeoutTimer.Reset();
+                            }
+                        })
                         )
                     )
                 );

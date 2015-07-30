@@ -155,6 +155,7 @@ namespace Singular
             ClassSpecific.Shaman.Totems.ToSpellId(WoWTotem.SpiritLink),
             124682, // Enveloping Mist
             116694, // Surging Mist
+            145205, // Wild Mushroom (Restoration Druid)
         };
 
         public static bool IsHeal(this WoWSpell spell)
@@ -239,14 +240,17 @@ namespace Singular
         public static float FindGroundBelow(this WoWUnit unit)
         {
             var unitLoc = new WoWPoint(unit.Location.X, unit.Location.Y, unit.Location.Z);
-            var listMeshZ = Navigator.FindHeights(unitLoc.X, unitLoc.Y).Where(h => h <= unitLoc.Z + 2f);
-            if (listMeshZ.Any())
-                return listMeshZ.Max();
-
+            var listMeshZ = Navigator.FindHeights(unitLoc.X, unitLoc.Y);
+            if (listMeshZ != null)
+            {
+                listMeshZ = listMeshZ.Where(h => h <= unitLoc.Z + 2f).ToList();
+                if (listMeshZ.Any())
+                    return listMeshZ.Max();
+            }
             return float.MaxValue;
         }
 
-        private static string _lastGetPredictedError;
+        //private static string _lastGetPredictedError;
         public static float PredictedHealthPercent(this WoWUnit u, bool includeMyHeals = false)
         {
 #if true

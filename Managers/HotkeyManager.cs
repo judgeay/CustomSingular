@@ -23,6 +23,8 @@ namespace Singular.Managers
     {
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
         public static extern IntPtr GetActiveWindow();
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        public static extern IntPtr GetForegroundWindow();
         
 
         private static HotkeySettings HotkeySettings { get { return SingularSettings.Instance.Hotkeys(); } }
@@ -47,7 +49,6 @@ namespace Singular.Managers
         /// </summary>
         public static bool IsMovementEnabled { get { return _MovementEnabled && !IsMovementTemporarilySuspended; } }
 
-
         private static bool IsMovementTemporarilySuspended
         {
             get 
@@ -57,7 +58,7 @@ namespace Singular.Managers
                     return false;
 
                 // check if still suspended
-                if ( _MovementTemporarySuspendEndtime > DateTime.Now )
+                if ( _MovementTemporarySuspendEndtime > DateTime.UtcNow )
                     return true;
 
                 // suspend has timed out, so refresh suspend timer if key is still down
@@ -65,7 +66,7 @@ namespace Singular.Managers
                 // if ( HotkeySettings.SuspendMovementKeys.Any( k => IsKeyDown( k )))
                 if ( IsKeyDown( _lastMovementTemporarySuspendKey ))
                 {
-                    _MovementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
+                    _MovementTemporarySuspendEndtime = DateTime.UtcNow + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
                     return true;
                 }
 
@@ -76,7 +77,7 @@ namespace Singular.Managers
             set
             {
                 if (value)
-                    _MovementTemporarySuspendEndtime = DateTime.Now + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
+                    _MovementTemporarySuspendEndtime = DateTime.UtcNow + TimeSpan.FromSeconds(HotkeySettings.SuspendDuration);
                 else
                     _MovementTemporarySuspendEndtime = DateTime.MinValue;
             }
@@ -108,6 +109,9 @@ namespace Singular.Managers
 
             // Hook the  hotkeys for the appropriate WOW Window...
             HotkeysManager.Initialize( StyxWoW.Memory.Process.MainWindowHandle);
+
+            if (HotkeySettings.LogMarkKey != Keys.None)
+                RegisterHotkeyAssignment("LogMark", HotkeySettings.LogMarkKey, (hk) => { Logger.LogMark(); TellUser("LogMark #{0} Added", Logger.LogMarkIndex); });
 
             // define hotkeys for behaviors when using them as toggles (press once to disable, press again to enable)
             // .. otherwise, keys are polled for in Pulse()
@@ -143,7 +147,10 @@ namespace Singular.Managers
             if ((key & Keys.Control) != 0)
                 mods |= ModifierKeys.Control;
 
-            Logger.Write( LogColor.Hilite, "Hotkey: To disable {0}, press: [{1}]", name, key.ToFormattedString());
+            if (name == "LogMark")
+                Logger.Write(LogColor.Hilite, "Hotkey: To add a LOGMARK, press: [{0}]", key.ToFormattedString());
+            else 
+                Logger.Write( LogColor.Hilite, "Hotkey: To disable {0}, press: [{1}]", name, key.ToFormattedString());
             HotkeysManager.Register(name, keyCode, mods, callback);
         }
 
@@ -169,6 +176,7 @@ namespace Singular.Managers
             _HotkeysRegistered = false;
 
             // remove hotkeys for commands with 1:1 key assignment          
+            HotkeysManager.Unregister("LogMark");
             HotkeysManager.Unregister("AOE");
             HotkeysManager.Unregister("Combat");
             HotkeysManager.Unregister("Movement");
@@ -202,8 +210,10 @@ namespace Singular.Managers
         /// </summary>
         internal static void Pulse()
         {
+            IntPtr activeWindow = GetActiveWindow();
+
             // since we are polling system keybd, make sure our game window is active
-            if (GetActiveWindow() != StyxWoW.Memory.Process.MainWindowHandle)
+            if (activeWindow != StyxWoW.Memory.Process.MainWindowHandle)
                 return;
 
             // handle release of key here if not using toggle behavior
@@ -273,7 +283,7 @@ namespace Singular.Managers
                 if (last_IsMovementEnabled)
                     TellUser("Movement now enabled!");
                 else
-                    TellUser("Movement disabled... press {0} to enable", HotkeySettings.MovementToggle.ToFormattedString() );
+                    TellUser("Movement disabled... press {0} to enable", HotkeySettings.MovementToggle.ToFormattedString());
 
                 MovementManager.Update();
             }
@@ -309,18 +319,6 @@ namespace Singular.Managers
             }
         }
 
-        #region Helpers
-
-        private static void TellUser(string template, params object[] args)
-        {
-            string msg = string.Format(template, args);
-            Logger.Write( Color.Yellow, string.Format("Hotkey: " + msg));
-            if ( HotkeySettings.ChatFrameMessage )
-                Lua.DoString(string.Format("print('{0}!')", msg));
-        }
-
-        #endregion
-
         // track whether keys registered yet
         private static bool _HotkeysRegistered = false;
 
@@ -333,7 +331,7 @@ namespace Singular.Managers
         private static Keys _lastMovementTemporarySuspendKey;
 
         // save keys used at last Register
-        public static Keys[] _registeredMovementSuspendKeys;
+        //public static Keys[] _registeredMovementSuspendKeys;
 
         // state prior to last puls saved here
         private static bool last_IsAoeEnabled;
@@ -432,6 +430,11 @@ namespace Singular.Managers
         static bool IsKeyDown(Keys key)
         {
             return (GetAsyncKeyState((int) key) & 0x8000) != 0;
+        }
+
+        private static void TellUser(string template, params object[] args)
+        {
+            Logger.TellUser("singular - Hotkey: " + template, args);
         }
     }
 

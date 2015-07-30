@@ -182,7 +182,7 @@ namespace Singular.ClassSpecific.Warrior
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 Common.CheckIfWeShouldCancelBladestorm(),
 
@@ -297,11 +297,12 @@ namespace Singular.ClassSpecific.Warrior
                                 )
                             ),
 
-                        Common.CreateChargeBehavior()
-                        )
-                    ),
+                        Common.CreateChargeBehavior(),
 
-                Movement.CreateMoveToMeleeBehavior(true)
+                        Common.CreateAttackFlyingOrUnreachableMobs()
+
+                        )
+                    )
                 );
         }
 
@@ -316,7 +317,7 @@ namespace Singular.ClassSpecific.Warrior
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 Common.CheckIfWeShouldCancelBladestorm(),
 
@@ -627,7 +628,7 @@ namespace Singular.ClassSpecific.Warrior
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown() && !StyxWoW.Me.HasAura("Bladestorm"),
@@ -859,7 +860,7 @@ namespace Singular.ClassSpecific.Warrior
                     {
                         mobc = scenario.MobCount;
                         avoidaoe = scenario.AvoidAOE;
-                        mobcc = scenario.Mobs.Count();
+                        mobcc = scenario.Mobs == null ? 0 : scenario.Mobs.Count();
                     }
 
                     log += string.Format(

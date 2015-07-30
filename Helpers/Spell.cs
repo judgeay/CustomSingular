@@ -89,31 +89,37 @@ namespace Singular.Helpers
 
         public static bool CastPrimative(string spellName)
         {
+            LastSpellTarget = WoWGuid.Empty;
             return SpellManager.Cast(spellName);
         }
 
         public static bool CastPrimative(int id)
         {
+            LastSpellTarget = WoWGuid.Empty;
             return SpellManager.Cast(id);
         }
 
         public static bool CastPrimative(WoWSpell spell)
         {
+            LastSpellTarget = WoWGuid.Empty;
             return SpellManager.Cast(spell);
         }
 
         public static bool CastPrimative(string spellName, WoWUnit unit)
         {
+            LastSpellTarget = unit == null ? WoWGuid.Empty : unit.Guid;
             return SpellManager.Cast(spellName, unit);
         }
 
         public static bool CastPrimative(int id, WoWUnit unit)
         {
+            LastSpellTarget = unit == null ? WoWGuid.Empty : unit.Guid;
             return SpellManager.Cast(id, unit);
         }
 
         public static bool CastPrimative(WoWSpell spell, WoWUnit unit)
         {
+            LastSpellTarget = unit == null ? WoWGuid.Empty : unit.Guid;
             return SpellManager.Cast(spell, unit);
         }
 
@@ -216,7 +222,8 @@ namespace Singular.Helpers
             if (atTarget.IsPlayer && unit.IsPlayer)
                 return 3.5f;
 
-            return Math.Max(5f, atTarget.CombatReach + 1.3333334f + unit.CombatReach);
+            // return Math.Max(5f, atTarget.CombatReach + 1.3333334f + unit.CombatReach);
+            return Math.Max(5f, atTarget.CombatReach + 1.3333334f);
         }
 
         public static float MeleeRange
@@ -436,6 +443,7 @@ namespace Singular.Helpers
         #region Properties
 
         internal static string LastSpellCast { get; set; }
+        internal static WoWGuid LastSpellTarget { get; set; }
 
         #endregion
 
@@ -603,24 +611,18 @@ namespace Singular.Helpers
 
         #region Wait
 
-        public static Composite WaitForGlobalCooldown(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
+        public static Composite WaitForGlobalCooldown(LagTolerance allow = LagTolerance.Yes)
         {
-            return new PrioritySelector(
-                new Decorator(
-                    ret => faceDuring == FaceDuring.Yes,
-                    Movement.CreateFaceTargetBehavior()
-                    ),
-                new Action(ret =>
+            return new Action(ret =>
                 {
                     if (IsGlobalCooldown(allow))
                         return RunStatus.Success;
 
                     return RunStatus.Failure;
-                })
-                );
+                });
         }
 
-        public static bool IsGlobalCooldown(LagTolerance allow = LagTolerance.Yes)
+        public static bool IsGlobalCooldown(LagTolerance allow = LagTolerance.No)
         {
 #if NO_LATENCY_ISSUES_WITH_GLOBAL_COOLDOWN
             uint latency = allow == LagTolerance.Yes ? SingularRoutine.Latency : 0;
@@ -641,27 +643,29 @@ namespace Singular.Helpers
         /// <param name = "faceDuring">Whether or not to face during casting</param>
         /// <param name = "allow">Whether or not to allow lag tollerance for spell queueing</param>
         /// <returns></returns>
-        public static Composite WaitForCast(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
+        public static Composite WaitForCast(LagTolerance allow = LagTolerance.Yes)
         {
-            return new PrioritySelector(
-                new Decorator(
-                    ret => faceDuring == FaceDuring.Yes,
-                    Movement.CreateFaceTargetBehavior()
-                    ),
-                new Action(ret =>
+            return new Action(ret =>
                 {
                     if (IsCasting(allow))
                         return RunStatus.Success;
 
                     return RunStatus.Failure;
-                })
-                );
+                });
         }
 
         public static bool IsCasting(LagTolerance allow = LagTolerance.Yes)
         {
-            if (!StyxWoW.Me.IsCasting)
-                return false;
+            try
+            {
+                if (!StyxWoW.Me.IsCasting)
+                    return false;
+            }
+            catch(Styx.InvalidObjectPointerException ie)
+            {
+                Logger.WriteDiagnostic("IsCasting: InvalidObjectPointerException exception encountered - returning true", ie);
+                return true;
+            }
 
             //if (StyxWoW.Me.IsWanding())
             //    return RunStatus.Failure;
@@ -695,27 +699,29 @@ namespace Singular.Helpers
         /// <param name = "faceDuring">Whether or not to face during casting</param>
         /// <param name = "allow">Whether or not to allow lag tollerance for spell queueing</param>
         /// <returns></returns>
-        public static Composite WaitForChannel(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
+        public static Composite WaitForChannel(LagTolerance allow = LagTolerance.Yes)
         {
-            return new PrioritySelector(
-                new Decorator(
-                    ret => faceDuring == FaceDuring.Yes,
-                    Movement.CreateFaceTargetBehavior()
-                    ),
-                new Action(ret =>
+            return new Action(ret =>
                 {
                     if (IsChannelling(allow))
                         return RunStatus.Success;
 
                     return RunStatus.Failure;
-                })
-                );
+                });
         }
 
         public static bool IsChannelling(LagTolerance allow = LagTolerance.Yes)
         {
-            if (!StyxWoW.Me.IsChanneling)
-                return false;
+            try
+            {
+                if (!StyxWoW.Me.IsChanneling)
+                    return false;
+            }
+            catch (Styx.InvalidObjectPointerException ie)
+            {
+                Logger.WriteDiagnostic("IsChannelling: InvalidObjectPointerException exception encountered - returning true", ie);
+                return true;
+            }
 
             uint latency = SingularRoutine.Latency * 2;
             TimeSpan timeLeft = StyxWoW.Me.CurrentChannelTimeLeft;
@@ -730,20 +736,20 @@ namespace Singular.Helpers
             return IsCasting(allow) || IsChannelling();
         }
 
-        public static Composite WaitForCastOrChannel(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
+        public static Composite WaitForCastOrChannel(LagTolerance allow = LagTolerance.Yes)
         {
             return new PrioritySelector(
-                WaitForCast(faceDuring, allow),
-                WaitForChannel(faceDuring, allow)
+                WaitForCast(allow),
+                WaitForChannel(allow)
                 );
         }
 
-        public static Composite WaitForGcdOrCastOrChannel(FaceDuring faceDuring = FaceDuring.No, LagTolerance allow = LagTolerance.Yes)
+        public static Composite WaitForGcdOrCastOrChannel(LagTolerance allow = LagTolerance.Yes)
         {
             return new PrioritySelector(
-                WaitForGlobalCooldown(faceDuring,allow),
-                WaitForCast(faceDuring, allow),
-                WaitForChannel(faceDuring, allow)
+                WaitForGlobalCooldown(allow),
+                WaitForCast(allow),
+                WaitForChannel(allow)
                 );
         }
 
@@ -1784,7 +1790,14 @@ namespace Singular.Helpers
                         // save status of queueing spell (lag tolerance - the prior spell still completing)
                         cctx.IsSpellBeingQueued = allow == LagTolerance.Yes && (Spell.GcdActive || StyxWoW.Me.IsCasting || StyxWoW.Me.IsChanneling);
 
-                        LogCast(cctx.spell.Name, cctx.unit, cctx.health, cctx.distance, cctx.spell.IsHeal());
+                        const int PENANCE = 047540;
+                        LogCast(
+                            cctx.spell.Name, 
+                            cctx.unit, 
+                            cctx.health, 
+                            cctx.distance,
+                            cctx.spell.IsHeal() ? true : (cctx.spell.Id == PENANCE && cctx.unit.IsFriendly)
+                            );
 
                         if (SingularSettings.DebugSpellCasting)
                             Logger.WriteDebug("Cast('{0}'): dist:{1:F3}, need({2}), hitbox:{3:F3}",
@@ -2532,9 +2545,9 @@ namespace Singular.Helpers
 
                 if (unit.Guid == Me.CurrentTargetGuid)
                     sTarget = "target";
-                else if (unit.IsPlayer && unit.ToPlayer().IsInMyPartyOrRaid)
+                else if (unit.IsPlayer && unit.ToPlayer().IsInMyPartyOrRaid())
                     sTarget = unit.Name;
-                else if (unit.IsPet && unit.OwnedByUnit != null && unit.OwnedByUnit.IsPlayer && unit.OwnedByUnit.ToPlayer().IsInMyPartyOrRaid)
+                else if (unit.IsPet && unit.OwnedByUnit != null && unit.OwnedByUnit.IsPlayer && unit.OwnedByUnit.ToPlayer().IsInMyPartyOrRaid())
                     sTarget = unit.OwnedByUnit.Name + "-pet";
                 else if (Me.GotAlivePet)
                 {
@@ -2963,18 +2976,18 @@ namespace Singular.Helpers
 
         static public void Add(uint spellID, TimeSpan duration)
         {
-            SpellBlacklistDict[spellID] = new BlacklistTime(DateTime.Now, duration);
+            SpellBlacklistDict[spellID] = new BlacklistTime(DateTime.UtcNow, duration);
         }
 
         static public void Add(string spellName, TimeSpan duration)
         {
-            SpellStringBlacklistDict[spellName] = new BlacklistTime(DateTime.Now, duration);
+            SpellStringBlacklistDict[spellName] = new BlacklistTime(DateTime.UtcNow, duration);
         }
 
         static void RemoveIfExpired(uint spellID)
         {
             if (SpellBlacklistDict.ContainsKey(spellID) &&
-                SpellBlacklistDict[spellID].TimeStamp + SpellBlacklistDict[spellID].Duration <= DateTime.Now)
+                SpellBlacklistDict[spellID].TimeStamp + SpellBlacklistDict[spellID].Duration <= DateTime.UtcNow)
             {
                 SpellBlacklistDict.Remove(spellID);
             }
@@ -2983,7 +2996,7 @@ namespace Singular.Helpers
         static void RemoveIfExpired(string spellName)
         {
             if (SpellStringBlacklistDict.ContainsKey(spellName) &&
-                SpellStringBlacklistDict[spellName].TimeStamp + SpellStringBlacklistDict[spellName].Duration <= DateTime.Now)
+                SpellStringBlacklistDict[spellName].TimeStamp + SpellStringBlacklistDict[spellName].Duration <= DateTime.UtcNow)
             {
                 SpellStringBlacklistDict.Remove(spellName);
             }

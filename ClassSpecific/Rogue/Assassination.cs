@@ -46,7 +46,7 @@ namespace Singular.ClassSpecific.Rogue
                 Common.CreateRoguePullSkipNonPickPocketableMob(),
                 Common.CreateRogueControlNearbyEnemyBehavior(),
                 Common.CreateRogueMoveBehindTarget(),
-                Helpers.Common.EnsureReadyToAttackFromMelee(),
+                Common.RogueEnsureReadyToAttackFromMelee(),
                 Spell.WaitForCastOrChannel(),
 
                 new Decorator(
@@ -85,7 +85,7 @@ namespace Singular.ClassSpecific.Rogue
         public static Composite CreateAssaRogueNormalCombat()
         {
             return new PrioritySelector(
-                Safers.EnsureTarget(),
+                Common.RogueEnsureWeKillSappedMobs(),
                 Common.CreateRogueMoveBehindTarget(),
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 

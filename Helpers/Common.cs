@@ -18,12 +18,29 @@ using Singular.ClassSpecific.Warlock;
 using System.Drawing;
 using Styx.CommonBot.POI;
 using Styx.CommonBot.Routines;
+using Singular.Dynamics;
 
 namespace Singular.Helpers
 {
     internal static class Common
     {
         private static LocalPlayer Me { get { return StyxWoW.Me; } }
+
+        [Behavior(BehaviorType.Initialize, WoWClass.None, priority: int.MaxValue - 5 )]
+        public static Composite CreateHelpersCommonInitialize()
+        {
+            if (Me.IsInGroup())
+            {
+                Logger.Write(LogColor.Init, "Soulwell: will {0} if available", SingularSettings.Instance.UseSoulwell ? "use" : "not use");
+                if (!SingularSettings.Instance.UseTable)
+                    Logger.Write(LogColor.Init, "Mage Table: ignored due to Use Table=false setting");
+                else if ((CharacterSettings.Instance.DrinkAmount + CharacterSettings.Instance.FoodAmount) == 0)
+                    Logger.Write(LogColor.Init, "Mage Table: ignored since HonorBuddy Drink/Food Amount to buy = 0");
+                else
+                    Logger.Write(LogColor.Init, "Mage Table: will pickup {0} mage food when we run out", ((Math.Max(CharacterSettings.Instance.DrinkAmount, CharacterSettings.Instance.FoodAmount) + 19) / 20) * 20);
+            }
+            return null;
+        }
 
         /// <summary>
         /// 
@@ -186,6 +203,8 @@ namespace Singular.Helpers
                                     }
                                 }                                
                             }
+
+                            return RunStatus.Failure;
                         })
                         )
                     );
@@ -202,12 +221,12 @@ namespace Singular.Helpers
                         {
                             if (Me.GotAlivePet)
                             {
-                                bool petUse = SingularRoutine.IsAllowed(CapabilityFlags.PetUse);
+                                bool petUse = PetManager.IsPetUseAllowed;
                                 if (!petUse)
                                 {
                                     if (Me.Pet.GotTarget() && Me.Pet.Combat)
                                     {
-                                        PetManager.CastAction("Passive");   // set to passive
+                                        PetManager.Passive();   // set to passive
                                     }
                                 }
                                 else if (petUse)
@@ -216,7 +235,7 @@ namespace Singular.Helpers
                                     {
                                         // pickup aggroed mobs I'm not attacking (grab easy agro first)
                                         WoWUnit aggroedOnMe = Unit.NearbyUnfriendlyUnits
-                                            .Where(u => u.Combat && u.GotTarget() && u.CurrentTarget.IsMe && u.Guid != Me.CurrentTargetGuid && !u.IsCrowdControlled())
+                                            .Where(u => u.CurrentTargetGuid == Me.Guid && u.Combat && !u.IsCrowdControlled())
                                             .OrderBy(u => u.Location.DistanceSqr(Me.Pet.Location))
                                             .FirstOrDefault();
                                         
@@ -224,7 +243,7 @@ namespace Singular.Helpers
                                         if (aggroedOnMe == null)
                                             aggroedOnMe = Me.CurrentTarget;
 
-                                        if (aggroedOnMe != null)
+                                        if (aggroedOnMe != null && Me.Pet.CurrentTargetGuid != aggroedOnMe.Guid)
                                         {
                                             if (SingularSettings.Debug)
                                             {
@@ -234,7 +253,7 @@ namespace Singular.Helpers
                                                 else
                                                     reason = "PickupAggro";
 
-                                                Logger.WriteDebug("PetManager: [reason={0}] sending Pet at {1} @ {2:F1} yds from Pet", reason, aggroedOnMe.SafeName(), Me.Pet.SpellDistance(r as WoWUnit));
+                                                Logger.WriteDebug("PetManager: [reason={0}] sending Pet at {1} @ {2:F1} yds from Pet", reason, aggroedOnMe.SafeName(), Me.Pet.SpellDistance(aggroedOnMe));
                                             }
 
                                             PetManager.Attack(aggroedOnMe);
@@ -242,6 +261,8 @@ namespace Singular.Helpers
                                     }
                                 }                                
                             }
+
+                            return RunStatus.Failure;
                         })
                         )
                     );
@@ -468,21 +489,34 @@ namespace Singular.Helpers
             if (u == null || !u.IsCasting)
                 return false;
 
-            if (!SingularSettings.Debug)
-                return u.CanInterruptCurrentSpellCast && u.InLineOfSight && StyxWoW.Me.IsSafelyFacing(u, 150f);
-
             if (!u.CanInterruptCurrentSpellCast)
-                ;   // Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but CanInterruptCurrentSpellCast == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
-            else if (!u.InLineOfSpellSight)
-                ;   // Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but LoSS == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
-            else if (!StyxWoW.Me.IsSafelyFacing(u))
-                ;   // Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but Facing == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
-            else if (u.CurrentCastTimeLeft.TotalMilliseconds < 250)
-                ;
-            else
-                return true;
+            {
+                //if (!SingularSettings.Debug)
+                //    Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but CanInterruptCurrentSpellCast == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
+                return false;
+            }
 
-            return false;
+            if (!u.InLineOfSpellSight)
+            {
+                //if (!SingularSettings.Debug)
+                //    Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but LoSS == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
+                return false;
+            }
+
+            if (!StyxWoW.Me.IsSafelyFacing(u))
+            {
+                //if (!SingularSettings.Debug)
+                //    Logger.WriteDebug("IsInterruptTarget: {0} casting {1} but Facing == false", u.SafeName(), (u.CastingSpell == null ? "(null)" : u.CastingSpell.Name));
+                return false;
+            }
+
+            if (u.CurrentCastTimeLeft.TotalMilliseconds < 250)
+            {
+                // not worth interrupting at this point
+                return false;
+            }
+
+            return true;
         }
 
 
@@ -654,8 +688,11 @@ namespace Singular.Helpers
 
         #endregion
 
-        public static Composite EnsureReadyToAttackFromMelee()
+        public static Composite EnsureReadyToAttackFromMelee(SimpleBooleanDelegate reqAutoAttack = null)
         {
+            if (reqAutoAttack == null)
+                reqAutoAttack = req => true;
+
             PrioritySelector prio = new PrioritySelector(
                 Movement.CreatePositionMobsInFront(),
                 Safers.EnsureTarget(),
@@ -666,7 +703,10 @@ namespace Singular.Helpers
                     req => Me.GotTarget() && Me.CurrentTarget.Distance < SingularSettings.Instance.MeleeDismountRange,
                     Helpers.Common.CreateDismount( Dynamics.CompositeBuilder.CurrentBehaviorType.ToString())   // should be Pull or Combat 99% of the time
                     ),
-                Helpers.Common.CreateAutoAttack()
+                new Decorator(
+                    req => reqAutoAttack(req),
+                    Helpers.Common.CreateAutoAttack()
+                    )
                 );
 
             if (Dynamics.CompositeBuilder.CurrentBehaviorType == BehaviorType.Pull)
@@ -710,7 +750,7 @@ namespace Singular.Helpers
                 Movement.CreateMoveToLosBehavior(),
                 Movement.CreateFaceTargetBehavior(),
                 Helpers.Common.CreateDismount(Dynamics.CompositeBuilder.CurrentBehaviorType.ToString()),   // should be Pull or Combat 99% of the time
-                Movement.CreateMoveToUnitBehavior(on => Me.CurrentTarget, 30, 25),
+                Movement.CreateMoveToUnitBehavior(on => Me.CurrentTarget, 29, 25),
                 Helpers.Common.CreateAutoAttack(),
                 Movement.CreateEnsureMovementStoppedBehavior(25f)
                 );
@@ -726,13 +766,13 @@ namespace Singular.Helpers
                 Movement.CreateMoveToLosBehavior(),
                 Movement.CreateFaceTargetBehavior(),
                 Helpers.Common.CreateDismount(Dynamics.CompositeBuilder.CurrentBehaviorType.ToString()),   // should be Pull or Combat 99% of the time
-                Movement.CreateMoveToUnitBehavior(on => Me.CurrentTarget, 40, 36),
+                Movement.CreateMoveToUnitBehavior(on => Me.CurrentTarget, 39, 35),
                 Helpers.Common.CreateAutoAttack(),
                 Movement.CreateEnsureMovementStoppedBehavior(36f)
                 );
         }
 
-        static DateTime brezStart = DateTime.Now;
+        static DateTime brezStart = DateTime.UtcNow;
         static WoWGuid brezPrevGuid = WoWGuid.Empty;
 
         public static CombatRezTarget CombatRezTargetSetting
@@ -797,14 +837,14 @@ namespace Singular.Helpers
                                     if (((WoWUnit)on).Guid != brezPrevGuid)
                                     {
                                         brezPrevGuid = ((WoWUnit)on).Guid;
-                                        brezStart = DateTime.Now + TimeSpan.FromSeconds( SingularSettings.Instance.CombatRezDelay);
+                                        brezStart = DateTime.UtcNow + TimeSpan.FromSeconds( SingularSettings.Instance.CombatRezDelay);
                                         Logger.Write( LogColor.Hilite,"^Combat Ressurrect: {0} @ {1:F1} yds in {2} seconds", ((WoWUnit)on).SafeName(), ((WoWUnit)on).SpellDistance(), SingularSettings.Instance.CombatRezDelay);
                                     }
                                     return RunStatus.Failure;
                                 }),
                                 Movement.CreateMoveToLosBehavior(on => (WoWUnit) on),
                                 Movement.CreateMoveToUnitBehavior(on => (WoWUnit)on, 40f, 40f),
-                                new Wait( SingularSettings.Instance.CombatRezDelay, until => brezStart < DateTime.Now, new ActionAlwaysFail()),
+                                new Wait( SingularSettings.Instance.CombatRezDelay, until => brezStart < DateTime.UtcNow, new ActionAlwaysFail()),
                                 Spell.Cast(spellName, mov => true, on => (WoWUnit)on, requirements, cancel => ((WoWUnit)cancel).IsAlive)
                                 )
                             )
@@ -900,57 +940,66 @@ namespace Singular.Helpers
 
             // throttle to minimize the impact of the list searches to once every interval
             return new Decorator(
-                req => !MovementManager.IsMovementDisabled && !ClassSpecific.Mage.Common.Gotfood && requirements(req),
-                new PrioritySelector(
+                req => !MovementManager.IsMovementDisabled 
+                    && !ClassSpecific.Mage.Common.Gotfood 
+                    && (CharacterSettings.Instance.DrinkAmount + CharacterSettings.Instance.FoodAmount) > 0
+                    && requirements(req),
+                new Sequence(
                     ctx => ClassSpecific.Mage.Common.MageTable,
 
-                    new Throttle(
-                        TimeSpan.FromSeconds(15),
-                        new Decorator(
-                            req => Me.FreeNormalBagSlots < 1,
-                            new Action( r=> Logger.Write( LogColor.Hilite, "Refreshment Table:  !! Bags Full - skipping !!"))
-                            )
+                    // no table nearby, no further checks needed
+                    new DecoratorContinue(
+                        req => req == null,
+                        new ActionAlwaysFail()
                         ),
 
-                    // check if we have space
-                    new Decorator(
-                        req =>
-                        {
-                            int drinksWanted = CharacterSettings.Instance.DrinkAmount;
-                            int foodWanted = CharacterSettings.Instance.FoodAmount;
-                            int biscuitsWanted = Math.Max(drinksWanted, foodWanted);
+                    // abort if bags full
+                    new DecoratorContinue(
+                        req => Me.FreeNormalBagSlots < 1,
+                        new PriLog( 60, LogColor.Hilite, s => "Mage Table:  !! Bags Full - cannot use table until space available !!")
+                        ),
 
-                            uint slotsNeeded = (uint) (biscuitsWanted + 19) / 20;
-                            uint slotsToFill = Me.FreeNormalBagSlots;
-
-                            if (slotsNeeded > slotsToFill)
+                    new PrioritySelector(
+                        // check if we have space
+                        new Decorator(
+                            req =>
                             {
-                                Logger.Write( LogColor.Hilite, "Refreshment Table: only {0} bag slots free - reducing amount we pickup", slotsToFill);
-                                slotsNeeded = slotsToFill;
-                            }
+                                int drinksWanted = CharacterSettings.Instance.DrinkAmount;
+                                int foodWanted = CharacterSettings.Instance.FoodAmount;
+                                int biscuitsWanted = Math.Max(drinksWanted, foodWanted);
+
+                                uint slotsNeeded = (uint) (biscuitsWanted + 19) / 20;
+                                uint slotsToFill = Me.FreeNormalBagSlots;
+
+                                if (slotsNeeded > slotsToFill)
+                                {
+                                    Logger.Write( LogColor.Hilite, "Mage Table: only {0} bag slots free - reducing amount we pickup", slotsToFill);
+                                    slotsNeeded = slotsToFill;
+                                }
                             
-                            return true;
-                        },
-                        new PrioritySelector(
-                            new Decorator(
-                                req => (req as WoWGameObject) != null && (SingularSettings.Instance.TableDistance == 0 || (req as WoWGameObject).Distance < SingularSettings.Instance.TableDistance),
-                                new PrioritySelector(
-                                    new Throttle(
-                                        TimeSpan.FromMilliseconds(500),
-                                        new Action(r =>
-                                        {
-                                            Logger.WriteDebug("Refreshment Table: moving towards @ {0:F1} yds", (r as WoWGameObject).Distance);
-                                            return RunStatus.Failure;
-                                        })
-                                        ),
-                                    Movement.CreateMoveToLocationBehavior(loc => (loc as WoWGameObject).Location, true, range => (range as WoWGameObject).InteractRange - 0.5f),
-                                    new Sequence(
-                                        new Action(r =>
-                                        {
-                                            Logger.Write( LogColor.Hilite, "^Interact with Refreshment Table");
-                                            (r as WoWGameObject).Interact();
-                                        }),
-                                        Helpers.Common.CreateWaitForLagDuration()
+                                return true;
+                            },
+                            new PrioritySelector(
+                                new Decorator(
+                                    req => (req as WoWGameObject) != null && (SingularSettings.Instance.TableDistance == 0 || (req as WoWGameObject).Distance < SingularSettings.Instance.TableDistance),
+                                    new PrioritySelector(
+                                        new Throttle(
+                                            TimeSpan.FromMilliseconds(500),
+                                            new Action(r =>
+                                            {
+                                                Logger.WriteDebug("Mage Table: moving towards @ {0:F1} yds", (r as WoWGameObject).Distance);
+                                                return RunStatus.Failure;
+                                            })
+                                            ),
+                                        Movement.CreateMoveToLocationBehavior(loc => (loc as WoWGameObject).Location, true, range => (range as WoWGameObject).InteractRange - 0.5f),
+                                        new Sequence(
+                                            new Action(r =>
+                                            {
+                                                Logger.Write( LogColor.Hilite, "^Interact with Refreshment Table");
+                                                (r as WoWGameObject).Interact();
+                                            }),
+                                            Helpers.Common.CreateWaitForLagDuration()
+                                            )
                                         )
                                     )
                                 )

@@ -150,7 +150,7 @@ namespace Singular.ClassSpecific.Priest
         {
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
@@ -177,7 +177,7 @@ namespace Singular.ClassSpecific.Priest
         {
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -188,14 +188,14 @@ namespace Singular.ClassSpecific.Priest
 
                         Spell.BuffSelf("Shadowform"),
 
+                        Helpers.Common.CreateInterruptBehavior(),
+
+                        Movement.WaitForFacing(),
+                        Movement.WaitForLineOfSpellSight(),
+
                         new Decorator(
                             req => !Unit.IsTrivial(Me.CurrentTarget),
                             new PrioritySelector(
-
-                                Helpers.Common.CreateInterruptBehavior(),
-
-                                Movement.WaitForFacing(),
-                                Movement.WaitForLineOfSpellSight(),
 
                                 Dispelling.CreatePurgeEnemyBehavior("Dispel Magic"),
 
@@ -358,7 +358,7 @@ namespace Singular.ClassSpecific.Priest
 
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -476,7 +476,7 @@ namespace Singular.ClassSpecific.Priest
         {
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
+                Spell.WaitForCastOrChannel(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -517,6 +517,11 @@ namespace Singular.ClassSpecific.Priest
                                     new PrioritySelector(
                                         ctx => Me.CurrentTarget,
 
+                                        Spell.Cast("Devouring Plague", req => OrbCount >= 3),
+                                        CastMindBlast(),
+
+                                        Spell.Cast("Shadow Word: Death", ret => Me.CurrentTarget.HealthPercent <= 20 && OrbCount < MaxOrbs),
+                
                                         // halo only if nothing near we aren't already in combat with
                                         Spell.Cast("Halo", 
                                             ret => Unit.NearbyUnfriendlyUnits

@@ -20,6 +20,7 @@ using Styx.Common;
 using System.Drawing;
 using CommonBehaviors.Actions;
 using Singular.Utilities;
+using Styx.CommonBot.POI;
 
 namespace Singular.ClassSpecific.Warrior
 {
@@ -132,11 +133,36 @@ namespace Singular.ClassSpecific.Warrior
                     && (SingularRoutine.CurrentWoWContext != WoWContext.Instances || Me.Shapeshift != (ShapeshiftForm)WarriorStance.GladiatorStance),
                 new Throttle(    // throttle these because most are off the GCD
                     new PrioritySelector(
+                        
+                        Spell.Cast(
+                            "Intimidating Shout",
+                            on => Me.CurrentTarget,
+                            req =>
+                            {
+                                if (SingularRoutine.CurrentWoWContext == WoWContext.Instances)
+                                    return false;
+                                if (EventHandlers.TimeSinceAttackedByEnemyPlayer.TotalSeconds > 10 && SingularRoutine.CurrentWoWContext != WoWContext.Battlegrounds)
+                                    return false;
+                                if (!Spell.IsSpellOnCooldown("Pummel"))
+                                    return false;
+                                WoWUnit melee = Unit.UnfriendlyUnits(8).Where(u => u.IsPlayer && u.IsCasting && u.IsTargetingMyStuff() && Spell.CanCastHack("Intimidating Shout", u)).FirstOrDefault();
+                                if (melee == null)
+                                    return false;
+
+                                int countRanged = Unit.UnfriendlyUnits().Where(u => u.IsPlayer && u.SpellDistance().Between(8, 42)).Count(u => u.IsTargetingMyStuff());
+                                if (countRanged > 1)
+                                    return false;
+
+                                Logger.Write(LogColor.Hilite, "^Intimidating Shout: control {0} attempting to cast [{1}]", melee.SafeName(), melee.CastingSpell == null ? "n/a" : melee.CastingSpell.Name);
+                                return true;
+                            }
+                            ),
+
                         Spell.HandleOffGCD(Spell.Cast("Demoralizing Shout", on => Unit.NearbyUnfriendlyUnits.FirstOrDefault(m => m.SpellDistance() < 10), req => true, gcd: HasGcd.No)),
 
-                        Spell.HandleOffGCD( 
+                        Spell.HandleOffGCD(
                             new PrioritySelector(
-                                Spell.BuffSelf("Shield Wall", ret => Me.HealthPercent < WarriorSettings.WarriorShieldWallHealth, gcd: HasGcd.No ),
+                                Spell.BuffSelf("Shield Wall", ret => Me.HealthPercent < WarriorSettings.WarriorShieldWallHealth, gcd: HasGcd.No),
                                 Spell.BuffSelf("Shield Barrier", ret => Me.HealthPercent < WarriorSettings.WarriorShieldBarrierHealth, gcd: HasGcd.No),
                                 Spell.BuffSelf("Shield Block", ret => Me.HealthPercent < WarriorSettings.WarriorShieldBlockHealth, gcd: HasGcd.No)
                                 )
@@ -155,13 +181,27 @@ namespace Singular.ClassSpecific.Warrior
                                 new Decorator(
                                     ret => Me.CurrentTarget.IsBoss() || Me.CurrentTarget.IsPlayer || (!Me.IsInGroup() && scenario.MobCount >= 3),
                                     new PrioritySelector(
-                                        Spell.HandleOffGCD( Spell.BuffSelf("Recklessness", req => true, 0, HasGcd.No)),
-                                        Spell.HandleOffGCD( Spell.BuffSelf("Avatar", req => true, 0, HasGcd.No))
+                                        Spell.HandleOffGCD(Spell.BuffSelf("Recklessness", req => true, 0, HasGcd.No)),
+                                        Spell.HandleOffGCD(Spell.BuffSelf("Avatar", req => true, 0, HasGcd.No))
                                         )
                                     ),
 
                                 Spell.BuffSelfAndWait("Bloodbath", gcd: HasGcd.No),
-                                Spell.BuffSelfAndWait("Berserker Rage", gcd: HasGcd.No)
+
+                                Spell.BuffSelfAndWait(
+                                    "Berserker Rage",
+                                    req =>
+                                    {
+                                        if (!Me.CurrentTarget.IsPlayer && EventHandlers.TimeSinceAttackedByEnemyPlayer > TimeSpan.FromSeconds(20))
+                                            return true;
+                                        if (Me.HasAuraWithMechanic(WoWSpellMechanic.Fleeing, WoWSpellMechanic.Sapped, WoWSpellMechanic.Incapacitated, WoWSpellMechanic.Turned))
+                                            return true;
+                                        if (Me.CurrentTarget.TimeToDeath(99) < 6)
+                                            return true;
+                                        return false;
+                                    },
+                                    gcd: HasGcd.No
+                                    )
                                 )
                             )
 
@@ -196,7 +236,7 @@ namespace Singular.ClassSpecific.Warrior
 
                 Helpers.Common.EnsureReadyToAttackFromMelee(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 Common.CheckIfWeShouldCancelBladestorm(),
 
@@ -254,6 +294,27 @@ namespace Singular.ClassSpecific.Warrior
                     CreateProtectionTauntBehavior()
                     ),
 
+                // Dump Rage
+                new Throttle(
+                    Spell.Cast(
+                        "Heroic Strike",
+                        on => Me.CurrentTarget,
+                        req =>
+                        {
+                            if (scenario.AvoidAOE && glyphCleave)
+                                return false;
+                            if (!Spell.CanCastHack("Heroic Strike", Me.CurrentTarget))
+                                return false;
+                            if (!HasUltimatum)
+                                return false;
+
+                            Logger.Write(LogColor.Hilite, "^Ultimatum: free Heroic Strike");
+                            return true;
+                        },
+                        gcd: HasGcd.No
+                        )
+                    ),
+
                 new Sequence(
                     new Decorator(
                         ret => Common.IsSlowNeeded(Me.CurrentTarget),
@@ -287,22 +348,30 @@ namespace Singular.ClassSpecific.Warrior
                 Spell.Cast("Revenge"),
                 Spell.Cast("Execute", req => Me.CurrentRage >= RageDump && Me.CurrentTarget.HealthPercent <= 20),
 
-                // Filler
-                Spell.Cast("Devastate"),
-
                 // Dump Rage
                 new Throttle(
                     Spell.Cast(
                         "Heroic Strike", 
                         on => Me.CurrentTarget,
-                        req => (!scenario.AvoidAOE || !glyphCleave) 
-                            && (HasUltimatum || Me.CurrentRage > RageDump || !SpellManager.HasSpell("Devastate") || !HasShieldInOffHand),
+                        req => 
+                        {
+                            if (scenario.AvoidAOE && glyphCleave) 
+                                return false;
+                            if (Me.CurrentRage > RageDump || !SpellManager.HasSpell("Devastate") || !HasShieldInOffHand)
+                                return true;
+                            return false;
+                        },
                         gcd: HasGcd.No
                         )
                     ),
 
+                // Filler
+                Spell.Cast("Devastate"),
+
                 //Charge
                 Common.CreateChargeBehavior(),
+
+                Common.CreateAttackFlyingOrUnreachableMobs(),
 
                 new Action(ret =>
                 {
@@ -310,6 +379,8 @@ namespace Singular.ClassSpecific.Warrior
                         Logger.WriteDebug("--- we did nothing!");
                     return RunStatus.Failure;
                 })
+
+
             );
 
         }
@@ -377,6 +448,8 @@ namespace Singular.ClassSpecific.Warrior
 
                 //Charge
                 Common.CreateChargeBehavior(),
+
+                Common.CreateAttackFlyingOrUnreachableMobs(),
 
                 new Action(ret =>
                 {
@@ -624,7 +697,8 @@ namespace Singular.ClassSpecific.Warrior
         {
             get
             {
-                return Me.ActiveAuras.ContainsKey("Ultimatum");
+                const int ULTIMATUM_PROC = 122510;
+                return Me.HasAura(ULTIMATUM_PROC);
             }
         }
 

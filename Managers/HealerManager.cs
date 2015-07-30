@@ -42,6 +42,8 @@ namespace Singular.Managers
 
         private static readonly WaitTimer _tankReset = WaitTimer.ThirtySeconds;
 
+        private int HealTargetCount { get; set; }
+
         // private static ulong _tankGuid;
 
         static HealerManager()
@@ -56,20 +58,40 @@ namespace Singular.Managers
         // .. and controls whether we should include Healing support
         public static bool NeedHealTargeting { get; set; }
 
+        public static int HealthToPriority(int nHealth)
+        {
+            return nHealth == 0 ? 0 : 200 - nHealth;
+        }
+
         protected override List<WoWObject> GetInitialObjectList()
         {
             // Targeting requires a list of WoWObjects - so it's not bound to any specific type of object. Just casting it down to WoWObject will work fine.
             // return ObjectManager.ObjectList.Where(o => o is WoWPlayer).ToList();
             List<WoWObject> heallist;
+
+            //if (Me.GroupInfo.IsInRaid || Me.GroupInfo.IsInParty)
+            //{
+            //    if (!SingularSettings.Instance.IncludeCompanionssAsHealTargets)
+            //        heallist = ObjectManager.ObjectList
+            //            .Where(o => o is WoWPlayer && o.ToPlayer().IsInMyRaid)
+            //            .ToList();
+            //    else
+            //        heallist = ObjectManager.ObjectList
+            //            .Where(o => (o is WoWPlayer && o.ToPlayer().IsInMyRaid) || (o is WoWUnit && o.ToUnit().SummonedByUnitGuid == Me.Guid && !o.ToUnit().IsPet))
+            //            .ToList();
+            //}
+
+            //if (Me.ZoneId == 6852)
             if (Me.GroupInfo.IsInRaid || Me.GroupInfo.IsInParty)
             {
+                HashSet<WoWGuid> raidmember = new HashSet<WoWGuid>(Me.GroupInfo.RaidMemberGuids);
                 if (!SingularSettings.Instance.IncludeCompanionssAsHealTargets)
                     heallist = ObjectManager.ObjectList
-                        .Where(o => o is WoWPlayer && o.ToPlayer().IsInMyRaid)
+                        .Where(o => raidmember.Contains(o.Guid))
                         .ToList();
                 else
                     heallist = ObjectManager.ObjectList
-                        .Where(o => (o is WoWPlayer && o.ToPlayer().IsInMyRaid) || (o is WoWUnit && o.ToUnit().SummonedByUnitGuid == Me.Guid && !o.ToUnit().IsPet))
+                        .Where(o => raidmember.Contains(o.Guid) || (o is WoWUnit && o.ToUnit().SummonedByUnitGuid == Me.Guid && !o.ToUnit().IsPet))
                         .ToList();
             }
             else
@@ -78,8 +100,8 @@ namespace Singular.Managers
                     heallist = new List<WoWObject>() { Me };
                 else
                     heallist = ObjectManager.ObjectList
-                    .Where(o => o is WoWUnit && o.ToUnit().SummonedByUnitGuid == Me.Guid && !o.ToUnit().IsPet)
-                    .ToList();
+                        .Where(o => o is WoWUnit && o.ToUnit().SummonedByUnitGuid == Me.Guid && !o.ToUnit().IsPet)
+                        .ToList();
             }
 
             return heallist;
@@ -112,9 +134,9 @@ namespace Singular.Managers
 
                     outgoingUnits.Add(incomingUnit);
 
-                    var player = incomingUnit as WoWPlayer;
-                    if (SingularSettings.Instance.IncludePetsAsHealTargets && player != null && player.GotAlivePet)
-                        outgoingUnits.Add(player.Pet);
+                    var unit = incomingUnit as WoWUnit;
+                    if (SingularSettings.Instance.IncludePetsAsHealTargets && unit != null && unit.GotAlivePet)
+                        outgoingUnits.Add(unit.Pet);
                 }
                 catch (System.AccessViolationException)
                 {
@@ -161,15 +183,17 @@ namespace Singular.Managers
         protected override void DefaultRemoveTargetsFilter(List<WoWObject> units)
         {
             bool isHorde = StyxWoW.Me.IsHorde;
-            int maxHealRangeSqr;
+            float maxHealRange, maxHealRangeSqr;
 
             if (MovementManager.IsMovementDisabled)
-                maxHealRangeSqr = 40 * 40;
+                maxHealRange = 40 + Me.CombatReach;
             else
-                maxHealRangeSqr = SingularSettings.Instance.MaxHealTargetRange * SingularSettings.Instance.MaxHealTargetRange;
+                maxHealRange = SingularSettings.Instance.MaxHealTargetRange + Me.CombatReach;
 
+            maxHealRangeSqr = maxHealRange * maxHealRange;
             WoWPoint myLoc = Me.Location;
 
+            int unitsLeft = 0;
             for (int i = units.Count - 1; i >= 0; i--)
             {
                 WoWUnit unit = units[i].ToUnit();
@@ -200,7 +224,7 @@ namespace Singular.Managers
 
                         // They're not in our party/raid. So ignore them. We can't heal them anyway.
                         /*
-                        if (!p.IsInMyPartyOrRaid)
+                        if (!p.IsInMyPartyOrRaid())
                         {
                             units.RemoveAt(i);
                             continue;
@@ -234,6 +258,17 @@ namespace Singular.Managers
                 {
                     units.RemoveAt(i);
                     continue;
+                }
+
+                unitsLeft++;
+            }
+
+            if (unitsLeft != HealTargetCount)
+            {
+                HealTargetCount = unitsLeft;
+                if (SingularSettings.TraceHeals)
+                {
+                    Logger.WriteDiagnostic(LogColor.Hilite, "HealTargetCount: {0} units", HealTargetCount);
                 }
             }
         }
@@ -403,12 +438,17 @@ namespace Singular.Managers
         /// <returns></returns>
         public static WoWUnit FindHighestPriorityTarget()
         {
-            WoWUnit target = Group.Tanks.Union( Group.Healers )
-                .Where( t => t.IsAlive && t.HealthPercent < 35 && t.SpellDistance() < 40)
-                .OrderBy( k => k.HealthPercent )
-                .FirstOrDefault();
+            WoWUnit target = FindLowestHealthEssentialTarget();
+            return target ?? FindLowestHealthTarget();
+        }
 
-            return target ?? FindLowestHealthTarget();    
+        public static WoWUnit FindLowestHealthEssentialTarget()
+        {
+            WoWUnit target = Group.Tanks.Union(Group.Healers)
+                .Where(t => t.IsAlive && t.HealthPercent < 35 && t.SpellDistance() < 40 && t.PredictedHealthPercent() < 35)
+                .OrderBy(k => k.HealthPercent)
+                .FirstOrDefault();
+            return target;
         }
 
         /// <summary>
@@ -459,10 +499,18 @@ namespace Singular.Managers
                 return false;
 
             // allow casts that are close to finishing to finish regardless
-            bool castInProgress = Spell.IsCastingOrChannelling();
-            if (castInProgress && Me.CurrentCastTimeLeft.TotalMilliseconds < 333 && Me.CurrentChannelTimeLeft.TotalMilliseconds < 333)
+            bool castInProgress = Spell.IsCasting();
+            if (castInProgress && Me.CurrentCastTimeLeft.TotalMilliseconds < 333)
             {
-                Logger.WriteDebug("CancelHealerDPS: suppressing /cancel since less than 333 ms remaining");
+                Logger.WriteDebug("CancelHealerDPS: suppressing /cancel since less than 333 ms cast remaining");
+                return false;
+            }
+
+            // allow casts that are close to finishing to finish regardless
+            castInProgress = Spell.IsChannelling();
+            if (castInProgress && Me.CurrentChannelTimeLeft.TotalMilliseconds < 333)
+            {
+                Logger.WriteDebug("CancelHealerDPS: suppressing /cancel since less than 333 ms channel remaining");
                 return false;
             }
 
@@ -590,17 +638,23 @@ namespace Singular.Managers
                 tank = HealerManager.TankToStayNear;
 
             if (tank == null)
-                ;
-            else if (!tank.Combat)
-                ;
-            else if (tank.IsMoving)
-                ;
-            else if (!tank.GotTarget() || tank.SpellDistance(tank.CurrentTarget) > 8)
-                ;
-            else
-                return true;
+            {
+                return false;
+            }
+            if (!tank.Combat)
+            {
+                return false;
+            }
+            if (tank.IsMoving)
+            {
+                return false;
+            }
+            if (!tank.GotTarget() || tank.SpellDistance(tank.CurrentTarget) > 8)
+            {
+                return false;
+            }
 
-            return false;
+            return true;
         }
 
         /// <summary>
@@ -882,7 +936,7 @@ namespace Singular.Managers
                 if (!SingularSettings.Instance.DpsOffHealAllowed)
                     return false;
 
-                if (Me.GroupInfo.IsInRaid)
+                if (Me.GroupInfo.IsInRaid || Group.MeIsTank)
                     return false;
 
                 WoWUnit first = HealerManager.Instance.FirstUnit;
@@ -891,7 +945,7 @@ namespace Singular.Managers
                     double health = first.PredictedHealthPercent(includeMyHeals: true);
                     if (health < SingularSettings.Instance.DpsOffHealBeginPct)
                     {
-                        Logger.WriteDiagnostic("EnableOffHeal: entering off-heal mode since {0} @ {1:F1}%", first.SafeName(), health);
+                        Logger.Write(LogColor.Hilite, "^OffHeal-Start: low-health {0} @ {1:F1}%", first.SafeName(), health);
                         return true;
                     }
                 }
@@ -907,7 +961,7 @@ namespace Singular.Managers
                 if (!SingularSettings.Instance.DpsOffHealAllowed)
                     return true;
 
-                if (Me.GroupInfo.IsInRaid)
+                if (Me.GroupInfo.IsInRaid || Group.MeIsTank)
                     return true;
 
                 WoWUnit healer = null;
@@ -923,9 +977,9 @@ namespace Singular.Managers
                     return false;
 
                 if (SingularRoutine.CurrentWoWContext == WoWContext.Normal)
-                    Logger.WriteDiagnostic("DisableOffHeal: leaving off-heal mode since lowest target is {0} @ {1:F1}% and solo", lowest.SafeName(), lowest.HealthPercent);
-                else 
-                    Logger.WriteDiagnostic("DisableOffHeal: leaving off-heal mode since lowest target is {0} @ {1:F1}% and {2} is {3:F1} yds away", lowest.SafeName(), lowest.HealthPercent, healer.SafeName(), healer.Distance);
+                    Logger.Write(LogColor.Hilite, "^OffHeal-Ended: lowest is {0} @ {1:F1}% and solo", lowest.SafeName(), lowest.HealthPercent);
+                else
+                    Logger.Write(LogColor.Hilite, "^OffHeal-Ended: lowest is {0} @ {1:F1}% and {2} now {3:F1} yds away", lowest.SafeName(), lowest.HealthPercent, healer.SafeName(), healer.Distance);
                 return true;
             }
         }
@@ -939,12 +993,12 @@ namespace Singular.Managers
                 if (!_actingHealer && EnableOffHeal)
                 {
                     _actingHealer = true;
-                    Logger.WriteDiagnostic("ActingAsOffHealer: offheal enabled");
+                    Logger.Write( LogColor.Hilite, "ActingAsOffHealer: offheal enabled");
                 }
                 else if (_actingHealer && DisableOffHeal)
                 {
                     _actingHealer = false;
-                    Logger.WriteDiagnostic("ActingAsOffHealer: offheal disabled");
+                    Logger.Write( LogColor.Hilite, "ActingAsOffHealer: offheal disabled");
                 }
                 return _actingHealer;
             }
@@ -960,7 +1014,7 @@ namespace Singular.Managers
     /// </summary>
     internal class HmmContext
     {
-        internal WoWPoint loc;
+        //internal WoWPoint loc;
         internal WoWUnit target;
         internal WoWUnit tank;
         internal bool behind;
@@ -1023,7 +1077,16 @@ namespace Singular.Managers
             PrioritySelector pri = new PrioritySelector();
             foreach (PrioritizedBehavior pb in blist)
             {
-                pri.AddChild(new CallTrace(pb.Name, pb.behavior));
+                if (!SingularSettings.TraceHeals)
+                    pri.AddChild(pb.behavior);
+                else 
+                {
+                    CallTrace ct = new CallTrace(pb.Name, pb.behavior);
+                    ct.TraceActive = true;
+                    ct.TraceEnter = false;
+                    ct.TraceExit = true;
+                    pri.AddChild( ct );
+                }
             }
 
             return pri;

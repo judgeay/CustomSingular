@@ -41,7 +41,7 @@ namespace Singular.ClassSpecific.Warlock
             return new PrioritySelector(
                 Helpers.Common.EnsureReadyToAttackFromLongRange(),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 new Decorator(ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
@@ -175,12 +175,12 @@ namespace Singular.ClassSpecific.Warlock
                             ctx =>
                             {
                                 uint stacks = Me.GetAuraStacks("Molten Core");
-                                if (stacks > 0 && (DateTime.Now - _lastSoulFire).TotalMilliseconds < 250)
+                                if (stacks > 0 && (DateTime.UtcNow - _lastSoulFire).TotalMilliseconds < 250)
                                     stacks--;
                                 return stacks;
                             },
                             Spell.Cast("Soul Fire", mov => true, on => Me.CurrentTarget, req => ((uint)req) > 0, cancel => false),
-                            new Action(r => _lastSoulFire = DateTime.Now)
+                            new Action(r => _lastSoulFire = DateTime.UtcNow)
                             ),
 
 
@@ -212,14 +212,14 @@ namespace Singular.ClassSpecific.Warlock
         #region Handle Forcing Reapply of Doom if Needed due to Buff/Proc
 
         static WoWGuid _guidLastUberDoom;
-        static DateTime _timeNextUberDoom = DateTime.Now;
+        static DateTime _timeNextUberDoom = DateTime.UtcNow;
 
         private static bool NeedToReapplyDoom()
         {
-            if (Me.HasAura("Perfect Aim") && (_guidLastUberDoom != Me.CurrentTargetGuid || _timeNextUberDoom < DateTime.Now))
+            if (Me.HasAura("Perfect Aim") && (_guidLastUberDoom != Me.CurrentTargetGuid || _timeNextUberDoom < DateTime.UtcNow))
             {
                 _guidLastUberDoom = Me.CurrentTargetGuid;
-                _timeNextUberDoom = DateTime.Now + TimeSpan.FromSeconds(60);
+                _timeNextUberDoom = DateTime.UtcNow + TimeSpan.FromSeconds(60);
                 Logger.Write( LogColor.Hilite, "^Perfect Aim: applying 100% Critical Doom");
                 return true;
             }
@@ -229,15 +229,15 @@ namespace Singular.ClassSpecific.Warlock
 
         #endregion
 
-        private static uint endMoltenCore = 0;
-        private static uint stackMoltenCore = 0;
+        // private static uint endMoltenCore = 0;
+        // private static uint stackMoltenCore = 0;
 
         private static Composite CreateHandOfGuldanBehavior()
         {
             return new Throttle(
                 TimeSpan.FromMilliseconds(2000),
                 new Decorator( 
-                    ret => Me.CurrentTarget.HasAuraExpired("Hand of Gul'dan", "Shadowflame", 1),
+                    ret => Me.GotTarget() && Me.CurrentTarget.HasAuraExpired("Hand of Gul'dan", "Shadowflame", 1),
                     new PrioritySelector(
                         ctx => TalentManager.HasGlyph("Hand of Gul'dan"),
                         Spell.CastOnGround("Hand of Gul'dan", on => Me.CurrentTarget, req => Me.GotTarget() && (bool)req),

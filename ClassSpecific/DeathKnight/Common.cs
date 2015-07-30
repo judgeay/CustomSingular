@@ -35,6 +35,32 @@ namespace Singular.ClassSpecific.DeathKnight
             return TalentManager.IsSelected((int)tal);
         }
 
+        [Behavior(BehaviorType.Initialize, WoWClass.DeathKnight)]
+        public static Composite CreateDeathKnightInitialize()
+        {
+            scenario = new CombatScenario(44, 1.5f);
+            talent.necrotic_plague_enabled = Common.HasTalent(DeathKnightTalents.NecroticPlague);
+            talent.breath_of_sindragosa_enabled = Common.HasTalent(DeathKnightTalents.BreathOfSindragosa);
+            talent.defile_enabled = Common.HasTalent(DeathKnightTalents.Defile);
+            talent.unholy_blight_enabled = Common.HasTalent(DeathKnightTalents.UnholyBlight);
+
+            BloodBoilRange = 10;
+            if (TalentManager.HasGlyph("Blood Boil"))
+            {
+                BloodBoilRange = 15;
+                Logger.Write(LogColor.Init, "Glyph of Blood Boil: range of Blood Boil extended to {0}", BloodBoilRange);
+            }
+
+            glyphEmpowerment = TalentManager.HasGlyph("Empowerment") && (Me.Specialization == WoWSpec.DeathKnightFrost || Me.Specialization == WoWSpec.DeathKnightUnholy);
+            if (glyphEmpowerment)
+            {
+                Logger.Write(LogColor.Init, "Glyph of Empowerment: Empower Rune Weapon heals for 30%");
+            }
+
+            return null;
+        }
+
+
         internal static int ActiveRuneCount
         {
             get
@@ -90,18 +116,6 @@ namespace Singular.ClassSpecific.DeathKnight
         internal static CombatScenario scenario { get; set; }
 
 
-        [Behavior(BehaviorType.Initialize, WoWClass.DeathKnight, priority:9999)]
-        public static Composite CreateUnholyDeathKnightInitialize()
-        {
-            scenario = new CombatScenario(44, 1.5f);
-            talent.necrotic_plague_enabled = Common.HasTalent(DeathKnightTalents.NecroticPlague);
-            talent.breath_of_sindragosa_enabled = Common.HasTalent(DeathKnightTalents.BreathOfSindragosa);
-            talent.defile_enabled = Common.HasTalent(DeathKnightTalents.Defile);
-            talent.unholy_blight_enabled = Common.HasTalent(DeathKnightTalents.UnholyBlight);
-
-            return null;
-        }
-
         /// <summary>
         /// check that we are in the last tick of Frost Fever or Blood Plague on current target and have a fully depleted rune
         /// </summary>
@@ -135,28 +149,7 @@ namespace Singular.ClassSpecific.DeathKnight
             }
         }
 
-        public static int BloodBoilRange;
-        public static int BloodBoilRangeSqr;
-
-        [Behavior(BehaviorType.Initialize, WoWClass.DeathKnight)]
-        public static Composite DeathKnightInitializeBehavior()
-        {
-            BloodBoilRange = 10;
-            if (TalentManager.HasGlyph("Blood Boil"))
-            {
-                BloodBoilRange = 15;
-                Logger.Write(LogColor.Init, "Glyph of Blood Boil: range of Blood Boil extended to {0}", BloodBoilRange);
-            }
-
-            glyphEmpowerment = TalentManager.HasGlyph("Empowerment") && (Me.Specialization == WoWSpec.DeathKnightFrost || Me.Specialization == WoWSpec.DeathKnightUnholy);
-            if (glyphEmpowerment)
-            {
-                Logger.Write(LogColor.Init, "Glyph of Empowerment: Empower Rune Weapon heals for 30%");
-            }
-
-            BloodBoilRangeSqr = BloodBoilRange * BloodBoilRange;
-            return null;
-        }
+        public static int BloodBoilRange { get; set; }
 
         #region Pull
 
@@ -179,20 +172,20 @@ namespace Singular.ClassSpecific.DeathKnight
 
                         CreateDarkSuccorBehavior(),
                         Common.CreateGetOverHereBehavior(),
-                        Spell.Cast("Outbreak"),
-                        Spell.Cast("Howling Blast"),
-                        Spell.Buff("Icy Touch")
+                        new Throttle(
+                            TimeSpan.FromSeconds(1.5),
+                            Spell.Cast("Outbreak"),
+                            Spell.Cast("Howling Blast"),
+                            Spell.Buff("Icy Touch")
+                            )
                         )
-                    ),
-
-                Movement.CreateMoveToMeleeBehavior(true)
+                    )
                 );
         }
 
-        // Non-blood DKs shouldn't be using Death Grip in instances. Only tanks should!
-        // You also shouldn't be a blood DK if you're DPSing. Thats just silly. (Like taking a prot war as DPS... you just don't do it)
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Instances)]
         [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Instances)]
+        // Non-blood DKs shouldn't be using Death Grip in instances. Only tanks should!
         public static Composite CreateDeathKnightFrostAndUnholyInstancePull()
         {
             return new PrioritySelector(
@@ -204,11 +197,14 @@ namespace Singular.ClassSpecific.DeathKnight
                             Movement.WaitForFacing(),
                             Movement.WaitForLineOfSpellSight(),
 
+                        new Throttle(
+                            TimeSpan.FromSeconds(1.5),
+                            Spell.Cast("Outbreak"),
                             Spell.Cast("Howling Blast"),
                             Spell.Buff("Icy Touch")
                             )
-                    ),
-                Movement.CreateMoveToMeleeBehavior(true)
+                        )
+                    )
                 );
         }
 
@@ -436,10 +432,9 @@ namespace Singular.ClassSpecific.DeathKnight
                             }),
 
                         // I'm unholy and I don't have a pet or I am blood/frost and I am using pet as dps bonus
-                        Spell.BuffSelf("Raise Dead",
-                            req => TalentManager.CurrentSpec == WoWSpec.DeathKnightUnholy
-                                && SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.PetSummoning)
-                                && !Me.GotAlivePet
+                        new Decorator(
+                            req => Me.Specialization == WoWSpec.DeathKnightUnholy ,
+                            ClassSpecific.DeathKnight.Unholy.UnholyCastRaiseDead()
                             ),
 
                         // never use army of the dead in instances if not blood specced unless you have the army of the dead glyph to take away the taunting
@@ -572,8 +567,7 @@ namespace Singular.ClassSpecific.DeathKnight
             return new Decorator(
                 req => Me.GetAuraTimeLeft("Dark Succor").TotalMilliseconds > 250
                     && (Me.HealthPercent < 80 || Me.GetAuraTimeLeft("Dark Succor").TotalMilliseconds < 3000 || (Me.GotTarget() && Me.CurrentTarget.TimeToDeath(99) < 6) 
-                    && Me.CurrentTarget.InLineOfSpellSight 
-                    && Me.IsSafelyFacing( Me.CurrentTarget)
+                    && Me.IsSafelyFacing( Me.CurrentTarget, 170)
                     && Spell.CanCastHack("Death Strike", Me.CurrentTarget)),
                 new Sequence(
                     new Action( r => Logger.WriteDebug( Color.White, "Dark Succor ({0} ms left) influenced Death Strike coming....", (int) Me.GetAuraTimeLeft("Dark Succor").TotalMilliseconds  )),
@@ -647,7 +641,7 @@ namespace Singular.ClassSpecific.DeathKnight
                             else if (stolenSpell.IsDamageRedux())
                                 strType = "buff ";
 
-                            Logger.Write(Color.DodgerBlue, "^Dark Simulacrum: we gained {0}[{1}] #{2}", strType, stolenSpell.Name, stolenSpell.Id);
+                            Logger.Write(LogColor.Hilite, "^Dark Simulacrum: we gained {0}[{1}] #{2}", strType, stolenSpell.Name, stolenSpell.Id);
                             return RunStatus.Success;
                         })
                         )

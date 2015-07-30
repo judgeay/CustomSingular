@@ -32,10 +32,33 @@ namespace Singular.ClassSpecific.Druid
 
         #region Common
 
+        public static bool talentBloodtalons { get; set; }
+        public static bool talentLunarInspiration { get; set; }
+
+
+        [Behavior(BehaviorType.Initialize, WoWClass.Druid, WoWSpec.DruidFeral)]
+        public static Composite CreateFeralDruidInitialize()
+        {
+            talentBloodtalons = Common.HasTalent(DruidTalents.Bloodtalons);
+            if (talentBloodtalons)
+            {
+                if (SingularRoutine.CurrentHealContext == HealingContext.Raids)
+                    Logger.Write(LogColor.Init, "Bloodtalons: Predatory Swiftness Healing Touch saved until 4+ combat points");
+                else
+                    Logger.Write(LogColor.Init, "Bloodtalons: save Predatory Swiftness Healing Touch until 4+ combat points or {0}%", DruidSettings.PredSwiftnessHealingTouchHealth);
+            }
+
+            talentLunarInspiration = Common.HasTalent(DruidTalents.LunarInspiration);
+
+            return null;
+        }
+
         [Behavior(BehaviorType.Rest, WoWClass.Druid, WoWSpec.DruidFeral, WoWContext.All, 1)]
         public static Composite CreateFeralDruidRest()
         {
             return new PrioritySelector(
+
+/* cp's are retained now, so don't consume just because they exist
                 new Throttle(10,
                     new Decorator(
                         ret => SpellManager.HasSpell("Savage Roar")
@@ -50,11 +73,9 @@ namespace Singular.ClassSpecific.Druid
                             )
                         )
                     ),
-
-                Common.CreateProwlBehavior(ret => Me.HasAnyAura("Drink", "Food", "Refreshment")),
-
+*/
                 new Decorator(
-                    ret => !Me.HasAnyAura("Drink", "Food", "Refreshment")
+                    ret => !Rest.IsEatingOrDrinking
                         && Me.HasAura("Predatory Swiftness")
                         && (Me.PredictedHealthPercent(includeMyHeals: true) < 95),
                     new PrioritySelector(
@@ -65,7 +86,9 @@ namespace Singular.ClassSpecific.Druid
                             req => true,
                             cancel => Me.HealthPercent > 95 )
                         )
-                    )
+                    ),
+
+                Common.CreateProwlBehavior(ret => Rest.IsEatingOrDrinking)
 
                 // remainder of rest behavior in common.cs CreateNonRestoDruidRest()                     
                 );
@@ -77,7 +100,7 @@ namespace Singular.ClassSpecific.Druid
         {
             return new PrioritySelector(
                 CreateFeralDiagnosticOutputBehavior( "Pull" ),
-                Helpers.Common.EnsureReadyToAttackFromMelee(),
+                Helpers.Common.EnsureReadyToAttackFromMelee(req => !Me.HasAura("Prowl")),
 
                 Spell.WaitForCast(),
 
@@ -88,6 +111,8 @@ namespace Singular.ClassSpecific.Druid
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
 
+                        Common.CreateAttackFlyingOrUnreachableMobs(),  
+/*
                         //Shoot flying targets
                         new Decorator(
                             ret => Me.CurrentTarget.IsAboveTheGround(),
@@ -102,34 +127,47 @@ namespace Singular.ClassSpecific.Druid
                                 }),
 
                                 Spell.Buff("Moonfire", req => Common.HasTalent(DruidTalents.LunarInspiration)),
-
                                 CreateFeralFaerieFireBehavior(),
+                                Spell.Buff("Moonfire"),
 
-                                Spell.Cast("Moonfire", ret => Me.CurrentTarget.Distance < 40),
                                 Movement.CreateMoveToUnitBehavior( on => StyxWoW.Me.CurrentTarget, 27f, 22f)
                                 )
                             ),
+*/
+                        Spell.Buff("Moonfire", req => Me.GotTarget() && Me.CurrentTarget.IsTrivial() && (Me.Shapeshift != ShapeshiftForm.Cat || (talentLunarInspiration && !Me.HasAura("Prowl")))),
 
-                        Common.CastForm( ShapeshiftForm.Cat, req => Me.Shapeshift != ShapeshiftForm.Cat && !Utilities.EventHandlers.IsShapeshiftSuppressed),
+                        Common.CreateProwlBehavior(
+                            req =>
+                            {
+                                if (!Me.GotTarget() || Unit.IsTrivial(Me.CurrentTarget))
+                                    return false;
 
-                        Common.CreateProwlBehavior(),
+                                float dist = Me.CurrentTarget.SpellDistance();
+                                if (dist < 29 && !Spell.IsSpellOnCooldown("Wild Charge"))
+                                    return true;
+                                if (dist < 9)
+                                    return true;
+                                if (dist < Math.Max( 18, 4 + Me.GetAggroRange(Me.CurrentTarget)) && Me.GetReactionTowards(Me.CurrentTarget) < WoWUnitReaction.Neutral)
+                                    return true;
+                                return false;
+                            }
+                            ),
+
+                        Common.CastForm(ShapeshiftForm.Cat, req => Me.Shapeshift != ShapeshiftForm.Cat && !Utilities.EventHandlers.IsShapeshiftSuppressed),
 
                         CreateFeralWildChargeBehavior(),
 
                         // only Dash if we dont have WC or WC was cast more than 2 seconds ago
 
-                        new Decorator(
-                            ret => Me.HasAura("Prowl"),
-                            new PrioritySelector(
-                                Spell.BuffSelf("Dash", 
-                                    ret => MovementManager.IsClassMovementAllowed && Me.IsMoving
-                                        && ((Me.CurrentTarget.Distance > 15 && Spell.GetSpellCooldown("Wild Charge", 999).TotalSeconds > 3)
-                                            || Spell.GetSpellCooldown("Wild Charge", 999).TotalSeconds > 40)
-                                    ),
-                                Spell.Buff("Rake", 3)
-                                )
+                        Spell.BuffSelf("Dash", 
+                            ret => MovementManager.IsClassMovementAllowed 
+                                && Me.IsMoving
+                                && Me.HasAura("Prowl")
+                                && Me.CurrentTarget.Distance > 17 
+                                && Spell.GetSpellCooldown("Wild Charge", 999).TotalSeconds > 1
                             ),
-                        Spell.Buff("Rake", 3)
+
+                        Spell.Buff("Rake", req => Me.GotTarget() && Me.CurrentTarget.IsWithinMeleeRange && Me.CurrentTarget.Distance < (Me.CurrentTarget.CombatReach + 2))
                         )
                     ),
 
@@ -186,6 +224,16 @@ namespace Singular.ClassSpecific.Druid
                 ret => !Spell.IsCastingOrChannelling() && !Spell.IsGlobalCooldown(), 
                 new PrioritySelector(
 
+                    // prowl will cast form if used, so check for it first
+                    Common.CreateProwlBehavior(
+                        ret => DruidSettings.Prowl == ProwlMode.Always
+                            && (Me.Shapeshift == ShapeshiftForm.Cat || !Utilities.EventHandlers.IsShapeshiftSuppressed)
+                            && !Me.HasAnyShapeshift(ShapeshiftForm.Aqua, ShapeshiftForm.FlightForm, ShapeshiftForm.EpicFlightForm)
+                            && BotPoi.Current.Type != PoiType.Loot
+                            && BotPoi.Current.Type != PoiType.Skin
+                            && !ObjectManager.GetObjectsOfType<WoWUnit>().Any(u => u.IsDead && ((CharacterSettings.Instance.LootMobs && u.CanLoot && u.Lootable) || (CharacterSettings.Instance.SkinMobs && u.Skinnable && u.CanSkin)) && u.Distance < CharacterSettings.Instance.LootRadius)
+                        ),
+
                     // cast cat form 
                     // since this check comes while not in combat (so will be doing other things like Questing) need to add some checks:
                     // - only if Moving
@@ -202,24 +250,69 @@ namespace Singular.ClassSpecific.Druid
                                 && !Me.IsFlying && !Me.IsSwimming 
                                 && !Me.HasAnyShapeshift( ShapeshiftForm.Cat, ShapeshiftForm.Travel, ShapeshiftForm.Aqua, ShapeshiftForm.FlightForm, ShapeshiftForm.EpicFlightForm)
                             )
-                        ),
-
-                    Common.CreateProwlBehavior(
-                        ret => DruidSettings.ProwlAlways
-                            && BotPoi.Current.Type != PoiType.Loot
-                            && BotPoi.Current.Type != PoiType.Skin
-                            && !ObjectManager.GetObjectsOfType<WoWUnit>().Any(u => u.IsDead && ((CharacterSettings.Instance.LootMobs && u.CanLoot && u.Lootable) || (CharacterSettings.Instance.SkinMobs && u.Skinnable && u.CanSkin)) && u.Distance < CharacterSettings.Instance.LootRadius)
                         )
                     )
                 );
         }
 
         [Behavior(BehaviorType.Heal, WoWClass.Druid, WoWSpec.DruidFeral, WoWContext.All, 999)]
-        public static Composite CreateFeralCombatHeal()
+        public static Composite CreateFeralHeal()
         {
             return new PrioritySelector(
                 new Action(ret => { _currTargetTimeToDeath = Me.CurrentTarget.TimeToDeath(); return RunStatus.Failure; }),
-                CreateFeralDiagnosticOutputBehavior("Combat")
+                CreateFeralDiagnosticOutputBehavior("Combat"),
+
+                Spell.BuffSelf("Survival Instincts", req => Me.HealthPercent < DruidSettings.SurvivalInstinctsHealth),
+
+                Spell.Cast(
+                    "Healing Touch",
+                    on =>
+                    {
+                        int pstime = (int) Me.GetAuraTimeLeft("Predatory Swiftness").TotalMilliseconds;
+                        if (pstime < 150)
+                            return null;
+
+                        WoWUnit unit = null;
+                        if (talentBloodtalons && (Me.ComboPoints >= 4 || pstime < 1650))
+                        {
+                            unit = Unit.GroupMembers
+                                .Where( u => u.IsAlive && Spell.CanCastHack("Healing Touch", u))
+                                .OrderBy( u => (int) u.HealthPercent )
+                                .FirstOrDefault();
+
+                            if (unit == null && Spell.CanCastHack("Healing Touch", Me))
+                                unit = Me;
+
+                            if (unit != null)
+                                Logger.Write(LogColor.Hilite, "^Bloodtalons: buffing bleeds");
+
+                            return unit;
+                        }
+
+                        // raids: don't waste a GCD on healing without a buff
+                        if (SingularRoutine.CurrentHealContext == HealingContext.Raids)
+                            return null;
+
+                        // else: find lowest health unit
+                        unit = HealerManager.NeedHealTargeting 
+                            ? HealerManager.FindHighestPriorityTarget() 
+                            : Unit.GroupMembers
+                                .Where( u => u.IsAlive && Spell.CanCastHack("Healing Touch", u))
+                                .OrderBy( u => (int) u.HealthPercent )
+                                .FirstOrDefault();
+
+                        if (unit != null)
+                        {
+                            if (unit.HealthPercent < DruidSettings.PredSwiftnessHealingTouchHealth)
+                                return unit;
+                            if (unit.HealthPercent < 90 && pstime < 1650)
+                                return unit;
+                            unit = null;
+                        }
+
+                        return unit;
+                    }
+                    )
                 );
         }
 
@@ -228,7 +321,9 @@ namespace Singular.ClassSpecific.Druid
         public static Composite CreateFeralCombatBuffs()
         {
             return new PrioritySelector(
+
                 Common.CastForm(ShapeshiftForm.Cat, req => Me.Shapeshift != ShapeshiftForm.Cat && !Utilities.EventHandlers.IsShapeshiftSuppressed)
+
                 );
         }
 
@@ -236,9 +331,9 @@ namespace Singular.ClassSpecific.Druid
         public static Composite CreateFeralNormalCombat()
         {
             return new PrioritySelector(
-                Helpers.Common.EnsureReadyToAttackFromMelee(),
+                Helpers.Common.EnsureReadyToAttackFromMelee(req => !Me.HasAura("Prowl")),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(), 
@@ -295,7 +390,7 @@ namespace Singular.ClassSpecific.Druid
                                 && Me.CurrentTarget.TimeToDeath() >= 7
                                 && Me.CurrentTarget.GetAuraTimeLeft("Rip", true).TotalSeconds < 3),
 
-                        Spell.Buff("Rake", 3 ),
+                        Spell.Buff("Rake", req => Me.GotTarget() && Me.CurrentTarget.IsWithinMeleeRange),
 
 #if MULTI_DOT_MOONFIRE
                         // multi-dot with if we can (in range and enough energy)
@@ -331,15 +426,16 @@ namespace Singular.ClassSpecific.Druid
                 );
         }
 
+
         static long _currTargetTimeToDeath { get; set; }
 
         [Behavior(BehaviorType.Combat, WoWClass.Druid, WoWSpec.DruidFeral, WoWContext.Instances )]
         public static Composite CreateFeralCombatInstances()
         {
             return new PrioritySelector(
-                Helpers.Common.EnsureReadyToAttackFromMelee(),
+                Helpers.Common.EnsureReadyToAttackFromMelee( req => !Me.HasAura("Prowl")),
 
-                Spell.WaitForCast(FaceDuring.Yes),
+                Spell.WaitForCast(),
 
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
@@ -619,12 +715,13 @@ namespace Singular.ClassSpecific.Druid
                 new Action(ret =>
                 {
                     string log;
-                    log = string.Format(context + " h={0:F1}%/e={1:F1}%/m={2:F1}%, shape={3}, prowl={4}, savage={5}, tfury={6}, brsrk={7}, predswf={8}, omen={9}, pts={10}",
+                    log = string.Format(context + " h={0:F1}%/e={1:F1}%/m={2:F1}%, shp={3}, prwl={4}, mov={5}, savg={6}, tfury={7}, brsrk={8}, predswf={9}, omen={10}, pts={11}",
                         Me.HealthPercent,
                         Me.EnergyPercent,
                         Me.ManaPercent,
                         Me.Shapeshift.ToString().Length < 4 ? Me.Shapeshift.ToString() : Me.Shapeshift.ToString().Substring(0, 4),
                         Me.HasAura("Prowl").ToYN(),
+                        Me.IsMoving.ToYN(),
                         (long)Me.GetAuraTimeLeft("Savage Roar", true).TotalMilliseconds,
                         (long)Me.GetAuraTimeLeft("Tiger's Fury", true).TotalMilliseconds,
                         (long)Me.GetAuraTimeLeft("Berserk", true).TotalMilliseconds,

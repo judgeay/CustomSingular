@@ -103,6 +103,8 @@ namespace Singular.ClassSpecific.Hunter
         [Behavior(BehaviorType.Initialize, WoWClass.Hunter)]
         public static Composite CreateHunterInitialize()
         {
+            PetManager.NeedsPetSupport = true;
+
             if (SingularRoutine.CurrentWoWContext == WoWContext.Normal || SingularRoutine.CurrentWoWContext == WoWContext.Battlegrounds)
             {
                 Composite jturn = null;
@@ -127,7 +129,7 @@ namespace Singular.ClassSpecific.Hunter
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
                         new Decorator(
-                            ret => !Me.HasAnyAura("Food", "Refreshment"),
+                            ret => !Helpers.Rest.IsEatingOrDrinking,
                             new PrioritySelector(
                                 CreateHunterCallPetBehavior(true),
                                 Spell.Buff("Mend Pet", onUnit => Me.Pet, req => Me.GotAlivePet && Pet.HealthPercent < 85)
@@ -288,7 +290,7 @@ namespace Singular.ClassSpecific.Hunter
                             until => Me.HasAura("Camouflage"),
                             new Action(r => 
                             { 
-                                camouflageStart = DateTime.Now;
+                                camouflageStart = DateTime.UtcNow;
                                 WoWAura aura = Me.GetAllAuras().FirstOrDefault(a => a.Name == "Camouflage");
                                 if (aura != null)
                                     camouflageExpires = camouflageStart + aura.TimeLeft;
@@ -459,7 +461,7 @@ namespace Singular.ClassSpecific.Hunter
                                 {
                                     // Does not require CurrentTarget to be non=null
                                     WoWPoint loc = WoWPoint.RayCast(Me.Location, Me.RenderFacing, 30f);
-                                    IEnumerable<WoWUnit> ienum = Clusters.GetConeCluster(loc, 100f, 46f, Unit.UnfriendlyUnits(50));
+                                    IEnumerable<WoWUnit> ienum = Clusters.GetConeCluster(100f, 46f, Unit.UnfriendlyUnits(50));
                                     int cntCC = 0;
                                     int cntTarget = 0;
                                     int cntNeutral = 0;
@@ -598,7 +600,7 @@ namespace Singular.ClassSpecific.Hunter
                     {
                         if (r != null)
                         {
-                            camouflageExpires = DateTime.Now + ((WoWAura)r).TimeLeft;
+                            camouflageExpires = DateTime.UtcNow + ((WoWAura)r).TimeLeft;
                             return RunStatus.Success;
                         }
 
@@ -823,8 +825,7 @@ namespace Singular.ClassSpecific.Hunter
         {
             return new PrioritySelector(
                 new Decorator(
-                    ret =>  !SingularSettings.Instance.DisablePetUsage
-                        && SingularRoutine.IsAllowed(Styx.CommonBot.Routines.CapabilityFlags.PetSummoning) 
+                    ret =>  PetManager.IsPetSummonAllowed
                         && (!Me.GotAlivePet || (ActivePetNumber != PetWeWant && ActivePetNumber != 0))
                         && PetManager.PetSummonAfterDismountTimer.IsFinished 
                         && !Me.Mounted 
@@ -1049,7 +1050,7 @@ namespace Singular.ClassSpecific.Hunter
                 new DecoratorContinue(
                     ret => Me.HasAura("Feign Death"),
                     new Sequence(
-                        new Action(ret => Logger.Write(LogColor.Cancel, "/cancel Feign Death after {0} seconds", (DateTime.Now - waitToCancelFeignDeath.StartTime).TotalSeconds)),
+                        new Action(ret => Logger.Write(LogColor.Cancel, "/cancel Feign Death after {0} seconds", (DateTime.UtcNow - waitToCancelFeignDeath.StartTime).TotalSeconds)),
                         new Action(ret => Me.CancelAura("Feign Death"))
                         )
                     ),
@@ -1179,7 +1180,7 @@ namespace Singular.ClassSpecific.Hunter
                     !Spell.IsCastingOrChannelling() && !Spell.IsGlobalCooldown()
                     && MovementManager.IsClassMovementAllowed
                     && SingularRoutine.CurrentWoWContext != WoWContext.Instances
-                    && Me.IsMoving // (DateTime.Now - GhostWolfRequest).TotalMilliseconds < 1000
+                    && Me.IsMoving // (DateTime.UtcNow - GhostWolfRequest).TotalMilliseconds < 1000
                     && Me.IsAlive
                     && !Me.OnTaxi && !Me.InVehicle && !Me.Mounted && !Me.IsOnTransport && !Me.IsSwimming
                     && !Me.HasAura("Aspect of the Cheetah")

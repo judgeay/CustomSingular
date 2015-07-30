@@ -29,7 +29,6 @@ namespace Singular.Utilities
         public static bool TrackDamage { get; set; }
 
         private static bool _combatLogAttached;
-        private static bool _combatFilterAdded;
 
         public static void Init()
         {
@@ -114,16 +113,26 @@ namespace Singular.Utilities
         public static DateTime LastUnitNotInfrontFailure { get; set; }
         public static DateTime LastNoPathFailure { get; set; }
         public static DateTime SuppressShapeshiftUntil { get; set; }
-        public static bool IsShapeshiftSuppressed { get { return SuppressShapeshiftUntil > DateTime.Now; } }
+        public static bool IsShapeshiftSuppressed { get { return SuppressShapeshiftUntil > DateTime.UtcNow; } }
 
         public static WoWUnit LastLineOfSightTarget { get; set; }
-        public static WoWGuid LastNoPathTarget { get; set; }
+        public static WoWGuid LastUnitNotInfrontGuid { get; set; }
+        public static WoWGuid LastNoPathGuid { get; set; }
 
         public static bool IsPathErrorTarget(this WoWUnit unit)
-        { 
-            if ( unit.Guid != Singular.Utilities.EventHandlers.LastNoPathTarget )
+        {
+            if (unit.Guid != Singular.Utilities.EventHandlers.LastNoPathGuid)
                 return false;
-            if (Singular.Utilities.EventHandlers.LastNoPathFailure < DateTime.Now - TimeSpan.FromMinutes(15))
+            if (Singular.Utilities.EventHandlers.LastNoPathFailure < DateTime.UtcNow - TimeSpan.FromMinutes(15))
+                return false;
+            return true;
+        }
+
+        public static bool IsNotFacingErrorTarget(this WoWUnit unit)
+        {
+            if (unit.Guid != Singular.Utilities.EventHandlers.LastUnitNotInfrontGuid)
+                return false;
+            if (Singular.Utilities.EventHandlers.LastNoPathFailure < DateTime.UtcNow - TimeSpan.FromMilliseconds(750))
                 return false;
             return true;
         }
@@ -131,7 +140,14 @@ namespace Singular.Utilities
         public static Dictionary<WoWGuid, int> MobsThatEvaded = new Dictionary<WoWGuid, int>();
 
         public static WoWUnit AttackingEnemyPlayer { get; set; }
-        public static DateTime LastAttackedByEnemyPlayer { get; set; }
+        private static DateTime TimeLastAttackedByEnemyPlayer { get; set; }
+        public static TimeSpan TimeSinceAttackedByEnemyPlayer
+        {
+            get
+            {
+                return DateTime.UtcNow - TimeLastAttackedByEnemyPlayer;
+            }
+        }
 
         public static DateTime LastRedErrorMessage { get; set; }
 
@@ -149,18 +165,22 @@ namespace Singular.Utilities
 
         private static void AttachCombatLogEvent()
         {
-            if (_combatLogAttached || _combatFilterAdded)
+            if (_combatLogAttached)
                 DetachCombatLogEvent();
 
             // DO NOT EDIT THIS UNLESS YOU KNOW WHAT YOU'RE DOING!
             // This ensures we only capture certain combat log events, not all of them.
             // This saves on performance, and possible memory leaks. (Leaks due to Lua table issues.)
-            Lua.Events.AttachEvent("COMBAT_LOG_EVENT_UNFILTERED", HandleCombatLog);
+            string myGuid = Lua.GetReturnVal<string>("return UnitGUID('player');", 0);
+            Logger.WriteDiagnostic("CombatLogEvent: setting filter= {0}", BuildCombatLogEventFilter("PlayerGUID"));
+            Lua.Events.AttachEvent("COMBAT_LOG_EVENT_UNFILTERED", HandleCombatLog, BuildCombatLogEventFilter(myGuid));
             _combatLogAttached = true;
 
-            string myGuid = Lua.GetReturnVal<string>("return UnitGUID('player');", 0);
-            //Logger.WriteDiagnostic("MyGuid = {0}", myGuid);
+            Logger.WriteDebug("Attached combat log");
+        }
 
+        private static string BuildCombatLogEventFilter(string myGuid)
+        {
             string filterCriteria = "return";
 
             if (SingularRoutine.CurrentWoWContext == WoWContext.Normal && SingularSettings.Instance.TargetWorldPvpRegardless)
@@ -189,36 +209,24 @@ namespace Singular.Utilities
             }
 
             // standard portion of filter
-            filterCriteria += 
+            filterCriteria +=
                 " ("
                 + " args[4] == " + "'" + myGuid + "'"
                 + " and"
-                +   " ("
-                +   " args[2] == 'SPELL_MISSED'"
-                +   " or args[2] == 'RANGE_MISSED'"
-                +   " or args[2] == 'SWING_MISSED'"
-                +   " or args[2] == 'SPELL_CAST_FAILED'"
-                +   " )"
-                +" )";
+                + " ("
+                + " args[2] == 'SPELL_MISSED'"
+                + " or args[2] == 'RANGE_MISSED'"
+                + " or args[2] == 'SWING_MISSED'"
+                + " or args[2] == 'SPELL_CAST_FAILED'"
+                + " )"
+                + " )";
 
-            _combatFilterAdded = Lua.Events.AddFilter("COMBAT_LOG_EVENT_UNFILTERED", filterCriteria);
-            if (!_combatFilterAdded)
-            {
-                Logger.Write( "ERROR: Could not add combat log event filter! - Performance may be horrible, and things may not work properly!");
-            }
 
-            Logger.WriteDebug("Attached combat log");
+            return filterCriteria;
         }
         
         private static void DetachCombatLogEvent()
         {
-            if (_combatFilterAdded)
-            {
-                Logger.WriteDebug("Removed combat log filter");
-                Lua.Events.RemoveFilter("COMBAT_LOG_EVENT_UNFILTERED");
-                _combatFilterAdded = false;
-            }
-
             if (_combatLogAttached)
             {
                 Logger.WriteDebug("Detached combat log");
@@ -248,7 +256,7 @@ namespace Singular.Utilities
                     {
                         Logger.WriteDiagnostic("GankDetect: received {0} src={1} dst={2}", args.EventName, e.SourceGuid, e.DestGuid);
                         AttackingEnemyPlayer = enemy;
-                        LastAttackedByEnemyPlayer = DateTime.Now;
+                        TimeLastAttackedByEnemyPlayer = DateTime.UtcNow;
 
                         // if (guidLastEnemy != enemy.Guid)
                         {
@@ -328,13 +336,28 @@ namespace Singular.Utilities
                             guid = StyxWoW.Me.CurrentTargetGuid;
                         }
 
-                        LastLineOfSightFailure = DateTime.Now;
+                        LastLineOfSightFailure = DateTime.UtcNow;
                         Logger.WriteFile("[CombatLog] cast failed due to los reported at {0} on target {1:X}", LastLineOfSightFailure.ToString("HH:mm:ss.fff"), e.DestGuid );
+                    }
+                    else if (e.Args[14].ToString() == LocalizedUnitNotInfrontFailure )
+                    {
+                        WoWGuid guid = e.DestGuid;
+                        LastUnitNotInfrontFailure = DateTime.UtcNow;
+                        if (guid.IsValid && guid != WoWGuid.Empty)
+                        {
+                            LastUnitNotInfrontGuid = guid;
+                            Logger.WriteFile("[CombatLog] not facing SpellTarget [{0}] at {1}", LastUnitNotInfrontGuid, LastUnitNotInfrontFailure.ToString("HH:mm:ss.fff"));
+                        }
+                        else
+                        {
+                            LastUnitNotInfrontGuid = Spell.LastSpellTarget;
+                            Logger.WriteFile("[CombatLog] not facing LastTarget [{0}] at {1}", LastUnitNotInfrontGuid, LastUnitNotInfrontFailure.ToString("HH:mm:ss.fff"), guid);
+                        }
                     }
                     else if (!MovementManager.IsMovementDisabled && StyxWoW.Me.Class == WoWClass.Warrior && e.Args[14].ToString() == LocalizedNoPathAvailableFailure)
                     {
-                        LastNoPathFailure = DateTime.Now;
-                        LastNoPathTarget = StyxWoW.Me.CurrentTargetGuid;
+                        LastNoPathFailure = DateTime.UtcNow;
+                        LastNoPathGuid = StyxWoW.Me.CurrentTargetGuid;
                         if (!StyxWoW.Me.GotTarget())
                             Logger.WriteFile("[CombatLog] cast failed - no path available to current target");
                         else
@@ -349,8 +372,8 @@ namespace Singular.Utilities
                         if (LocalizedShapeshiftMessages.ContainsKey(e.Args[14].ToString()))
                         {
                             string symbolicName = LocalizedShapeshiftMessages[e.Args[14].ToString()];
-                            SuppressShapeshiftUntil = DateTime.Now.Add( TimeSpan.FromSeconds(30));
-                            Logger.Write(LogColor.Cancel, "/cancel{0} - due to Shapeshift Error '{1}' on cast, suppress form until {2}!", StyxWoW.Me.Shapeshift.ToString().CamelToSpaced(), symbolicName, SuppressShapeshiftUntil.ToString("HH:mm:ss.fff"));
+                            SuppressShapeshiftUntil = DateTime.UtcNow.Add( TimeSpan.FromSeconds(30));
+                            Logger.Write(LogColor.Cancel, "/cancel{0} - due to Shapeshift Error '{1}' on cast, suppress form for {2:F1} seconds", StyxWoW.Me.Shapeshift.ToString().CamelToSpaced(), symbolicName, (SuppressShapeshiftUntil - DateTime.UtcNow).TotalSeconds);
                             Lua.DoString("CancelShapeshiftForm()");
                         }
                     }
@@ -585,8 +608,8 @@ namespace Singular.Utilities
             if (RoutineManager.Current.Name != SingularRoutine.Instance.Name)
                 return;
 
-            bool handled = false;
-            LastRedErrorMessage = DateTime.Now;
+            // bool handled = false;
+            LastRedErrorMessage = DateTime.UtcNow;
 
             if (SingularSettings.Debug)
             {
@@ -600,7 +623,7 @@ namespace Singular.Utilities
                     WoWUnit unit = StyxWoW.Me.CurrentTarget;
                     Logger.WriteDebug("WowRedError Handler: already pick pocketed {0}, blacklisting from pick pocket for 2 minutes", unit.SafeName());
                     Blacklist.Add(unit.Guid, BlacklistFlags.Node, TimeSpan.FromMinutes(2), "Singular: already pick pocketed mob");
-                    handled = true;
+                    //handled = true;
                 }
             }
 
@@ -612,10 +635,10 @@ namespace Singular.Utilities
                     if (LocalizedShapeshiftMessages.ContainsKey(args.Args[0].ToString()))
                     {
                         string symbolicName = LocalizedShapeshiftMessages[args.Args[0].ToString()];
-                        SuppressShapeshiftUntil = DateTime.Now.Add(TimeSpan.FromSeconds(30));
+                        SuppressShapeshiftUntil = DateTime.UtcNow.Add(TimeSpan.FromSeconds(30));
                         Logger.Write(LogColor.Cancel, "/cancel{0} - due to Error '{1}', suppress form until {2}!", StyxWoW.Me.Shapeshift.ToString().CamelToSpaced(), symbolicName, SuppressShapeshiftUntil.ToString("HH:mm:ss.fff"));
                         Lua.DoString("CancelShapeshiftForm()");
-                        handled = true;
+                        // handled = true;
                     }
                 }
             }

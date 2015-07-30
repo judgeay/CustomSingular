@@ -29,8 +29,24 @@ namespace Singular.ClassSpecific.Shaman
         private static LocalPlayer Me { get { return StyxWoW.Me; } }
         private static ShamanSettings ShamanSettings { get { return SingularSettings.Instance.Shaman(); } }
 
-        private static WoWGuid guidLastHealTarget;
+        private static int ChainHealCastTime { get; set; }
+        private static float ChainHealHopDistance { get; set; }
+
+        //private static WoWGuid guidLastHealTarget;
         private static WoWGuid guidLastEarthShield;
+
+        #region INIT
+
+        [Behavior(BehaviorType.Initialize, WoWClass.Shaman, WoWSpec.ShamanRestoration)]
+        public static Composite CreateRestoShamanInitialize()
+        {
+            ChainHealCastTime = (int) Spell.GetSpellCastTime("Chain Heal").TotalMilliseconds;
+            ChainHealHopDistance = TalentManager.Glyphs.Contains("Chaining") ? 25f : 12.5f;
+
+            return null;
+        }
+
+        #endregion
 
         #region REST
 
@@ -39,7 +55,7 @@ namespace Singular.ClassSpecific.Shaman
         {
             return new PrioritySelector(
                 new Decorator(
-                    ret => !StyxWoW.Me.HasAnyAura("Drink", "Food", "Refreshment"),
+                    ret => !Helpers.Rest.IsEatingOrDrinking,
                     CreateRestoShamanCombatBuffs()    // call here so any Earth Shield done before we drink
                     ),
                 Singular.Helpers.Rest.CreateDefaultRestBehaviour("Healing Surge", "Ancestral Spirit"),
@@ -414,7 +430,7 @@ namespace Singular.ClassSpecific.Shaman
 
             #region Save the Group
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.SpiritLinkTotem) + 600, "Spirit Link Totem", "Spirit Link Totem",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.SpiritLinkTotem) + 600, "Spirit Link Totem", "Spirit Link Totem",
                 new Decorator(
                     ret => Me.Combat && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
                     Spell.Cast(
@@ -425,7 +441,7 @@ namespace Singular.ClassSpecific.Shaman
                     )
                 );
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.AncestralSwiftness) + 500,
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.AncestralSwiftness) + 500,
                 String.Format("Oh Shoot Heal @ {0}%", ShamanSettings.RestoHealSettings.AncestralSwiftness),
                 "Ancestral Swiftness",
                 new Decorator(
@@ -444,9 +460,11 @@ namespace Singular.ClassSpecific.Shaman
 
             #region AoE Heals
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.HealingTideTotem) + 400, "Healing Tide Totem", "Healing Tide Totem",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.HealingTideTotem) + 400, "Healing Tide Totem", "Healing Tide Totem",
                 new Decorator(
-                    ret => (Me.Combat || ((WoWUnit)ret).Combat) && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
+                    ret => (Me.Combat || ((WoWUnit)ret).Combat) 
+                        && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid)
+                        && (Common.talentTotemicPersistance || !Totems.Exist(WoWTotem.Cloudburst) || (Totems.GetTotem(WoWTotem.Cloudburst).Expires - DateTime.UtcNow).TotalMilliseconds < 1500),
                     Spell.Cast(
                         "Healing Tide Totem",
                         on => Me,
@@ -455,7 +473,7 @@ namespace Singular.ClassSpecific.Shaman
                     )
                 );
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.HealingStreamTotem) + 300, "Healing Stream Totem", "Healing Stream Totem",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.HealingStreamTotem) + 300, "Healing Stream Totem", "Healing Stream Totem",
                 new Decorator(
                     ret => Me.Combat && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
                     Spell.Cast(
@@ -490,7 +508,47 @@ namespace Singular.ClassSpecific.Shaman
                     )
                 );
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.HealingRain) + 200, "Healing Rain", "Healing Rain",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.CloudburstTotem) + 300, "Cloudburst Totem", "Cloudburst Totem",
+                new Decorator(
+                    ret => Me.Combat && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
+                    Spell.Cast(
+                        "Cloudburst Totem",
+                        on =>
+                        {
+                            if (Totems.Exist(WoWTotemType.Water))
+                                return null;
+
+                            if (Spell.IsSpellOnCooldown(Totems.ToSpellId(WoWTotem.Cloudburst)))
+                                return null;
+
+                            if (Unit.ValidUnit(Me.CurrentTarget) && (Me.CurrentTarget.TimeToDeath() < 20 || Unit.UnitsInCombatWithUsOrOurStuff().Count() < 3))
+                                return null;
+
+                            // if tank in group, make sure we are near the tank
+                            WoWUnit tank = HealerManager.TankToStayNear;
+                            if (tank != null)
+                            {
+                                if (!HealerManager.IsTankSettledIntoFight(tank))
+                                    return null;
+                                if (tank.Distance > Totems.GetTotemRange(WoWTotem.Cloudburst))
+                                    return null;
+                            }
+
+                            WoWUnit unit = HealerManager.Instance.TargetList
+                                .Where(
+                                    p => p.HealthPercent < ShamanSettings.RestoHealSettings.CloudburstTotem
+                                        && p.Distance <= Totems.GetTotemRange(WoWTotem.Cloudburst)
+                                    )
+                                .OrderBy( p => (int) p.HealthPercent)
+                                .FirstOrDefault();
+
+                            return unit;
+                        }
+                        )
+                    )
+                );
+
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.HealingRain) + 200, "Healing Rain", "Healing Rain",
                 new Decorator(
                     ret => Me.Combat && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
                     new PrioritySelector(
@@ -503,7 +561,7 @@ namespace Singular.ClassSpecific.Shaman
                     )
                 );
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.ChainHeal) + 100, "Chain Heal", "Chain Heal",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.ChainHeal) + 100, "Chain Heal", "Chain Heal",
                 new Decorator(
                     ret => Me.Combat  && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
                     new PrioritySelector(
@@ -512,13 +570,18 @@ namespace Singular.ClassSpecific.Shaman
                             ret => ret != null,
                             new Sequence(
                                 new DecoratorContinue(
-                                    req => ((WoWUnit) req).HasAuraExpired("Riptide", TimeSpan.FromMilliseconds(2500), true),
+                                    req => ((WoWUnit) req).HasAuraExpired("Riptide", TimeSpan.FromMilliseconds(ChainHealCastTime), true),
                                     new Sequence(
                                         Spell.Cast("Riptide", on => (WoWUnit)on, req => true, cancel => false),
-                                        new Wait(2, until => !Spell.IsGlobalCooldown(), new ActionAlwaysSucceed()),
+                                        new Wait(TimeSpan.FromMilliseconds(1500), until => !Spell.IsGlobalCooldown(LagTolerance.No), new ActionAlwaysSucceed()),
                                         new Action(r => TidalWaveRefresh())
                                         )
                                     ),
+                                new PrioritySelector(
+                                    Spell.Cast("Unleash Life", on => (WoWUnit)on),
+                                    new ActionAlwaysSucceed()
+                                    ),
+                                new WaitContinue(TimeSpan.FromMilliseconds(1500), until => !Spell.IsGlobalCooldown(LagTolerance.No), new ActionAlwaysSucceed()),
                                 Spell.Cast("Chain Heal", on => (WoWUnit)on),
                                 new Action(r => TidalWaveRefresh())
                                 )
@@ -531,7 +594,7 @@ namespace Singular.ClassSpecific.Shaman
 
             #region Single Target Heals
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.HealingWave), "Healing Wave", "Healing Wave",
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.HealingWave), "Healing Wave", "Healing Wave",
                 new Decorator( ret => ((WoWUnit)ret).PredictedHealthPercent() < ShamanSettings.RestoHealSettings.HealingWave,
                     new Sequence(
                         new WaitContinue(TimeSpan.FromMilliseconds(1500), until => !Spell.IsGlobalCooldown(), new ActionAlwaysSucceed()),
@@ -550,7 +613,7 @@ namespace Singular.ClassSpecific.Shaman
                     )
                 );
 
-            behavs.AddBehavior(HealthToPriority(ShamanSettings.RestoHealSettings.HealingSurge), "Healing Surge", "Healing Surge", 
+            behavs.AddBehavior(HealerManager.HealthToPriority(ShamanSettings.RestoHealSettings.HealingSurge), "Healing Surge", "Healing Surge", 
                 new Decorator( ret => ((WoWUnit)ret).PredictedHealthPercent() < ShamanSettings.RestoHealSettings.HealingSurge,
                     new Sequence(
                         new WaitContinue(TimeSpan.FromMilliseconds(1500), until => !Spell.IsGlobalCooldown(), new ActionAlwaysSucceed()),
@@ -574,7 +637,7 @@ namespace Singular.ClassSpecific.Shaman
 
             #region Healing Cooldowns
 
-            behavs.AddBehavior(HealthToPriority( ShamanSettings.RestoHealSettings.Ascendance) + 100, "Ascendance", "Ascendance",
+            behavs.AddBehavior(HealerManager.HealthToPriority( ShamanSettings.RestoHealSettings.Ascendance) + 100, "Ascendance", "Ascendance",
                 new Decorator(
                     ret => ShamanSettings.UseAscendance && (StyxWoW.Me.GroupInfo.IsInParty || StyxWoW.Me.GroupInfo.IsInRaid),
                     Spell.BuffSelf(
@@ -672,7 +735,7 @@ namespace Singular.ClassSpecific.Shaman
                             ,
 
                             new Decorator(
-                                ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && !Unit.NearbyFriendlyPlayers.Any(u => u.IsInMyPartyOrRaid),
+                                ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && !Unit.NearbyFriendlyPlayers.Any(u => u.IsInMyPartyOrRaid()),
                                 new PrioritySelector(
                                     Movement.CreateMoveToLosBehavior(),
                                     Movement.CreateFaceTargetBehavior(),
@@ -717,14 +780,6 @@ namespace Singular.ClassSpecific.Shaman
                 );
         }
 
-        private static float ChainHealHopRange
-        {
-            get
-            {
-                return TalentManager.Glyphs.Contains("Chaining") ? 25f : 12.5f;
-            }
-        }
-
         private static IEnumerable<WoWUnit> ChainHealPlayers
         {
             get
@@ -740,9 +795,12 @@ namespace Singular.ClassSpecific.Shaman
         {
             get
             {
+                // refresh each call to account for changed in haste
+                ChainHealCastTime = (int)Spell.GetSpellCastTime("Chain Heal").TotalMilliseconds;
+
                 // TODO: Decide if we want to do this differently to ensure we take into account the T12 4pc bonus. (Not removing RT when using CH)
                 return HealerManager.Instance.TargetList
-                    .Where(u => u.IsAlive && u.DistanceSqr < 40 * 40 && u.PredictedHealthPercent() < ShamanSettings.RestoHealSettings.ChainHeal && u.HasMyAura("Riptide"))
+                    .Where(u => u.IsAlive && u.DistanceSqr < 40 * 40 && u.PredictedHealthPercent() < ShamanSettings.RestoHealSettings.ChainHeal && u.GetAuraTimeLeft("Riptide").TotalMilliseconds > ChainHealCastTime)
                     .Select(u => (WoWUnit)u);
             }
         }
@@ -815,7 +873,7 @@ namespace Singular.ClassSpecific.Shaman
 
         private static WoWUnit GetBestRiptideTarget()
         {
-            WoWUnit ripTarget = Clusters.GetBestUnitForCluster(ChainHealPlayers, ClusterType.Chained, ChainHealHopRange);
+            WoWUnit ripTarget = Clusters.GetBestUnitForCluster(ChainHealPlayers, ClusterType.Chained, ChainHealHopDistance);
             if (ripTarget != null)
                 Logger.WriteDebug("GetBestRiptideTarget: found optimal target {0}, hasmyaura={1} with {2} ms left", ripTarget.SafeName(), ripTarget.HasMyAura("Riptide"), (int)ripTarget.GetAuraTimeLeft("Riptide").TotalMilliseconds);
 
@@ -835,7 +893,7 @@ namespace Singular.ClassSpecific.Shaman
 
             // search players with Riptide first
             var targetInfo = ChainHealRiptidePlayers
-                .Select( p => new { Unit = p, Count = Clusters.GetClusterCount(p, ChainHealPlayers, ClusterType.Chained, ChainHealHopRange) })
+                .Select(p => new { Unit = p, Count = Clusters.GetClusterCount(p, ChainHealPlayers, ClusterType.Chained, ChainHealHopDistance) })
                 .OrderByDescending( v => v.Count )
                 .ThenByDescending( v => Group.Tanks.Any( t => t.Guid == v.Unit.Guid))
                 .DefaultIfEmpty(null)
@@ -847,10 +905,10 @@ namespace Singular.ClassSpecific.Shaman
             // too few hops? then search any group member
             if (count < ShamanSettings.RestoHealSettings.MinChainHealCount)
             {
-                target = Clusters.GetBestUnitForCluster(ChainHealPlayers, ClusterType.Chained, ChainHealHopRange);
+                target = Clusters.GetBestUnitForCluster(ChainHealPlayers, ClusterType.Chained, ChainHealHopDistance);
                 if (target != null)
                 {
-                    count = Clusters.GetClusterCount(target, ChainHealPlayers, ClusterType.Chained, ChainHealHopRange);
+                    count = Clusters.GetClusterCount(target, ChainHealPlayers, ClusterType.Chained, ChainHealHopDistance);
                     if (count < ShamanSettings.RestoHealSettings.MinChainHealCount)
                         target = null;
                 }
@@ -924,11 +982,6 @@ namespace Singular.ClassSpecific.Shaman
                 count += StyxWoW.Me.Inventory.Equipped.Head.ItemInfo.ItemSetId == RESTO_T12_ITEM_SET_ID ? 1 : 0;
                 return count;
             }
-        }
-
-        public static int HealthToPriority(int nHealth)
-        {
-            return nHealth == 0 ? 0 : 200 - nHealth;
         }
 
         #region Diagnostics
