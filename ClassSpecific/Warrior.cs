@@ -101,7 +101,7 @@ namespace Singular.ClassSpecific
 
         public static WoWUnit SpellReflectTarget
         {
-            get { return active_enemies_list.FirstOrDefault(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(WarriorSpells.pummel) || !Spell.CanCastHack(WarriorSpells.pummel, u))); }
+            get { return SingularRoutine.Instance.ActiveEnemies.FirstOrDefault(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(WarriorSpells.pummel) || !Spell.CanCastHack(WarriorSpells.pummel, u))); }
         }
 
         public static uint rage

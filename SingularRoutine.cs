@@ -53,6 +53,7 @@ namespace Singular
         private static int _pulsePhase;
         private static int countRentrancyStopBot;
         private DateTime NextAuraCheck = DateTime.MinValue;
+        private WoWUnit[] _activeEnemies = new WoWUnit[0];
         private ConfigurationForm _configForm;
 
         #endregion
@@ -97,7 +98,11 @@ namespace Singular
             get { return true; }
         }
 
-        public WoWUnit[] ActiveEnemies { get; private set; }
+        public WoWUnit[] ActiveEnemies
+        {
+            get { return _activeEnemies; }
+            private set { _activeEnemies = value ?? new WoWUnit[0]; }
+        }
 
         private static bool IsMounted
         {
@@ -415,7 +420,7 @@ namespace Singular
         public override void Pulse()
         {
             // Check ennemies
-            if (_waitForEnemiesCheck.IsFinished)
+            if (_waitForEnemiesCheck.IsFinished || ActiveEnemies == null)
             {
                 ActiveEnemies = Unit.UnfriendlyUnits()
                     .Where(u =>
@@ -461,12 +466,12 @@ namespace Singular
                 if (SingularSettings.Debug)
                 {
                     TimeSpan since = CallWatch.TimeSpanSinceLastCall;
-                    if (since.TotalSeconds > (4*CallWatch.SecondsBetweenWarnings))
+                    if (since.TotalSeconds > (4 * CallWatch.SecondsBetweenWarnings))
                     {
                         if (!Me.IsGhost && !Me.Mounted && !Me.IsFlying && DateTime.Now > _nextNoCallMsgAllowed)
                         {
                             Logger.WriteDebug(Color.HotPink, "info: {0:F0} seconds since {1} BotBase last called Singular", since.TotalSeconds, GetBotName());
-                            _nextNoCallMsgAllowed = DateTime.Now.AddSeconds(4*CallWatch.SecondsBetweenWarnings);
+                            _nextNoCallMsgAllowed = DateTime.Now.AddSeconds(4 * CallWatch.SecondsBetweenWarnings);
                         }
                     }
                 }
@@ -580,7 +585,7 @@ namespace Singular
             Logger.Write(LogColor.Hilite, "Starting " + singularName);
 
             // save some support info in case we need
-            Logger.WriteFile("{0:F1} days since Windows was restarted", TimeSpan.FromMilliseconds(Environment.TickCount).TotalHours/24.0);
+            Logger.WriteFile("{0:F1} days since Windows was restarted", TimeSpan.FromMilliseconds(Environment.TickCount).TotalHours / 24.0);
             Logger.WriteFile("{0} FPS currently in WOW", GetFPS());
             Logger.WriteFile("{0} ms of Latency in WOW", Latency);
             Logger.WriteFile("{0} local system time", DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss"));

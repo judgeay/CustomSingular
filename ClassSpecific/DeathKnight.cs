@@ -25,8 +25,10 @@ namespace Singular.ClassSpecific
         private const byte DEATH_AND_DECAY_DISTANCE = 10;
         private const byte HOWLING_BLAST_DISTANCE = 10;
 
-        private static readonly Func<Func<bool>, Composite> antimagic_shell =
-            cond => Spell.BuffSelf(DkSpells.antimagic_shell, req => Spell.UseCooldown && Unit.NearbyUnfriendlyUnits.Any(u => (u.IsCasting || u.ChanneledCastingSpellId != 0) && u.CurrentTargetGuid == StyxWoW.Me.Guid) && cond());
+        private static readonly Func<Func<bool>, Composite> antimagic_shell = cond => 
+            Spell.BuffSelf(DkSpells.antimagic_shell, req =>
+                Spell.UseCooldown &&
+                SingularRoutine.Instance.ActiveEnemies.Any(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(DkSpells.mind_freeze) || !Spell.CanCastHack(DkSpells.mind_freeze, u))) && cond());
 
         private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && cond());
@@ -38,7 +40,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> death_and_decay = cond => Spell.CastOnGround(DkSpells.death_and_decay, on => Me.CurrentTarget, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> death_coil = cond => Spell.Cast(DkSpells.death_coil, req => cond());
         private static readonly Func<Func<bool>, Composite> death_grip = cond => Spell.Cast(DkSpells.death_grip, req => cond());
-        private static readonly Func<Func<bool>, Composite> death_pact = cond => Spell.BuffSelf(DkSpells.death_pact, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> death_pact = cond => Spell.BuffSelf(DkSpells.death_pact, req => talent.death_pact.enabled && Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> death_strike = cond => Spell.Cast(DkSpells.death_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> defile = cond => Spell.CastOnGround(DkSpells.defile, on => Me.CurrentTarget, req => talent.defile.enabled && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> empower_rune_weapon = cond => Spell.BuffSelf(DkSpells.empower_rune_weapon, req => Spell.UseCooldown && cond());
@@ -129,6 +131,11 @@ namespace Singular.ClassSpecific
 
                 return sum;
             }
+        }
+
+        private static byte BloodBoilDistance
+        {
+            get { return (TalentManager.HasGlyph(DkSpells.blood_boil) ? BLOOD_BOIL_GLYPH_DISTANCE : BLOOD_BOIL_DISTANCE); }
         }
 
         private static int Frost
@@ -280,6 +287,9 @@ namespace Singular.ClassSpecific
                     //actions=auto_attack
                     //actions+=/deaths_advance,if=movement.remains>2
                     //actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
+                    antimagic_shell(() => true),
+                    icebound_fortitude(() => health.pct < 50),
+                    death_pact(() => health.pct < 30),
                     //actions+=/pillar_of_frost
                     pillar_of_frost(() => true),
                     //actions+=/potion,name=draenic_strength,if=target.time_to_die<=30|(target.time_to_die<=60&buff.pillar_of_frost.up)
@@ -349,6 +359,9 @@ namespace Singular.ClassSpecific
                     //actions=auto_attack
                     //actions+=/deaths_advance,if=movement.remains>2
                     //actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
+                    antimagic_shell(() => true),
+                    icebound_fortitude(() => health.pct < 50),
+                    death_pact(() => health.pct < 30),
                     //actions+=/blood_fury,if=!talent.breath_of_sindragosa.enabled
                     blood_fury(() => !talent.breath_of_sindragosa.enabled),
                     //actions+=/berserking,if=!talent.breath_of_sindragosa.enabled
@@ -454,7 +467,7 @@ namespace Singular.ClassSpecific
                 //actions.multi_target+=/obliterate,if=unholy>1
                 obliterate(() => unholy > 1),
                 //actions.multi_target+=/blood_boil,if=dot.blood_plague.ticking&(!talent.unholy_blight.enabled|cooldown.unholy_blight.remains<49),line_cd=28
-                blood_boil(() => active_enemies_list.Any(x => !dot.blood_plague.Ticking(x)) && dot.blood_plague.ticking && (!talent.unholy_blight.enabled || cooldown.unholy_blight.remains < 49)),
+                blood_boil(() => Enemies(BloodBoilDistance).Any(x => !dot.blood_plague.Ticking(x)) && dot.blood_plague.ticking && (!talent.unholy_blight.enabled || cooldown.unholy_blight.remains < 49)),
                 //actions.multi_target+=/defile
                 defile(() => true),
                 //actions.multi_target+=/breath_of_sindragosa,if=runic_power>75
@@ -648,7 +661,7 @@ namespace Singular.ClassSpecific
                 //actions.bos+=/plague_strike,if=!disease.ticking
                 plague_strike(() => !disease.ticking),
                 //actions.bos+=/blood_boil,cycle_targets=1,if=(spell_targets.blood_boil>=2&!(dot.blood_plague.ticking|dot.frost_fever.ticking))|spell_targets.blood_boil>=4&(runic_power<88&runic_power>30)
-                blood_boil(() => (spell_targets.blood_boil >= 2 && active_enemies_list.Any(x => !(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x)))) || spell_targets.blood_boil >= 4 && (runic_power < 88 && runic_power > 30)),
+                blood_boil(() => (spell_targets.blood_boil >= 2 && Enemies(BloodBoilDistance).Any(x => !(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x)))) || spell_targets.blood_boil >= 4 && (runic_power < 88 && runic_power > 30)),
                 //actions.bos+=/death_and_decay,if=spell_targets.death_and_decay>=2&(runic_power<88&runic_power>30)
                 death_and_decay(() => spell_targets.death_and_decay >= 2 && (runic_power < 88 && runic_power > 30)),
                 //actions.bos+=/festering_strike,if=(blood=2&frost=2&(((Frost-death)>0)|((Blood-death)>0)))&runic_power<80
@@ -697,11 +710,11 @@ namespace Singular.ClassSpecific
                 //actions.unholy+=/unholy_blight,if=!disease.min_ticking
                 unholy_blight(() => !disease.min_ticking),
                 //actions.unholy+=/outbreak,cycle_targets=1,if=!talent.necrotic_plague.enabled&(!(dot.blood_plague.ticking|dot.frost_fever.ticking))
-                outbreak(() => !talent.necrotic_plague.enabled && active_enemies_list.Any(x => (!(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x))))),
+                outbreak(() => !talent.necrotic_plague.enabled && (!(dot.blood_plague.ticking || dot.frost_fever.ticking))),
                 //actions.unholy+=/plague_strike,if=(!talent.necrotic_plague.enabled&!(dot.blood_plague.ticking|dot.frost_fever.ticking))|(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)
                 plague_strike(() => (!talent.necrotic_plague.enabled && !(dot.blood_plague.ticking || dot.frost_fever.ticking)) || (talent.necrotic_plague.enabled && !dot.necrotic_plague.ticking)),
                 //actions.unholy+=/blood_boil,cycle_targets=1,if=(spell_targets.blood_boil>1&!talent.necrotic_plague.enabled)&(!(dot.blood_plague.ticking|dot.frost_fever.ticking))
-                blood_boil(() => (spell_targets.blood_boil > 1 && !talent.necrotic_plague.enabled) && active_enemies_list.Any(x => (!(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x))))),
+                blood_boil(() => (spell_targets.blood_boil > 1 && !talent.necrotic_plague.enabled) && Enemies(BloodBoilDistance).Any(x => (!(dot.blood_plague.Ticking(x) || dot.frost_fever.Ticking(x))))),
                 //actions.unholy+=/death_and_decay,if=spell_targets.death_and_decay>1&unholy>1
                 death_and_decay(() => spell_targets.death_and_decay > 1 && unholy > 1),
                 //actions.unholy+=/defile,if=unholy=2
@@ -719,7 +732,7 @@ namespace Singular.ClassSpecific
                 //actions.unholy+=/festering_strike,if=(blood=2|frost=2)&(((Frost-death)>0)&((Blood-death)>0))
                 festering_strike(() => (blood == 2 || frost == 2) && (((Frost - death) > 0) && ((Blood - death) > 0))),
                 //actions.unholy+=/blood_boil,cycle_targets=1,if=(talent.necrotic_plague.enabled&!dot.necrotic_plague.ticking)&spell_targets.blood_boil>1
-                blood_boil(() => (talent.necrotic_plague.enabled && active_enemies_list.Any(x => !dot.necrotic_plague.Ticking(x))) && spell_targets.blood_boil > 1),
+                blood_boil(() => (talent.necrotic_plague.enabled && Enemies(BloodBoilDistance).Any(x => !dot.necrotic_plague.Ticking(x))) && spell_targets.blood_boil > 1),
                 //actions.unholy+=/defile,if=blood=2|frost=2
                 defile(() => blood == 2 || frost == 2),
                 //actions.unholy+=/death_and_decay,if=spell_targets.death_and_decay>1
@@ -795,6 +808,7 @@ namespace Singular.ClassSpecific
             public const string icy_touch = "Icy Touch";
             public const int killing_machine = 51124;
             public const string lichborne = "Lichborne";
+            public const string mind_freeze = "Mind Freeze";
             public const string necrotic_plague = "Necrotic Plague";
             public const string obliterate = "Obliterate";
             public const string outbreak = "Outbreak";
@@ -925,7 +939,7 @@ namespace Singular.ClassSpecific
 
             public static int blood_boil
             {
-                get { return EnemiesCountNearTarget(Me, (TalentManager.HasGlyph(DkSpells.blood_boil) ? BLOOD_BOIL_GLYPH_DISTANCE : BLOOD_BOIL_DISTANCE)); }
+                get { return EnemiesCountNearTarget(Me, BloodBoilDistance); }
             }
 
             public static int death_and_decay
@@ -1055,6 +1069,7 @@ namespace Singular.ClassSpecific
             public static readonly talent runic_corruption = new talent(DkTalentsEnum.RunicCorruption);
             public static readonly talent runic_empowerment = new talent(DkTalentsEnum.RunicEmpowerment);
             public static readonly talent unholy_blight = new talent(DkTalentsEnum.UnholyBlight);
+            public static readonly talent death_pact = new talent(DkTalentsEnum.DeathPact);
 
             #endregion
 

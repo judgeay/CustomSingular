@@ -97,14 +97,14 @@ namespace Singular.ClassSpecific
 
         public static WoWUnit NetherTempestTarget
         {
-            get { return active_enemies_list.OrderByDescending(x => EnemiesCountNearTarget(x, NETHER_TEMPEST_DISTANCE)).FirstOrDefault(); }
+            get { return SingularRoutine.Instance.ActiveEnemies.OrderByDescending(x => EnemiesCountNearTarget(x, NETHER_TEMPEST_DISTANCE)).FirstOrDefault(); }
         }
 
         public static WoWUnit SupernovaTarget
         {
             get
             {
-                var units = active_enemies_list.ToList();
+                var units = SingularRoutine.Instance.ActiveEnemies.ToList();
                 if (Me.GroupInfo.IsInParty) units.AddRange(Me.GroupInfo.RaidMembers.Where(x => x != null).Select(x => x.ToPlayer()).Where(x => x != null));
                 if (!units.Contains(Me)) units.Add(Me);
 

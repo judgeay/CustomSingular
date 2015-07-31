@@ -33,11 +33,7 @@ namespace Singular.ClassSpecific.Common
 
         public bool react
         {
-            get
-            {
-                Logging.Write(Colors.Red, "React : {0} = {1}", SpellName != null ? SpellName : SpellId.ToString(), SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId));
-                return SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId);
-            }
+            get { return SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId); }
         }
 
         public double remains

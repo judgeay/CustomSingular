@@ -106,28 +106,7 @@ namespace Singular.ClassSpecific.Common
 
         protected static int active_enemies
         {
-            get { return Spell.UseAoe ? active_enemies_list.Count() : 1; }
-        }
-
-        protected static IEnumerable<WoWUnit> active_enemies_list
-        {
-            get
-            {
-                var distance = 40;
-
-                switch (StyxWoW.Me.Specialization)
-                {
-                    case WoWSpec.DeathKnightUnholy:
-                    case WoWSpec.DeathKnightFrost:
-                        distance = TalentManager.HasGlyph(DeathKnight.DkSpells.blood_boil) ? 15 : 10;
-                        break;
-                    case WoWSpec.DeathKnightBlood:
-                        distance = 20;
-                        break;
-                }
-
-                return SingularRoutine.Instance.ActiveEnemies.Where(u => u.Distance <= distance);
-            }
+            get { return Spell.UseAoe ? SingularRoutine.Instance.ActiveEnemies.Count() : 1; }
         }
 
         protected static double gcd
@@ -170,12 +149,12 @@ namespace Singular.ClassSpecific.Common
 
         protected static IOrderedEnumerable<WoWUnit> Enemies(byte distance)
         {
-            return active_enemies_list.Where(x => x.Distance <= distance).OrderBy(x => x.Distance);
+            return SingularRoutine.Instance.ActiveEnemies.Where(x => x.Distance <= distance).OrderBy(x => x.Distance);
         }
 
         protected static int EnemiesCountNearTarget(WoWUnit target, byte distance)
         {
-            return active_enemies_list.Where(x => target != x).Count(x => target.Location.Distance(x.Location) <= distance);
+            return SingularRoutine.Instance.ActiveEnemies.Where(x => target != x).Count(x => target.Location.Distance(x.Location) <= distance);
         }
 
         protected static int time_to_die(WoWUnit target, int indeterminateValue)
