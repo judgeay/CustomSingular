@@ -19,7 +19,7 @@ namespace Singular.Helpers
     {
         #region Fields
 
-        private const double NANOSECONDS_PER_SECOND = 10000.0 * 1000.0;
+        private const double TICKS_PER_SECOND = 10000.0 * 1000.0;
         private const int SECONDS_PER_HOUR = 3600;
 
         private static readonly Dictionary<WoWGuid, UnitLifeTime> _guids = new Dictionary<WoWGuid, UnitLifeTime>();
@@ -114,7 +114,7 @@ namespace Singular.Helpers
 
         private static double TotalSeconds(this DateTime time)
         {
-            return time.Ticks / NANOSECONDS_PER_SECOND;
+            return time.Ticks / TICKS_PER_SECOND;
         }
 
         #endregion

@@ -1,6 +1,8 @@
 using System.Linq;
+using System.Windows.Media;
 using Singular.Helpers;
 using Styx;
+using Styx.Common;
 
 namespace Singular.ClassSpecific.Common
 {
@@ -31,7 +33,11 @@ namespace Singular.ClassSpecific.Common
 
         public bool react
         {
-            get { return SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId); }
+            get
+            {
+                Logging.Write(Colors.Red, "React : {0} = {1}", SpellName != null ? SpellName : SpellId.ToString(), SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId));
+                return SpellName != null ? StyxWoW.Me.HasAura(SpellName) : StyxWoW.Me.HasAura(SpellId);
+            }
         }
 
         public double remains

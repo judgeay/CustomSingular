@@ -33,35 +33,27 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> bloodbath = cond => Spell.BuffSelfAndWait(WarriorSpells.bloodbath, req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> colossus_smash = cond => Spell.Cast(WarriorSpells.colossus_smash, req => cond());
         private static readonly Func<Composite> commanding_shout = () => Spell.Cast(WarriorSpells.commanding_shout, ret => !Me.HasAura(WarriorSpells.battle_shout) && !Me.HasMyAura(WarriorSpells.commanding_shout) && !Me.HasPartyBuff(PartyBuffType.Stamina));
+        private static readonly Func<Composite> die_by_the_sword = () => Spell.BuffSelf(WarriorSpells.die_by_the_sword, req => Spell.UseCooldown && health.pct < 50, gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> dragon_roar = cond => Spell.Cast(WarriorSpells.dragon_roar, req => Spell.UseAoe && cond());
-        private static readonly Func<Composite> die_by_the_sword = () => Spell.HandleOffGCD(Spell.BuffSelf("Die by the Sword", req => Me.Combat && Me.HealthPercent < 50, 0, HasGcd.No));
         private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> execute = (target, cond) => Spell.Cast(WarriorSpells.execute, on => target(), req => target() != null && cond());
         private static readonly Func<Func<bool>, Composite> heroic_throw = cond => Spell.Cast(WarriorSpells.heroic_throw, req => cond());
         private static readonly Func<Func<bool>, Composite> impending_victory = cond => Spell.Cast(WarriorSpells.impending_victory, req => cond());
         private static readonly Func<Func<bool>, Composite> mortal_strike = cond => Spell.Cast(WarriorSpells.mortal_strike, req => cond());
-        private static readonly Func<Composite> rallying_cry = () => Spell.BuffSelf("Rallying Cry", req => Me.HealthPercent < 30, gcd: HasGcd.No);        
+        private static readonly Func<Composite> rallying_cry = () => Spell.BuffSelf(WarriorSpells.rallying_cry, req => Spell.UseCooldown && health.pct < 30, gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> ravager = cond => Spell.CastOnGround(WarriorSpells.ravager, on => Me.CurrentTarget, req => Spell.UseCooldown && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> recklessness = cond => Spell.BuffSelfAndWait(WarriorSpells.recklessness, req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> rend = (target, cond) => Spell.Cast(WarriorSpells.rend, on => target(), req => target() != null && cond());
         private static readonly Func<Func<bool>, Composite> shockwave = cond => Spell.Cast(WarriorSpells.shockwave, req => cond());
         private static readonly Func<Func<bool>, Composite> siegebreaker = cond => Spell.Cast(WarriorSpells.siegebreaker, req => cond());
         private static readonly Func<Func<bool>, Composite> slam = cond => Spell.Cast(WarriorSpells.slam, req => cond());
+        private static readonly Func<Composite> spell_reflect = () => Spell.Cast(WarriorSpells.spell_reflect, on => SpellReflectTarget, req => SpellReflectTarget != null);
         private static readonly Func<Func<bool>, Composite> storm_bolt = cond => Spell.Cast(WarriorSpells.storm_bolt, req => cond());
-        private static readonly Func<Composite> spell_reflect = () => Spell.Cast("Spell Reflect", on => SpellReflectTarget, req => SpellReflectTarget != null);
         private static readonly Func<Func<bool>, Composite> sweeping_strikes = cond => Spell.BuffSelfAndWait(WarriorSpells.sweeping_strikes, req => Spell.UseAoe && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> thunder_clap = cond => Spell.Cast(WarriorSpells.thunder_clap, req => Spell.UseAoe && cond());
-        private static readonly Func<Composite> victory_rush = () => Spell.Cast("Victory Rush", ret => Me.Combat && Me.HealthPercent < 80 && Me.HasAura("Victorious"));
+        private static readonly Func<Composite> victory_rush = () => Spell.Cast(WarriorSpells.victory_rush, ret => !talent.impending_victory.enabled && health.pct < 80 && buff.victory_rush.up);
         private static readonly Func<Func<bool>, Composite> whirlwind = cond => Spell.Cast(WarriorSpells.whirlwind, req => cond());
 
         #endregion
-
-        public static WoWUnit SpellReflectTarget
-        {
-            get
-            {
-                return active_enemies_list.FirstOrDefault(u => u.IsCasting && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown("Pummel") || !Spell.CanCastHack("Pummel", u)));
-            }
-        }
 
         #region Enums
 
@@ -106,6 +98,11 @@ namespace Singular.ClassSpecific
         #endregion
 
         #region Properties
+
+        public static WoWUnit SpellReflectTarget
+        {
+            get { return active_enemies_list.FirstOrDefault(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(WarriorSpells.pummel) || !Spell.CanCastHack(WarriorSpells.pummel, u))); }
+        }
 
         public static uint rage
         {
@@ -392,22 +389,28 @@ namespace Singular.ClassSpecific
             public const string charge_stun = "Charge Stun";
             public const string colossus_smash = "Colossus Smash";
             public const string commanding_shout = "Commanding Shout";
+            public const string die_by_the_sword = "Die by the Sword";
             public const string dragon_roar = "Dragon Roar";
             public const string execute = "Execute";
             public const string heroic_leap = "Heroic Leap";
             public const string heroic_throw = "Heroic Throw";
             public const string impending_victory = "Impending Victory";
             public const string mortal_strike = "Mortal Strike";
+            public const string pummel = "Pummel";
+            public const string rallying_cry = "Rallying Cry";
             public const string ravager = "Ravager";
             public const string recklessness = "Recklessness";
             public const string rend = "Rend";
             public const string shockwave = "Shockwave";
             public const string siegebreaker = "Siegebreaker";
             public const string slam = "Slam";
+            public const string spell_reflect = "Spell Reflect";
             public const string storm_bolt = "Storm Bolt";
             public const int sudden_death = 52437;
             public const string sweeping_strikes = "Sweeping Strikes";
             public const string thunder_clap = "Thunder Clap";
+            public const string victorious = "Victorious";
+            public const string victory_rush = "Victory Rush";
             public const string warbringer = "Warbringer";
             public const string whirlwind = "Whirlwind";
 
@@ -453,6 +456,7 @@ namespace Singular.ClassSpecific
             public static readonly buff colossus_smash_up = new buff(WarriorSpells.colossus_smash);
             public static readonly buff recklessness = new buff(WarriorSpells.recklessness);
             public static readonly buff sudden_death = new buff(WarriorSpells.sudden_death);
+            public static readonly buff victory_rush = new buff(WarriorSpells.victorious);
 
             #endregion
 
@@ -534,6 +538,7 @@ namespace Singular.ClassSpecific
             public static readonly talent anger_management = new talent((int) WarriorTalents.AngerManagement);
             public static readonly talent bladestorm = new talent((int) WarriorTalents.Bladestorm);
             public static readonly talent bloodbath = new talent((int) WarriorTalents.Bloodbath);
+            public static readonly talent impending_victory = new talent((int) WarriorTalents.ImpendingVictory);
             public static readonly talent ravager = new talent((int) WarriorTalents.Ravager);
             public static readonly talent slam = new talent((int) WarriorTalents.Slam);
             public static readonly talent taste_for_blood = new talent((int) WarriorTalents.TasteForBlood);
