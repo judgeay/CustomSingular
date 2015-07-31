@@ -205,11 +205,7 @@ namespace Singular.ClassSpecific.Common
 
             public static bool _1h
             {
-                get
-                {
-                    Logger.Write(Color.SeaGreen, "Try to get main_hand._1h {0}", Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass));
-                    return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass);
-                }
+                get { return Me.Inventory.Equipped.MainHand != null && _oneHandWeaponClasses.Contains(Me.Inventory.Equipped.MainHand.ItemInfo.WeaponClass); }
             }
 
             public static bool _2h

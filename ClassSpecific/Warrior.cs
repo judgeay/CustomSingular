@@ -34,10 +34,12 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> colossus_smash = cond => Spell.Cast(WarriorSpells.colossus_smash, req => cond());
         private static readonly Func<Composite> commanding_shout = () => Spell.Cast(WarriorSpells.commanding_shout, ret => !Me.HasAura(WarriorSpells.battle_shout) && !Me.HasMyAura(WarriorSpells.commanding_shout) && !Me.HasPartyBuff(PartyBuffType.Stamina));
         private static readonly Func<Func<bool>, Composite> dragon_roar = cond => Spell.Cast(WarriorSpells.dragon_roar, req => Spell.UseAoe && cond());
+        private static readonly Func<Composite> die_by_the_sword = () => Spell.HandleOffGCD(Spell.BuffSelf("Die by the Sword", req => Me.Combat && Me.HealthPercent < 50, 0, HasGcd.No));
         private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> execute = (target, cond) => Spell.Cast(WarriorSpells.execute, on => target(), req => target() != null && cond());
         private static readonly Func<Func<bool>, Composite> heroic_throw = cond => Spell.Cast(WarriorSpells.heroic_throw, req => cond());
         private static readonly Func<Func<bool>, Composite> impending_victory = cond => Spell.Cast(WarriorSpells.impending_victory, req => cond());
         private static readonly Func<Func<bool>, Composite> mortal_strike = cond => Spell.Cast(WarriorSpells.mortal_strike, req => cond());
+        private static readonly Func<Composite> rallying_cry = () => Spell.BuffSelf("Rallying Cry", req => Me.HealthPercent < 30, gcd: HasGcd.No);        
         private static readonly Func<Func<bool>, Composite> ravager = cond => Spell.CastOnGround(WarriorSpells.ravager, on => Me.CurrentTarget, req => Spell.UseCooldown && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> recklessness = cond => Spell.BuffSelfAndWait(WarriorSpells.recklessness, req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<WoWUnit>, Func<bool>, Composite> rend = (target, cond) => Spell.Cast(WarriorSpells.rend, on => target(), req => target() != null && cond());
@@ -45,11 +47,21 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> siegebreaker = cond => Spell.Cast(WarriorSpells.siegebreaker, req => cond());
         private static readonly Func<Func<bool>, Composite> slam = cond => Spell.Cast(WarriorSpells.slam, req => cond());
         private static readonly Func<Func<bool>, Composite> storm_bolt = cond => Spell.Cast(WarriorSpells.storm_bolt, req => cond());
+        private static readonly Func<Composite> spell_reflect = () => Spell.Cast("Spell Reflect", on => SpellReflectTarget, req => SpellReflectTarget != null);
         private static readonly Func<Func<bool>, Composite> sweeping_strikes = cond => Spell.BuffSelfAndWait(WarriorSpells.sweeping_strikes, req => Spell.UseAoe && cond(), gcd: HasGcd.No);
         private static readonly Func<Func<bool>, Composite> thunder_clap = cond => Spell.Cast(WarriorSpells.thunder_clap, req => Spell.UseAoe && cond());
+        private static readonly Func<Composite> victory_rush = () => Spell.Cast("Victory Rush", ret => Me.Combat && Me.HealthPercent < 80 && Me.HasAura("Victorious"));
         private static readonly Func<Func<bool>, Composite> whirlwind = cond => Spell.Cast(WarriorSpells.whirlwind, req => cond());
 
         #endregion
+
+        public static WoWUnit SpellReflectTarget
+        {
+            get
+            {
+                return active_enemies_list.FirstOrDefault(u => u.IsCasting && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown("Pummel") || !Spell.CanCastHack("Pummel", u)));
+            }
+        }
 
         #region Enums
 
@@ -130,6 +142,10 @@ namespace Singular.ClassSpecific
                     Movement.WaitForFacing(),
                     Movement.WaitForLineOfSpellSight(),
                     use_trinket(),
+                    victory_rush(),
+                    spell_reflect(),
+                    die_by_the_sword(),
+                    rallying_cry(),
                     //actions=charge,if=debuff.charge.down
                     //actions+=/auto_attack
                     //# This is mostly to prevent cooldowns from being accidentally used during movement.
