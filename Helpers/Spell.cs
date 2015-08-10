@@ -217,6 +217,11 @@ namespace Singular.Helpers
             get { return HotkeyDirector.IsCooldownEnabled && SingularSettings.Instance.AllowAutoCooldownUsage; }
         }
 
+        public static bool UseDefensiveCooldown
+        {
+            get { return HotkeyDirector.IsDefensiveCooldownEnabled && SingularSettings.Instance.AllowAutoCooldownUsage; }
+        }
+
         public static float MeleeDistance(this WoWUnit unit)
         {
             return Me.MeleeDistance(unit);

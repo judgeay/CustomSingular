@@ -105,7 +105,7 @@ namespace Singular.Settings
         private static SingularSettings _instance;
 
         public SingularSettings()
-            : base(Path.Combine(CharacterSettingsPath, "SingularSettings.xml"))
+            : base(Path.Combine(CharacterSettingsPath, "CustomSingularSettings.xml"))
         {
             // changing how we are initialize the _instance pointer
             _entrycount++;

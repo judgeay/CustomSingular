@@ -26,10 +26,12 @@ namespace Singular.Managers
         private static bool _aoeEnabled;
         private static bool _combatEnabled;
         private static bool _cooldownEnabled;
+        private static bool _defensiveCooldownEnabled;
         private static bool _hotkeysRegistered;
         private static bool _lastIsAoeEnabled;
         private static bool _lastIsCombatEnabled;
         private static bool _lastIsCooldownEnabled;
+        private static bool _lastIsDefensiveCooldownEnabled;
         private static bool _lastIsMovementEnabled;
         private static bool _lastIsMovementTemporarilySuspended;
         private static bool _lastIsPullMoreEnabled;
@@ -61,6 +63,11 @@ namespace Singular.Managers
         public static bool IsCooldownEnabled
         {
             get { return _cooldownEnabled; }
+        }
+
+        public static bool IsDefensiveCooldownEnabled
+        {
+            get { return _defensiveCooldownEnabled; }
         }
 
         /// <summary>
@@ -168,6 +175,18 @@ namespace Singular.Managers
             }
         }
 
+        internal static void DefensiveCooldownKeyHandler()
+        {
+            if (_defensiveCooldownEnabled != _lastIsDefensiveCooldownEnabled)
+            {
+                _lastIsDefensiveCooldownEnabled = _defensiveCooldownEnabled;
+                if (_lastIsDefensiveCooldownEnabled)
+                    TellUser("Automatic Cooldown usage now active!");
+                else
+                    TellUser("Automatic Cooldown usage disabled... press {0} to enable", HotkeySettings.DefensiveCooldownToggle.ToFormattedString());
+            }
+        }
+
         /// <summary>
         /// sets initial values for all key states. registers a local botevent handler so 
         /// we know when we are running and when we arent to enable/disable hotkeys
@@ -239,6 +258,11 @@ namespace Singular.Managers
                     _cooldownEnabled = !IsKeyDown(HotkeySettings.CooldownToggle);
                     CooldownKeyHandler();
                 }
+                if (HotkeySettings.DefensiveCooldownToggle != Keys.None)
+                {
+                    _defensiveCooldownEnabled = !IsKeyDown(HotkeySettings.DefensiveCooldownToggle);
+                    DefensiveCooldownKeyHandler();
+                }
                 if (HotkeySettings.MovementToggle != Keys.None)
                 {
                     _movementEnabled = !IsKeyDown(HotkeySettings.MovementToggle);
@@ -272,6 +296,9 @@ namespace Singular.Managers
 
                 if (HotkeySettings.CooldownToggle != Keys.None)
                     RegisterHotkeyAssignment("Cooldown", HotkeySettings.CooldownToggle, hk => CooldownToggle());
+
+                if (HotkeySettings.DefensiveCooldownToggle != Keys.None)
+                    RegisterHotkeyAssignment("DefensiveCooldown", HotkeySettings.DefensiveCooldownToggle, hk => DefensiveCooldownToggle());
 
                 // register hotkey for commands with 1:1 key assignment
                 if (HotkeySettings.PullMoreToggle != Keys.None)
@@ -373,12 +400,22 @@ namespace Singular.Managers
             return (_cooldownEnabled);
         }
 
+        private static bool DefensiveCooldownToggle()
+        {
+            _defensiveCooldownEnabled = !_defensiveCooldownEnabled;
+#if !REACT_TO_HOTKEYS_IN_PULSE
+            CooldownKeyHandler();
+#endif
+            return (_defensiveCooldownEnabled);
+        }
+
         private static void InitKeyStates()
         {
             // reset these values so we begin at same state every Start
             _aoeEnabled = true;
             _combatEnabled = true;
             _cooldownEnabled = true;
+            _defensiveCooldownEnabled = true;
             _pullMoreEnabled = true;
             _movementEnabled = true;
             _movementTemporarySuspendEndtime = DateTime.MinValue;
@@ -386,6 +423,7 @@ namespace Singular.Managers
             _lastIsAoeEnabled = true;
             _lastIsCombatEnabled = true;
             _lastIsCooldownEnabled = true;
+            _lastIsDefensiveCooldownEnabled = true;
             _lastIsPullMoreEnabled = true;
             _lastIsMovementEnabled = true;
             _lastIsMovementTemporarilySuspended = false;
