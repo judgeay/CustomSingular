@@ -27,20 +27,20 @@ namespace Singular.ClassSpecific
 
         private static readonly Func<Func<bool>, Composite> antimagic_shell = cond => 
             Spell.BuffSelf(DkSpells.antimagic_shell, req =>
-                Spell.UseCooldown &&
+                Spell.UseDefensiveCooldown &&
                 SingularRoutine.Instance.ActiveEnemies.Any(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(DkSpells.mind_freeze) || !Spell.CanCastHack(DkSpells.mind_freeze, u))) && cond());
 
         private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && cond());
-        private static readonly Func<Func<bool>, Composite> bone_shield = cond => Spell.BuffSelf(DkSpells.bone_shield, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> bone_shield = cond => Spell.BuffSelf(DkSpells.bone_shield, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> breath_of_sindragosa = cond => Spell.Buff(DkSpells.breath_of_sindragosa, req => talent.breath_of_sindragosa.enabled && !Me.HasAura(DkSpells.breath_of_sindragosa) && Spell.UseAoe && cond());
-        private static readonly Func<Func<bool>, Composite> conversion = cond => Spell.BuffSelf(DkSpells.conversion, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> conversion = cond => Spell.BuffSelf(DkSpells.conversion, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> dancing_rune_weapon = cond => Spell.Cast(DkSpells.dancing_rune_weapon, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> dark_transformation = cond => Spell.Cast(DkSpells.dark_transformation, on => Me.Pet, req => cond());
         private static readonly Func<Func<bool>, Composite> death_and_decay = cond => Spell.CastOnGround(DkSpells.death_and_decay, on => Me.CurrentTarget, req => Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> death_coil = cond => Spell.Cast(DkSpells.death_coil, req => cond());
         private static readonly Func<Func<bool>, Composite> death_grip = cond => Spell.Cast(DkSpells.death_grip, req => cond());
-        private static readonly Func<Func<bool>, Composite> death_pact = cond => Spell.BuffSelf(DkSpells.death_pact, req => talent.death_pact.enabled && Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> death_pact = cond => Spell.BuffSelf(DkSpells.death_pact, req => talent.death_pact.enabled && Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> death_strike = cond => Spell.Cast(DkSpells.death_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> defile = cond => Spell.CastOnGround(DkSpells.defile, on => Me.CurrentTarget, req => talent.defile.enabled && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> empower_rune_weapon = cond => Spell.BuffSelf(DkSpells.empower_rune_weapon, req => Spell.UseCooldown && cond());
@@ -48,7 +48,7 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> frost_strike = cond => Spell.Cast(DkSpells.frost_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> horn_of_winter = cond => Spell.BuffSelf(DkSpells.horn_of_winter, req => cond());
         private static readonly Func<Func<bool>, Composite> howling_blast = cond => Spell.Cast(DkSpells.howling_blast, req => cond());
-        private static readonly Func<Func<bool>, Composite> icebound_fortitude = cond => Spell.BuffSelf(DkSpells.icebound_fortitude, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> icebound_fortitude = cond => Spell.BuffSelf(DkSpells.icebound_fortitude, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> icy_touch = cond => Spell.Cast(DkSpells.icy_touch, req => cond());
         private static readonly Func<Func<bool>, Composite> lichborne = cond => Spell.BuffSelf(DkSpells.lichborne, req => Spell.UseCooldown && talent.lichborne.enabled && cond());
         private static readonly Func<Func<bool>, Composite> obliterate = cond => Spell.Cast(DkSpells.obliterate, req => cond());
@@ -57,12 +57,12 @@ namespace Singular.ClassSpecific
         private static readonly Func<Func<bool>, Composite> plague_leech = cond => Spell.Cast(DkSpells.plague_leech, req => talent.plague_leech.enabled && disease.ticking && cond());
         private static readonly Func<Func<bool>, Composite> plague_strike = cond => Spell.Cast(DkSpells.plague_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> raise_dead = cond => Spell.Cast(DkSpells.raise_dead, req => StyxWoW.Me.GotAlivePet == false && SingularSettings.Instance.DisablePetUsage == false && cond());
-        private static readonly Func<Func<bool>, Composite> rune_tap = cond => Spell.BuffSelf(DkSpells.rune_tap, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> rune_tap = cond => Spell.BuffSelf(DkSpells.rune_tap, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> scourge_strike = cond => Spell.Cast(DkSpells.scourge_strike, req => cond());
         private static readonly Func<Func<bool>, Composite> soul_reaper = cond => Spell.Cast(DkSpells.soul_reaper, req => cond());
         private static readonly Func<Func<bool>, Composite> summon_gargoyle = cond => Spell.Cast(DkSpells.summon_gargoyle, req => Spell.UseCooldown && cond());
         private static readonly Func<Func<bool>, Composite> unholy_blight = cond => Spell.Cast(DkSpells.unholy_blight, req => talent.unholy_blight.enabled && cond());
-        private static readonly Func<Func<bool>, Composite> vampiric_blood = cond => Spell.BuffSelf(DkSpells.vampiric_blood, req => Spell.UseCooldown && cond());
+        private static readonly Func<Func<bool>, Composite> vampiric_blood = cond => Spell.BuffSelf(DkSpells.vampiric_blood, req => Spell.UseDefensiveCooldown && cond());
 
         #endregion
 
