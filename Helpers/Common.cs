@@ -219,7 +219,7 @@ namespace Singular.Helpers
         /// </summary>
         public static Composite CreateInterruptBehavior()
         {
-            if ( SingularSettings.Instance.InterruptTarget == CheckTargets.None || HotkeyDirector.IsInterruptEnabled == false )
+            if ( SingularSettings.Instance.InterruptTarget == CheckTargets.None )
                 return new ActionAlwaysFail();
 
             Composite actionSelectTarget;
@@ -307,7 +307,7 @@ namespace Singular.Helpers
             }
 
             if ( Me.Class == WoWClass.DeathKnight)
-                prioSpell.AddChild( Spell.Cast("Mind Freeze", ctx => _unitInterrupt));
+                prioSpell.AddChild( Spell.Cast("Mind Freeze", ctx => _unitInterrupt, req => HotkeyDirector.IsInterruptEnabled));
 
             if ( Me.Race == WoWRace.Pandaren )
                 prioSpell.AddChild( Spell.Cast("Quaking Palm", ctx => _unitInterrupt));
@@ -360,7 +360,7 @@ namespace Singular.Helpers
                 prioSpell.AddChild( Spell.Cast("Silence", ctx => _unitInterrupt));
 
             if (Me.Class == WoWClass.DeathKnight)
-                prioSpell.AddChild(Spell.Cast("Strangulate", ctx => _unitInterrupt));
+                prioSpell.AddChild(Spell.Cast("Strangulate", ctx => _unitInterrupt, req => HotkeyDirector.IsInterruptEnabled && SingularRoutine.CurrentWoWContext == WoWContext.Battlegrounds));
 
             if (Me.Class == WoWClass.Mage)
                 prioSpell.AddChild(Spell.Cast("Frostjaw", ctx => _unitInterrupt));
