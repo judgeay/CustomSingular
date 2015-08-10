@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using Singular.Helpers;
-using Singular.Managers;
 using Singular.Settings;
 using Styx;
 using Styx.CommonBot;
@@ -30,8 +28,7 @@ namespace Singular.ClassSpecific.Common
 
         protected static readonly Func<Composite> use_trinket = () =>
         {
-            if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never &&
-                SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never)
+            if ((SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never && SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never) || Spell.UseCooldown == false)
             {
                 return new Action(ret => RunStatus.Failure);
             }
