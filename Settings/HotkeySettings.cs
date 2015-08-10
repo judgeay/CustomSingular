@@ -79,15 +79,22 @@ namespace Singular.Settings
         [DefaultValue(Keys.None)]
         [Category("Hotkeys")]
         [DisplayName("Key - Automatic Cooldown usage")]
-        [Description("Enables/Disables All Automatic Cooldown Usage")]
+        [Description("Enables/Disables Automatic Cooldown Usage")]
         public Keys CooldownToggle { get; set; }
 
         [Setting]
         [DefaultValue(Keys.None)]
         [Category("Hotkeys")]
         [DisplayName("Key - Automatic Defensive Cooldown usage")]
-        [Description("Enables/Disables All Automatic Defensive Cooldown Usage")]
+        [Description("Enables/Disables Automatic Defensive Cooldown Usage")]
         public Keys DefensiveCooldownToggle { get; set; }
+
+        [Setting]
+        [DefaultValue(Keys.None)]
+        [Category("Hotkeys")]
+        [DisplayName("Key - Automatic Interrupt usage")]
+        [Description("Enables/Disables Automatic Interrupt Usage")]
+        public Keys InterruptToogle { get; set; }
 
         [Setting]
         [DefaultValue(Keys.None)]

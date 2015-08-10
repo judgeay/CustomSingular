@@ -28,10 +28,12 @@ namespace Singular.Managers
         private static bool _cooldownEnabled;
         private static bool _defensiveCooldownEnabled;
         private static bool _hotkeysRegistered;
+        private static bool _interruptEnabled;
         private static bool _lastIsAoeEnabled;
         private static bool _lastIsCombatEnabled;
         private static bool _lastIsCooldownEnabled;
         private static bool _lastIsDefensiveCooldownEnabled;
+        private static bool _lastIsInterruptEnabled;
         private static bool _lastIsMovementEnabled;
         private static bool _lastIsMovementTemporarilySuspended;
         private static bool _lastIsPullMoreEnabled;
@@ -68,6 +70,11 @@ namespace Singular.Managers
         public static bool IsDefensiveCooldownEnabled
         {
             get { return _defensiveCooldownEnabled; }
+        }
+
+        public static bool IsInterruptEnabled
+        {
+            get { return _interruptEnabled; }
         }
 
         /// <summary>
@@ -181,9 +188,9 @@ namespace Singular.Managers
             {
                 _lastIsDefensiveCooldownEnabled = _defensiveCooldownEnabled;
                 if (_lastIsDefensiveCooldownEnabled)
-                    TellUser("Automatic Cooldown usage now active!");
+                    TellUser("Automatic Defensive Cooldown usage now active!");
                 else
-                    TellUser("Automatic Cooldown usage disabled... press {0} to enable", HotkeySettings.DefensiveCooldownToggle.ToFormattedString());
+                    TellUser("Automatic Defensive Cooldown usage disabled... press {0} to enable", HotkeySettings.DefensiveCooldownToggle.ToFormattedString());
             }
         }
 
@@ -202,6 +209,18 @@ namespace Singular.Managers
                 else if (arg.Event == SingularBotEvent.BotStopped)
                     Stop();
             };
+        }
+
+        internal static void InterruptKeyHandler()
+        {
+            if (_interruptEnabled != _lastIsInterruptEnabled)
+            {
+                _lastIsInterruptEnabled = _interruptEnabled;
+                if (_lastIsInterruptEnabled)
+                    TellUser("Interrupt usage now active!");
+                else
+                    TellUser("Interrupt usage disabled... press {0} to enable", HotkeySettings.InterruptToogle.ToFormattedString());
+            }
         }
 
         internal static void MovementKeyHandler()
@@ -263,6 +282,11 @@ namespace Singular.Managers
                     _defensiveCooldownEnabled = !IsKeyDown(HotkeySettings.DefensiveCooldownToggle);
                     DefensiveCooldownKeyHandler();
                 }
+                if (HotkeySettings.InterruptToogle != Keys.None)
+                {
+                    _interruptEnabled = !IsKeyDown(HotkeySettings.InterruptToogle);
+                    InterruptKeyHandler();
+                }
                 if (HotkeySettings.MovementToggle != Keys.None)
                 {
                     _movementEnabled = !IsKeyDown(HotkeySettings.MovementToggle);
@@ -299,6 +323,9 @@ namespace Singular.Managers
 
                 if (HotkeySettings.DefensiveCooldownToggle != Keys.None)
                     RegisterHotkeyAssignment("DefensiveCooldown", HotkeySettings.DefensiveCooldownToggle, hk => DefensiveCooldownToggle());
+
+                if (HotkeySettings.InterruptToogle != Keys.None)
+                    RegisterHotkeyAssignment("Interrupt", HotkeySettings.InterruptToogle, hk => InterruptToogle());
 
                 // register hotkey for commands with 1:1 key assignment
                 if (HotkeySettings.PullMoreToggle != Keys.None)
@@ -416,6 +443,7 @@ namespace Singular.Managers
             _combatEnabled = true;
             _cooldownEnabled = true;
             _defensiveCooldownEnabled = true;
+            _interruptEnabled = true;
             _pullMoreEnabled = true;
             _movementEnabled = true;
             _movementTemporarySuspendEndtime = DateTime.MinValue;
@@ -424,9 +452,19 @@ namespace Singular.Managers
             _lastIsCombatEnabled = true;
             _lastIsCooldownEnabled = true;
             _lastIsDefensiveCooldownEnabled = true;
+            _lastIsInterruptEnabled = true;
             _lastIsPullMoreEnabled = true;
             _lastIsMovementEnabled = true;
             _lastIsMovementTemporarilySuspended = false;
+        }
+
+        private static bool InterruptToogle()
+        {
+            _interruptEnabled = !_interruptEnabled;
+#if !REACT_TO_HOTKEYS_IN_PULSE
+            InterruptKeyHandler();
+#endif
+            return (_interruptEnabled);
         }
 
         private static bool IsKeyDown(Keys key)

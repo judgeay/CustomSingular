@@ -219,7 +219,7 @@ namespace Singular.Helpers
         /// </summary>
         public static Composite CreateInterruptBehavior()
         {
-            if ( SingularSettings.Instance.InterruptTarget == CheckTargets.None )
+            if ( SingularSettings.Instance.InterruptTarget == CheckTargets.None || HotkeyDirector.IsInterruptEnabled == false )
                 return new ActionAlwaysFail();
 
             Composite actionSelectTarget;
