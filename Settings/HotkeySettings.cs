@@ -10,7 +10,7 @@ namespace Singular.Settings
     internal class HotkeySettings : Styx.Helpers.Settings
     {
         public HotkeySettings()
-            : base(Path.Combine(SingularSettings.CharacterSettingsPath, "SingularSettings.Hotkeys.xml"))
+            : base(Path.Combine(SingularSettings.GlobalSettingsPath, "CustomSingularSettings.Hotkeys.xml"))
         { 
             // bit of a hack -- SavedToFile setting tracks if we have ever saved
             // .. these settings.  this is needed because we can't use the DefaultValue
