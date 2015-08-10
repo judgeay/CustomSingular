@@ -27,8 +27,8 @@ namespace Singular.ClassSpecific.Common
         protected static readonly Func<Func<bool>, Composite> blood_fury = cond => Spell.BuffSelfAndWait("Blood Fury", req => Spell.UseCooldown && cond(), gcd: HasGcd.No);
 
         protected static readonly Func<Composite> use_trinket = () =>
-        {
-            if ((SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never && SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never) || Spell.UseCooldown == false)
+        {			
+            if (SingularSettings.Instance.Trinket1Usage == TrinketUsage.Never && SingularSettings.Instance.Trinket2Usage == TrinketUsage.Never)
             {
                 return new Action(ret => RunStatus.Failure);
             }
@@ -37,12 +37,12 @@ namespace Singular.ClassSpecific.Common
 
             if (SingularSettings.IsTrinketUsageWanted(TrinketUsage.OnCooldownInCombat))
             {
-                ps.AddChild(new Decorator(
-                    ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && ((StyxWoW.Me.IsMelee() && StyxWoW.Me.CurrentTarget.IsWithinMeleeRange) || StyxWoW.Me.CurrentTarget.SpellDistance() < 40),
-                    Item.UseEquippedTrinket(TrinketUsage.OnCooldownInCombat)));
+                return new Decorator(
+                    ret => StyxWoW.Me.Combat && StyxWoW.Me.GotTarget() && ((StyxWoW.Me.IsMelee() && StyxWoW.Me.CurrentTarget.IsWithinMeleeRange) || StyxWoW.Me.CurrentTarget.SpellDistance() < 40) && Spell.UseCooldown,
+                    Item.UseEquippedTrinket(TrinketUsage.OnCooldownInCombat));
             }
 
-            return ps;
+            return new Action(ret => RunStatus.Failure);
         };
 
         private static readonly Dictionary<WoWClass, uint> T18ClassTrinketIds = new Dictionary<WoWClass, uint>
