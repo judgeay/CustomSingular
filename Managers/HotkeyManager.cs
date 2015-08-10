@@ -349,6 +349,8 @@ namespace Singular.Managers
             HotkeysManager.Unregister("AOE");
             HotkeysManager.Unregister("Combat");
             HotkeysManager.Unregister("Cooldown");
+            HotkeysManager.Unregister("DefensiveCooldown");
+            HotkeysManager.Unregister("Interrupt");
             HotkeysManager.Unregister("PullMore");
             HotkeysManager.Unregister("Movement");
 
@@ -431,7 +433,7 @@ namespace Singular.Managers
         {
             _defensiveCooldownEnabled = !_defensiveCooldownEnabled;
 #if !REACT_TO_HOTKEYS_IN_PULSE
-            CooldownKeyHandler();
+            DefensiveCooldownKeyHandler();
 #endif
             return (_defensiveCooldownEnabled);
         }
