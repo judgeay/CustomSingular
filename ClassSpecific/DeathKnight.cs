@@ -31,7 +31,7 @@ namespace Singular.ClassSpecific
                 SingularRoutine.Instance.ActiveEnemies.Any(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(DkSpells.mind_freeze) || !Spell.CanCastHack(DkSpells.mind_freeze, u))) && cond());
 
         private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && cond());
-        private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && cond());
+        private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && buff.blood_charge.stack >= 5 && cond());
         private static readonly Func<Func<bool>, Composite> bone_shield = cond => Spell.BuffSelf(DkSpells.bone_shield, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> breath_of_sindragosa = cond => Spell.Buff(DkSpells.breath_of_sindragosa, req => talent.breath_of_sindragosa.enabled && !Me.HasAura(DkSpells.breath_of_sindragosa) && Spell.UseAoe && cond());
         private static readonly Func<Func<bool>, Composite> conversion = cond => Spell.BuffSelf(DkSpells.conversion, req => Spell.UseDefensiveCooldown && cond());
