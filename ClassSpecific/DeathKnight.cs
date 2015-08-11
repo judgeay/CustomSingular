@@ -277,13 +277,9 @@ namespace Singular.ClassSpecific
         [Behavior(BehaviorType.Combat, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost)]
         public static Composite FrostActionList()
         {
-            return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
+            return new PrioritySelector(
+                Helpers.Common.CreateInterruptBehavior(),
                 new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
-                    Helpers.Common.CreateInterruptBehavior(),
-                    Movement.WaitForFacing(),
-                    Movement.WaitForLineOfSpellSight(),
                     //actions=auto_attack
                     //actions+=/deaths_advance,if=movement.remains>2
                     //actions+=/antimagic_shell,damage=100000,if=((dot.breath_of_sindragosa.ticking&runic_power<25)|cooldown.breath_of_sindragosa.remains>40)|!talent.breath_of_sindragosa.enabled
