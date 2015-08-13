@@ -240,7 +240,7 @@ namespace Singular.ClassSpecific
                 //actions+=/arcane_torrent
                 arcane_torrent(() => runic_power < 20),
                 //actions+=/antimagic_shell
-                //antimagic_shell(() => true),
+                antimagic_shell(() => true),
                 //actions+=/conversion,if=!buff.conversion.up&runic_power>50&health.pct<90
                 conversion(() => !buff.conversion.up && runic_power > 50 && health.pct < 90),
                 //actions+=/lichborne,if=health.pct<90
