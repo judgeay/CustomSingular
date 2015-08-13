@@ -125,60 +125,55 @@ namespace Singular.ClassSpecific
         [Behavior(BehaviorType.Combat, WoWClass.Paladin, WoWSpec.PaladinRetribution)]
         public static Composite RetributionActionList()
         {
-            return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
-                new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
-                    Helpers.Common.CreateInterruptBehavior(),
-                    Movement.WaitForFacing(),
-                    Movement.WaitForLineOfSpellSight(),
-                    use_trinket(),
-                    //actions=rebuke
-                    //actions+=/potion,name=draenic_strength,if=(buff.bloodlust.react|buff.avenging_wrath.up|target.time_to_die<=40)
-                    //actions+=/auto_attack,target_if=dot.censure.remains<4
-                    //actions+=/speed_of_light,if=movement.distance>5
-                    //actions+=/judgment,if=talent.empowered_seals.enabled&time<2
-                    judgment(() => (talent.empowered_seals.enabled)), // ADD COMBAT TIME
-                    //actions+=/execution_sentence,if=!talent.seraphim.enabled
-                    execution_sentence(() => (!talent.seraphim.enabled)),
-                    //actions+=/execution_sentence,sync=seraphim,if=talent.seraphim.enabled
-                    execution_sentence(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
-                    //actions+=/lights_hammer,if=!talent.seraphim.enabled
-                    lights_hammer(() => (!talent.seraphim.enabled)),
-                    //actions+=/lights_hammer,sync=seraphim,if=talent.seraphim.enabled
-                    lights_hammer(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
-                    //actions+=/use_item,name=thorasus_the_stone_heart_of_draenor,if=buff.avenging_wrath.up
-                    //actions+=/avenging_wrath,sync=seraphim,if=talent.seraphim.enabled
-                    avenging_wrath(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
-                    //actions+=/avenging_wrath,if=!talent.seraphim.enabled&set_bonus.tier18_4pc=0
-                    avenging_wrath(() => (!talent.seraphim.enabled && !set_bonus.tier18_4pc)),
-                    //actions+=/avenging_wrath,if=!talent.seraphim.enabled&time<20&set_bonus.tier18_4pc=1
-                    avenging_wrath(() => (!talent.seraphim.enabled && set_bonus.tier18_4pc)), // ADD COMBAT TIME
-                    //actions+=/avenging_wrath,if=prev.execution_sentence&set_bonus.tier18_4pc=1&talent.execution_sentence.enabled&!talent.seraphim.enabled
-                    avenging_wrath(() => (prev_gcd == PalSpells.execution_sentence && set_bonus.tier18_4pc && talent.execution_sentence.enabled && !talent.seraphim.enabled)),
-                    //actions+=/avenging_wrath,if=prev.lights_hammer&set_bonus.tier18_4pc=1&talent.lights_hammer.enabled&!talent.seraphim.enabled
-                    avenging_wrath(() => (prev_gcd == PalSpells.lights_hammer && set_bonus.tier18_4pc && talent.lights_hammer.enabled && !talent.seraphim.enabled)),
-                    //actions+=/holy_avenger,sync=avenging_wrath,if=!talent.seraphim.enabled
-                    holy_avenger(() => (cooldown.avenging_wrath.up && !talent.seraphim.enabled)),
-                    //actions+=/holy_avenger,sync=seraphim,if=talent.seraphim.enabled
-                    holy_avenger(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
-                    //actions+=/holy_avenger,if=holy_power<=2&!talent.seraphim.enabled
-                    holy_avenger(() => (holy_power <= 2 && !talent.seraphim.enabled)),
-                    //actions+=/blood_fury
-                    blood_fury(() => true),
-                    //actions+=/berserking
-                    berserking(() => true),
-                    //actions+=/arcane_torrent
-                    arcane_torrent(() => true),
-                    //actions+=/seraphim
-                    seraphim(() => (true)),
-                    //actions+=/wait,sec=cooldown.seraphim.remains,if=talent.seraphim.enabled&cooldown.seraphim.remains>0&cooldown.seraphim.remains<gcd.max&holy_power>=5
-                    //actions+=/call_action_list,name=cleave,if=spell_targets.divine_storm>=3
-                    new Decorator(RetributionCleave(), req => spell_targets.divine_storm >= 3),
-                    //actions+=/call_action_list,name=single
-                    new Decorator(RetributionSingle()),
-                    new ActionAlwaysFail()
-                    )));
+            return new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
+                Helpers.Common.CreateInterruptBehavior(),
+                use_trinket(),
+                //actions=rebuke
+                //actions+=/potion,name=draenic_strength,if=(buff.bloodlust.react|buff.avenging_wrath.up|target.time_to_die<=40)
+                //actions+=/auto_attack,target_if=dot.censure.remains<4
+                //actions+=/speed_of_light,if=movement.distance>5
+                //actions+=/judgment,if=talent.empowered_seals.enabled&time<2
+                judgment(() => (talent.empowered_seals.enabled)), // ADD COMBAT TIME
+                //actions+=/execution_sentence,if=!talent.seraphim.enabled
+                execution_sentence(() => (!talent.seraphim.enabled)),
+                //actions+=/execution_sentence,sync=seraphim,if=talent.seraphim.enabled
+                execution_sentence(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
+                //actions+=/lights_hammer,if=!talent.seraphim.enabled
+                lights_hammer(() => (!talent.seraphim.enabled)),
+                //actions+=/lights_hammer,sync=seraphim,if=talent.seraphim.enabled
+                lights_hammer(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
+                //actions+=/use_item,name=thorasus_the_stone_heart_of_draenor,if=buff.avenging_wrath.up
+                //actions+=/avenging_wrath,sync=seraphim,if=talent.seraphim.enabled
+                avenging_wrath(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
+                //actions+=/avenging_wrath,if=!talent.seraphim.enabled&set_bonus.tier18_4pc=0
+                avenging_wrath(() => (!talent.seraphim.enabled && !set_bonus.tier18_4pc)),
+                //actions+=/avenging_wrath,if=!talent.seraphim.enabled&time<20&set_bonus.tier18_4pc=1
+                avenging_wrath(() => (!talent.seraphim.enabled && set_bonus.tier18_4pc)), // ADD COMBAT TIME
+                //actions+=/avenging_wrath,if=prev.execution_sentence&set_bonus.tier18_4pc=1&talent.execution_sentence.enabled&!talent.seraphim.enabled
+                avenging_wrath(() => (prev_gcd == PalSpells.execution_sentence && set_bonus.tier18_4pc && talent.execution_sentence.enabled && !talent.seraphim.enabled)),
+                //actions+=/avenging_wrath,if=prev.lights_hammer&set_bonus.tier18_4pc=1&talent.lights_hammer.enabled&!talent.seraphim.enabled
+                avenging_wrath(() => (prev_gcd == PalSpells.lights_hammer && set_bonus.tier18_4pc && talent.lights_hammer.enabled && !talent.seraphim.enabled)),
+                //actions+=/holy_avenger,sync=avenging_wrath,if=!talent.seraphim.enabled
+                holy_avenger(() => (cooldown.avenging_wrath.up && !talent.seraphim.enabled)),
+                //actions+=/holy_avenger,sync=seraphim,if=talent.seraphim.enabled
+                holy_avenger(() => (cooldown.seraphim.up && talent.seraphim.enabled)),
+                //actions+=/holy_avenger,if=holy_power<=2&!talent.seraphim.enabled
+                holy_avenger(() => (holy_power <= 2 && !talent.seraphim.enabled)),
+                //actions+=/blood_fury
+                blood_fury(() => true),
+                //actions+=/berserking
+                berserking(() => true),
+                //actions+=/arcane_torrent
+                arcane_torrent(() => true),
+                //actions+=/seraphim
+                seraphim(() => (true)),
+                //actions+=/wait,sec=cooldown.seraphim.remains,if=talent.seraphim.enabled&cooldown.seraphim.remains>0&cooldown.seraphim.remains<gcd.max&holy_power>=5
+                //actions+=/call_action_list,name=cleave,if=spell_targets.divine_storm>=3
+                new Decorator(RetributionCleave(), req => spell_targets.divine_storm >= 3),
+                //actions+=/call_action_list,name=single
+                new Decorator(RetributionSingle()),
+                new ActionAlwaysFail()
+                ));
         }
 
         [Behavior(BehaviorType.Pull, WoWClass.Paladin, WoWSpec.PaladinRetribution)]

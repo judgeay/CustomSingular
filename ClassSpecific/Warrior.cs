@@ -131,47 +131,41 @@ namespace Singular.ClassSpecific
         [Behavior(BehaviorType.Combat, WoWClass.Warrior, WoWSpec.WarriorArms)]
         public static Composite ArmsActionList()
         {
-            return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
-                new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
-                    Helpers.Common.CreateInterruptBehavior(),
-                    Movement.WaitForFacing(),
-                    Movement.WaitForLineOfSpellSight(),
-                    use_trinket(),
-                    victory_rush(),
-                    spell_reflect(),
-                    die_by_the_sword(),
-                    rallying_cry(),
-                    //actions=charge,if=debuff.charge.down
-                    //actions+=/auto_attack
-                    //# This is mostly to prevent cooldowns from being accidentally used during movement.
-                    //actions+=/run_action_list,name=movement,if=movement.distance>5
-                    new Decorator(ArmsMovement(), req => Me.IsMoving && !Me.CurrentTarget.IsWithinMeleeRange),
-                    //actions+=/use_item,name=thorasus_the_stone_heart_of_draenor,if=(buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up))
-                    //actions+=/potion,name=draenic_strength,if=(target.health.pct<20&buff.recklessness.up)|target.time_to_die<25
-                    //# This incredibly long line (Due to differing talent choices) says 'Use recklessness on cooldown with colossus smash, unless the boss will die before the ability is usable again, and then use it with execute.'
-                    //actions+=/recklessness,if=(((target.time_to_die>190|target.health.pct<20)&(buff.bloodbath.up|!talent.bloodbath.enabled))|target.time_to_die<=12|talent.anger_management.enabled)&((desired_targets=1&!raid_event.adds.exists)|!talent.bladestorm.enabled)
-                    recklessness(() => (((target.time_to_die > 190 || target.health.pct < 20) && (buff.bloodbath.up || !talent.bloodbath.enabled)) || target.time_to_die <= 12 || talent.anger_management.enabled) && (!talent.bladestorm.enabled)),
-                    //actions+=/bloodbath,if=(dot.rend.ticking&cooldown.colossus_smash.remains<5&((talent.ravager.enabled&prev_gcd.ravager)|!talent.ravager.enabled))|target.time_to_die<20
-                    bloodbath(() => (dot.rend.ticking && cooldown.colossus_smash.remains < 5 && ((talent.ravager.enabled && prev_gcd == WarriorSpells.ravager) || !talent.ravager.enabled)) || target.time_to_die < 20),
-                    //actions+=/avatar,if=buff.recklessness.up|target.time_to_die<25
-                    avatar(() => buff.recklessness.up || target.time_to_die < 25),
-                    //actions+=/blood_fury,if=buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up)|buff.recklessness.up
-                    blood_fury(() => buff.bloodbath.up || (!talent.bloodbath.enabled && debuff.colossus_smash.up) || buff.recklessness.up),
-                    //actions+=/berserking,if=buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up)|buff.recklessness.up
-                    berserking(() => buff.bloodbath.up || (!talent.bloodbath.enabled && debuff.colossus_smash.up) || buff.recklessness.up),
-                    //actions+=/arcane_torrent,if=rage<rage.max-40
-                    arcane_torrent(() => rage < rage_max - 40),
-                    //actions+=/heroic_leap,if=(raid_event.movement.distance>25&raid_event.movement.in>45)|!raid_event.movement.exists
-                    heroic_leap(),
-                    //actions+=/call_action_list,name=aoe,if=spell_targets.whirlwind>1
-                    new Decorator(ArmsAoe(), req => spell_targets.whirlwind > 1),
-                    //actions+=/call_action_list,name=single
-                    new Decorator(ArmsSingle()),
-                    new ActionAlwaysFail()
-                    )))
-                ;
+            return new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
+                Helpers.Common.CreateInterruptBehavior(),
+                use_trinket(),
+                victory_rush(),
+                spell_reflect(),
+                die_by_the_sword(),
+                rallying_cry(),
+                //actions=charge,if=debuff.charge.down
+                //actions+=/auto_attack
+                //# This is mostly to prevent cooldowns from being accidentally used during movement.
+                //actions+=/run_action_list,name=movement,if=movement.distance>5
+                new Decorator(ArmsMovement(), req => Me.IsMoving && !Me.CurrentTarget.IsWithinMeleeRange),
+                //actions+=/use_item,name=thorasus_the_stone_heart_of_draenor,if=(buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up))
+                //actions+=/potion,name=draenic_strength,if=(target.health.pct<20&buff.recklessness.up)|target.time_to_die<25
+                //# This incredibly long line (Due to differing talent choices) says 'Use recklessness on cooldown with colossus smash, unless the boss will die before the ability is usable again, and then use it with execute.'
+                //actions+=/recklessness,if=(((target.time_to_die>190|target.health.pct<20)&(buff.bloodbath.up|!talent.bloodbath.enabled))|target.time_to_die<=12|talent.anger_management.enabled)&((desired_targets=1&!raid_event.adds.exists)|!talent.bladestorm.enabled)
+                recklessness(() => (((target.time_to_die > 190 || target.health.pct < 20) && (buff.bloodbath.up || !talent.bloodbath.enabled)) || target.time_to_die <= 12 || talent.anger_management.enabled) && (!talent.bladestorm.enabled)),
+                //actions+=/bloodbath,if=(dot.rend.ticking&cooldown.colossus_smash.remains<5&((talent.ravager.enabled&prev_gcd.ravager)|!talent.ravager.enabled))|target.time_to_die<20
+                bloodbath(() => (dot.rend.ticking && cooldown.colossus_smash.remains < 5 && ((talent.ravager.enabled && prev_gcd == WarriorSpells.ravager) || !talent.ravager.enabled)) || target.time_to_die < 20),
+                //actions+=/avatar,if=buff.recklessness.up|target.time_to_die<25
+                avatar(() => buff.recklessness.up || target.time_to_die < 25),
+                //actions+=/blood_fury,if=buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up)|buff.recklessness.up
+                blood_fury(() => buff.bloodbath.up || (!talent.bloodbath.enabled && debuff.colossus_smash.up) || buff.recklessness.up),
+                //actions+=/berserking,if=buff.bloodbath.up|(!talent.bloodbath.enabled&debuff.colossus_smash.up)|buff.recklessness.up
+                berserking(() => buff.bloodbath.up || (!talent.bloodbath.enabled && debuff.colossus_smash.up) || buff.recklessness.up),
+                //actions+=/arcane_torrent,if=rage<rage.max-40
+                arcane_torrent(() => rage < rage_max - 40),
+                //actions+=/heroic_leap,if=(raid_event.movement.distance>25&raid_event.movement.in>45)|!raid_event.movement.exists
+                heroic_leap(),
+                //actions+=/call_action_list,name=aoe,if=spell_targets.whirlwind>1
+                new Decorator(ArmsAoe(), req => spell_targets.whirlwind > 1),
+                //actions+=/call_action_list,name=single
+                new Decorator(ArmsSingle()),
+                new ActionAlwaysFail()
+                ));
         }
 
         [Behavior(BehaviorType.Pull, WoWClass.Warrior, WoWSpec.WarriorArms)]

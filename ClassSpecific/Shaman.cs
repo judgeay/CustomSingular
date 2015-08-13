@@ -67,17 +67,11 @@ namespace Singular.ClassSpecific
         [Behavior(BehaviorType.Combat, WoWClass.Shaman, WoWSpec.ShamanEnhancement)]
         public static Composite EnhancementActionList()
         {
-            return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
-                new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
-                    SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
-                    Helpers.Common.CreateInterruptBehavior(),
-                    Movement.WaitForFacing(),
-                    Movement.WaitForLineOfSpellSight(),
-                    use_trinket(),
-                    new ActionAlwaysFail()
-                    )))
-                ;
+            return new Decorator(ret => !Spell.IsGlobalCooldown(), new PrioritySelector(
+                Helpers.Common.CreateInterruptBehavior(),
+                use_trinket(),
+                new ActionAlwaysFail()
+                ));
         }
 
         [Behavior(BehaviorType.Pull, WoWClass.Shaman, WoWSpec.ShamanEnhancement)]

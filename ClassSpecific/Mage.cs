@@ -119,38 +119,31 @@ namespace Singular.ClassSpecific
         [Behavior(BehaviorType.Combat | BehaviorType.Pull, WoWClass.Mage, WoWSpec.MageArcane)]
         public static Composite ArcaneActionList()
         {
-            return new PrioritySelector(
-                Helpers.Common.EnsureReadyToAttackFromLongRange(),
-                Spell.WaitForCastOrChannel(FaceDuring.Yes),
-                new Decorator(
-                    ret => !Spell.IsGlobalCooldown(),
-                    new PrioritySelector(
-                        Helpers.Common.CreateInterruptBehavior(),
-                        Movement.WaitForFacing(),
-                        Movement.WaitForLineOfSpellSight(),
-                        use_trinket(),
-                        //actions=counterspell,if=target.debuff.casting.react
-                        //actions+=/stop_burn_phase,if=prev_gcd.evocation&burn_phase_duration>gcd.max
-                        new Decorator(arcane_stop_burn_phase(), req => prev_gcd == MageSpells.evocation),
-                        //actions+=/cold_snap,if=health.pct<30
-                        //actions+=/time_warp,if=target.health.pct<25|time>5
-                        //actions+=/call_action_list,name=movement,if=raid_event.movement.exists
-                        //actions+=/rune_of_power,if=buff.rune_of_power.remains<2*spell_haste
-                        rune_of_power(() => buff.rune_of_power.remains < 2 * spell_haste),
-                        //actions+=/mirror_image
-                        mirror_image(() => true),
-                        //actions+=/cold_snap,if=buff.presence_of_mind.down&cooldown.presence_of_mind.remains>75
-                        //actions+=/call_action_list,name=aoe,if=active_enemies>=5
-                        new Decorator(arcane_aoe(), req => active_enemies >= 5),
-                        //actions+=/call_action_list,name=init_burn,if=!burn_phase
-                        new Decorator(arcane_init_burn(), req => true),
-                        //actions+=/call_action_list,name=burn,if=burn_phase
-                        new Decorator(arcane_burn(), req => burn_phase),
-                        //actions+=/call_action_list,name=conserve
-                        new Decorator(arcane_conserve()),
-                        new ActionAlwaysFail()
-                        )))
-                ;
+            return new Decorator(ret => !Spell.IsGlobalCooldown(),
+                new PrioritySelector(
+                    Helpers.Common.CreateInterruptBehavior(),
+                    use_trinket(),
+                    //actions=counterspell,if=target.debuff.casting.react
+                    //actions+=/stop_burn_phase,if=prev_gcd.evocation&burn_phase_duration>gcd.max
+                    new Decorator(arcane_stop_burn_phase(), req => prev_gcd == MageSpells.evocation),
+                    //actions+=/cold_snap,if=health.pct<30
+                    //actions+=/time_warp,if=target.health.pct<25|time>5
+                    //actions+=/call_action_list,name=movement,if=raid_event.movement.exists
+                    //actions+=/rune_of_power,if=buff.rune_of_power.remains<2*spell_haste
+                    rune_of_power(() => buff.rune_of_power.remains < 2 * spell_haste),
+                    //actions+=/mirror_image
+                    mirror_image(() => true),
+                    //actions+=/cold_snap,if=buff.presence_of_mind.down&cooldown.presence_of_mind.remains>75
+                    //actions+=/call_action_list,name=aoe,if=active_enemies>=5
+                    new Decorator(arcane_aoe(), req => active_enemies >= 5),
+                    //actions+=/call_action_list,name=init_burn,if=!burn_phase
+                    new Decorator(arcane_init_burn(), req => true),
+                    //actions+=/call_action_list,name=burn,if=burn_phase
+                    new Decorator(arcane_burn(), req => burn_phase),
+                    //actions+=/call_action_list,name=conserve
+                    new Decorator(arcane_conserve()),
+                    new ActionAlwaysFail()
+                    ));
         }
 
         [Behavior(BehaviorType.PreCombatBuffs | BehaviorType.PullBuffs, WoWClass.Mage)]

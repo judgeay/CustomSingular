@@ -257,10 +257,11 @@ namespace Singular.ClassSpecific
                 //actions+=/dancing_rune_weapon,if=health.pct<80&buff.army_of_the_dead.down&buff.icebound_fortitude.down&buff.bone_shield.down&buff.vampiric_blood.down
                 dancing_rune_weapon(() => buff.icebound_fortitude.down && buff.bone_shield.down && buff.vampiric_blood.down),
                 //actions+=/death_pact,if=health.pct<50
-                death_pact(() => health.pct < 50));
+                death_pact(() => health.pct < 50),
+                Item.CreateUsePotionAndHealthstone(20, 0));
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightBlood, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightBlood)]
         public static Composite BloodInstancePull()
         {
             return BloodActionList();
@@ -318,30 +319,10 @@ namespace Singular.ClassSpecific
                 ));
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightFrost)]
         public static Composite FrostInstancePull()
         {
             return FrostActionList();
-        }
-
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, (WoWSpec) int.MaxValue, WoWContext.Normal | WoWContext.Battlegrounds)]
-        public static Composite NormalAndPvPPull()
-        {
-            return new PrioritySelector(Helpers.Common.EnsureReadyToAttackFromMelee(), Spell.WaitForCastOrChannel(),
-                new Decorator(req => !Spell.IsGlobalCooldown(), new PrioritySelector(
-                    Helpers.Common.CreateInterruptBehavior(),
-                    Movement.WaitForFacing(),
-                    Movement.WaitForLineOfSpellSight(),
-                    death_grip(
-                        () =>
-                            MovementManager.IsMovementDisabled == false && Me.CurrentTarget.IsBoss() == false && Me.CurrentTarget.DistanceSqr > 10 * 10 &&
-                            (Me.CurrentTarget.IsPlayer || Me.CurrentTarget.TaggedByMe || (!Me.CurrentTarget.TaggedByOther && CompositeBuilder.CurrentBehaviorType == BehaviorType.Pull && SingularRoutine.CurrentWoWContext != WoWContext.Instances))),
-                    new DecoratorContinue(req => Me.IsMoving, new Action(req => StopMoving.Now())),
-                    new WaitContinue(1, until => !Me.GotTarget() || Me.CurrentTarget.IsWithinMeleeRange, new ActionAlwaysSucceed())
-                    )
-                    ),
-                Movement.CreateMoveToMeleeBehavior(true)
-                );
         }
 
         [Behavior(BehaviorType.Combat, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy)]
@@ -369,7 +350,7 @@ namespace Singular.ClassSpecific
                 ));
         }
 
-        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy, WoWContext.Instances)]
+        [Behavior(BehaviorType.Pull, WoWClass.DeathKnight, WoWSpec.DeathKnightUnholy)]
         public static Composite UnholyInstancePull()
         {
             return UnholyActionList();
