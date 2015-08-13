@@ -1,8 +1,6 @@
 using System.Linq;
-using System.Windows.Media;
 using Singular.Helpers;
 using Styx;
-using Styx.Common;
 
 namespace Singular.ClassSpecific.Common
 {

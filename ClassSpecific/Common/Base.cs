@@ -1,6 +1,3 @@
-using Styx.CommonBot;
-using Styx.WoWInternals;
-
 namespace Singular.ClassSpecific.Common
 {
     internal abstract class Base

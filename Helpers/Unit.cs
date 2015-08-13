@@ -24,20 +24,7 @@ namespace Singular.Helpers
 {
     internal static class Unit
     {
-        public static uint TrivialHealth    { get; set; }
         public static uint SeriousHealth { get; set; }
-
-
-        [Behavior(BehaviorType.Initialize)]
-        public static Composite InitializeUnit()
-        {
-            TrivialHealth = (uint) (0.01f * SingularSettings.Instance.TrivialMaxHealthPcnt * StyxWoW.Me.MaxHealth);
-
-            Logger.WriteFile("  {0}: {1}", "TrivialHealth", TrivialHealth);
-            Logger.WriteFile("  {0}: {1}", "NeedTankTargeting", TankManager.NeedTankTargeting);
-            Logger.WriteFile("  {0}: {1}", "NeedHealTargeting", HealerManager.NeedHealTargeting);
-            return null;
-        }
 
         public static HashSet<uint> IgnoreMobs = new HashSet<uint>
             {
@@ -472,14 +459,7 @@ namespace Singular.Helpers
 
         public static bool IsTrivial(this WoWUnit unit)
         {
-            if (SingularRoutine.CurrentWoWContext != WoWContext.Normal)
-                return false;
-
-            if (unit == null)
-                return false;
-
-            uint maxh = unit.MaxHealth;
-            return maxh <= TrivialHealth;
+            return false;
         }
 
         public static bool IsStressful(this WoWUnit unit)
