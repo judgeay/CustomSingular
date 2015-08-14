@@ -472,6 +472,13 @@ namespace Singular.Helpers
                     new Action(ctx => UseItem((WoWItem) ctx))));
         }
 
+        public static Composite UseItem(uint id, SimpleBooleanDelegate requirements)
+        {
+            return new Decorator(
+                req => requirements(req),
+                UseItem(id));
+        }
+
         public static void WriteCharacterGearAndSetupInfo()
         {
             Logger.WriteFile("");

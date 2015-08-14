@@ -30,7 +30,7 @@ namespace Singular.ClassSpecific
                 Spell.UseDefensiveCooldown &&
                 SingularRoutine.Instance.ActiveEnemies.Any(u => u.IsCasting && u.CurrentTarget == Me && (!u.CanInterruptCurrentSpellCast || Spell.IsSpellOnCooldown(DkSpells.mind_freeze) || !Spell.CanCastHack(DkSpells.mind_freeze, u))) && cond());
 
-        private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && cond());
+        private static readonly Func<Func<bool>, Composite> blood_boil = cond => Spell.Cast(DkSpells.blood_boil, req => Spell.UseAoe && spell_targets.blood_boil >= 1 && cond());
         private static readonly Func<Func<bool>, Composite> blood_tap = cond => Spell.Cast(DkSpells.blood_tap, req => talent.blood_tap.enabled && buff.blood_charge.stack >= 5 && cond());
         private static readonly Func<Func<bool>, Composite> bone_shield = cond => Spell.BuffSelf(DkSpells.bone_shield, req => Spell.UseDefensiveCooldown && cond());
         private static readonly Func<Func<bool>, Composite> breath_of_sindragosa = cond => Spell.Buff(DkSpells.breath_of_sindragosa, req => talent.breath_of_sindragosa.enabled && !Me.HasAura(DkSpells.breath_of_sindragosa) && Spell.UseAoe && cond());
@@ -274,7 +274,7 @@ namespace Singular.ClassSpecific
                 bone_shield(() => Me.Specialization == WoWSpec.DeathKnightBlood),
                 raise_dead(() => Me.Specialization == WoWSpec.DeathKnightUnholy),
                 // Permanent rune usage
-                Item.UseItem(128482),
+                Item.UseItem(128482, req => !Me.HasAnyAura(175439, 175456, 175457)),
                 horn_of_winter(() => !Me.HasPartyBuff(PartyBuffType.AttackPower)),
                 new ActionAlwaysFail()
                 );
