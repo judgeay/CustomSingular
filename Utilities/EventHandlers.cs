@@ -145,18 +145,22 @@ namespace Singular.Utilities
 
         private static void AttachCombatLogEvent()
         {
-            if (_combatLogAttached || _combatFilterAdded)
+            if (_combatLogAttached)
                 DetachCombatLogEvent();
 
             // DO NOT EDIT THIS UNLESS YOU KNOW WHAT YOU'RE DOING!
             // This ensures we only capture certain combat log events, not all of them.
             // This saves on performance, and possible memory leaks. (Leaks due to Lua table issues.)
-            Lua.Events.AttachEvent("COMBAT_LOG_EVENT_UNFILTERED", HandleCombatLog);
+            string myGuid = Lua.GetReturnVal<string>("return UnitGUID('player');", 0);
+            Logger.WriteDiagnostic("CombatLogEvent: setting filter= {0}", BuildCombatLogEventFilter("PlayerGUID"));
+            Lua.Events.AttachEvent("COMBAT_LOG_EVENT_UNFILTERED", HandleCombatLog, BuildCombatLogEventFilter(myGuid));
             _combatLogAttached = true;
 
-            string myGuid = Lua.GetReturnVal<string>("return UnitGUID('player');", 0);
-            //Logger.WriteDiagnostic("MyGuid = {0}", myGuid);
+            Logger.WriteDebug("Attached combat log");
+        }
 
+        private static string BuildCombatLogEventFilter(string myGuid)
+        {
             string filterCriteria = "return";
 
             if (SingularRoutine.CurrentWoWContext == WoWContext.Normal && SingularSettings.Instance.TargetWorldPvpRegardless)
@@ -185,36 +189,24 @@ namespace Singular.Utilities
             }
 
             // standard portion of filter
-            filterCriteria += 
+            filterCriteria +=
                 " ("
                 + " args[4] == " + "'" + myGuid + "'"
                 + " and"
-                +   " ("
-                +   " args[2] == 'SPELL_MISSED'"
-                +   " or args[2] == 'RANGE_MISSED'"
-                +   " or args[2] == 'SWING_MISSED'"
-                +   " or args[2] == 'SPELL_CAST_FAILED'"
-                +   " )"
-                +" )";
+                + " ("
+                + " args[2] == 'SPELL_MISSED'"
+                + " or args[2] == 'RANGE_MISSED'"
+                + " or args[2] == 'SWING_MISSED'"
+                + " or args[2] == 'SPELL_CAST_FAILED'"
+                + " )"
+                + " )";
 
-            _combatFilterAdded = Lua.Events.AddFilter("COMBAT_LOG_EVENT_UNFILTERED", filterCriteria);
-            if (!_combatFilterAdded)
-            {
-                Logger.Write( "ERROR: Could not add combat log event filter! - Performance may be horrible, and things may not work properly!");
-            }
 
-            Logger.WriteDebug("Attached combat log");
+            return filterCriteria;
         }
-        
+
         private static void DetachCombatLogEvent()
         {
-            if (_combatFilterAdded)
-            {
-                Logger.WriteDebug("Removed combat log filter");
-                Lua.Events.RemoveFilter("COMBAT_LOG_EVENT_UNFILTERED");
-                _combatFilterAdded = false;
-            }
-
             if (_combatLogAttached)
             {
                 Logger.WriteDebug("Detached combat log");
