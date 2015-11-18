@@ -154,9 +154,36 @@ namespace Singular.ClassSpecific.Priest
                 new Decorator(
                     ret => !Spell.IsGlobalCooldown(),
                     new PrioritySelector(
+                // grinding or questing, if target meets either of these cast instant if possible
+                // 1. mob is less than 12 yds, so no benefit from delay in Lightning Bolt missile arrival
+                // 2. area has another player competing for mobs (we want to tag the mob quickly)
+                        new Decorator(
+                            ret =>
+                            {
+                                if (StyxWoW.Me.CurrentTarget.IsHostile && StyxWoW.Me.CurrentTarget.Distance < 12)
+                                {
+                                    Logger.Write(LogColor.Hilite, "Pull with Instant since hostile target is {0:F1} yds away", StyxWoW.Me.CurrentTarget.Distance);
+                                    return true;
+                                }
+                                WoWPlayer nearby = ObjectManager.GetObjectsOfType<WoWPlayer>(true, false).FirstOrDefault(p => !p.IsMe && p.SpellDistance(Me.CurrentTarget) <= 40);
+                                if (nearby != null)
+                                {
+                                    Logger.Write(LogColor.Hilite, "Pull with Instant since player {0} nearby @ {1:F1} yds", nearby.SafeName(), nearby.Distance);
+                                    return true;
+                                }
+                                Logger.WriteDiagnostic("Pull with normal rotation since no urgency");
+                                return false;
+                            },
+
+                            new PrioritySelector(
+                                Spell.Buff("Devouring Plague", req => OrbCount >= 3),
+                                Spell.Buff("Shadow Word: Pain", true)
+                                )
+                            ),
+
                         Spell.BuffSelf("Power Word: Shield", ret => PriestSettings.UseShieldPrePull && !Me.HasAura("Weakened Soul")),
 
-                        Spell.BuffSelf("Shadowform"),
+                        Spell.BuffSelfAndWait("Shadowform"),
 
                         Movement.WaitForFacing(),
                         Movement.WaitForLineOfSpellSight(),
@@ -186,7 +213,7 @@ namespace Singular.ClassSpecific.Priest
                         SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.Heal),
                         SingularRoutine.MoveBehaviorInlineToCombat(BehaviorType.CombatBuffs),
 
-                        Spell.BuffSelf("Shadowform"),
+                        Spell.BuffSelfAndWait("Shadowform"),
 
                         Helpers.Common.CreateInterruptBehavior(),
 
@@ -234,6 +261,26 @@ namespace Singular.ClassSpecific.Priest
                             new PrioritySelector(
                                 ctx => AoeTargets.Where( u=> Me.IsSafelyFacing(u) && u.InLineOfSpellSight).FirstOrDefault(),
 
+                                Spell.Cast(
+                                    "Mind Sear",
+                                    mov => true,
+                                    on =>
+                                    {
+                                        IEnumerable<WoWUnit> AoeTargetsFacing = AoeTargets.Where(u => Me.IsSafelyFacing(u) && u.InLineOfSpellSight && u.IsTrivial());
+                                        WoWUnit unit = Clusters.GetBestUnitForCluster(AoeTargetsFacing, ClusterType.Radius, 10);
+                                        if (unit == null)
+                                            return null;
+                                        if (3 > Clusters.GetClusterCount(unit, AoeTargets, ClusterType.Radius, 10))
+                                            return null;
+                                        if (Unit.UnfriendlyUnits(50).Any(u => !u.IsTrivial() && unit.SpellDistance(u) < 12))
+                                            return null;
+
+                                        Logger.Write(LogColor.Hilite, "^Trivial Farming: all trivial mobs within 12 yds of {0}", unit.SafeName());
+                                        return unit;
+                                    },
+                                    cancel => Me.HealthPercent < PriestSettings.ShadowFlashHeal
+                                    ),
+
                                 Spell.Buff(
                                     "Void Entropy", 
                                     true, 
@@ -241,9 +288,21 @@ namespace Singular.ClassSpecific.Priest
                                     ret => OrbCount >= 3 && Me.CurrentTarget.TimeToDeath() > 30
                                     ),
 
-                                new Decorator(
-                                    req => Common.HasTalent(PriestTalents.AuspiciousSpirits),
-                                    Spell.Buff("Shadow Word: Pain", true, on => AoeTargets.FirstOrDefault(u => !u.HasMyAura("Shadow Word: Pain") && u.InLineOfSpellSight), req => true)
+                                Spell.Buff("Shadow Word: Pain", true),      // no multi message for current target
+                                Spell.Buff(                                 // multi-dot others w/ message
+                                    "Shadow Word: Pain", 
+                                    true, 
+                                    on => 
+                                    {
+                                        WoWUnit dotTarget = AoeTargets.FirstOrDefault(u => u != Me.CurrentTarget && !u.HasMyAura("Shadow Word: Pain") && u.InLineOfSpellSight && !Spell.DoubleCastContains(u, "Shadow Word: Pain"));
+                                        if (dotTarget != null && Spell.CanCastHack("Shadow Word: Pain", dotTarget))
+                                        {
+                                            Logger.Write(LogColor.Hilite, "^Multi-DoT: cast Shadow Word: Pain on {0}", dotTarget.SafeName());
+                                            return dotTarget;
+                                        }
+                                        return null;
+                                    }, 
+                                    req => true
                                     ),
 
                                 // cast on highest health mob (for greatest heal)
@@ -270,8 +329,22 @@ namespace Singular.ClassSpecific.Priest
                                         )
                                     ),
 
-                                Spell.Buff("Shadow Word: Pain", true, on => AoeTargets.FirstOrDefault(u => !u.HasMyAura("Shadow Word: Pain") && u.InLineOfSpellSight), req => true),
-                                Spell.Buff("Vampiric Touch", true, on => AoeTargets.FirstOrDefault(u => !u.HasMyAura("Vampiric Touch") && Me.IsSafelyFacing(u) && u.InLineOfSpellSight), req => true),
+                                Spell.Buff("Vampiric Touch", true),     // no multi message for current target
+                                Spell.Buff(                             // multi-dot others with message
+                                    "Vampiric Touch",
+                                    true,
+                                    on =>
+                                    {
+                                        WoWUnit dotTarget = AoeTargets.FirstOrDefault(u => u != Me.CurrentTarget && !u.HasMyAura("Vampiric Touch") && u.InLineOfSpellSight && !Spell.DoubleCastContains(u, "Vampiric Touch"));
+                                        if (dotTarget != null && dotTarget != Me.CurrentTarget && Spell.CanCastHack("Vampiric Touch", dotTarget))
+                                        {
+                                            Logger.Write(LogColor.Hilite, "^Multi-DoT: cast Vampiric Touch on {0}", dotTarget.SafeName());
+                                            return dotTarget;
+                                        }
+                                        return null;
+                                    },
+                                    req => true
+                                    ),
 
                                 new Decorator(
                                     req => cntAoeTargets >= PriestSettings.TalentTier6Count,
@@ -366,7 +439,7 @@ namespace Singular.ClassSpecific.Priest
 
                         CreateFightAssessment(),
 
-                        Spell.BuffSelf("Shadowform"),
+                        Spell.BuffSelfAndWait("Shadowform"),
 
                         // blow-up target (or snipe a kill) when possible 
                         Spell.Cast("Shadow Word: Death", on => Unit.NearbyUnfriendlyUnits.FirstOrDefault(u => u.HealthPercent < 20 && Me.IsSafelyFacing(u) && u.InLineOfSpellSight)),
@@ -464,7 +537,7 @@ namespace Singular.ClassSpecific.Priest
         [Behavior(BehaviorType.PreCombatBuffs, WoWClass.Priest, WoWSpec.PriestShadow)]
         public static Composite CreatePriestShadowRest()
         {
-            return Spell.BuffSelf("Shadowform");
+            return Spell.BuffSelfAndWait("Shadowform");
         }
 
         #endregion 
@@ -491,7 +564,7 @@ namespace Singular.ClassSpecific.Priest
 
                         Dispelling.CreatePurgeEnemyBehavior("Dispel Magic"),
 
-                        Spell.BuffSelf("Shadowform"),
+                        Spell.BuffSelfAndWait("Shadowform"),
 
                         new Decorator(
                             req => Me.CurrentTarget != null,
@@ -930,10 +1003,11 @@ namespace Singular.ClassSpecific.Priest
                     if (target == null)
                         line += ", target=(null)";
                     else
-                        line += string.Format(", target={0} @ {1:F1} yds, th={2:F1}%, tface={3}, tloss={4}, sw:p={5}, vamptch={6}, devplague={7}",
+                        line += string.Format(", target={0} @ {1:F1} yds, th={2:F1}%, ttd={3}, tface={4}, tloss={5}, sw:p={6}, vamptch={7}, devplague={8}",
                             target.SafeName(),
                             target.Distance,
                             target.HealthPercent,
+                            target.TimeToDeath(),
                             Me.IsSafelyFacing(target),
                             target.InLineOfSpellSight,
                             (long)target.GetAuraTimeLeft("Shadow Word: Pain", true).TotalMilliseconds,

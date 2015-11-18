@@ -395,7 +395,6 @@ namespace Singular
 
         static DateTime _nextNotInGameMsgAllowed = DateTime.MinValue;
         static DateTime _nextNotInWorldMsgAllowed = DateTime.MinValue;
-        static bool _lastCombatDisabledState = false;
 
         static int _pulsePhase = 0;
 
@@ -500,6 +499,11 @@ namespace Singular
                 HotkeyDirector.Pulse();
 
                 WatchAurasForProcs();
+            }
+
+            if (Me.Class == WoWClass.Warlock)
+            {
+                ClassSpecific.Warlock.Common.CancelBurningRushIfNeeded(fromPulse: true);
             }
 
             // Output if Target changed 
@@ -647,6 +651,8 @@ namespace Singular
                 onchg(unit);
                 if (SingularSettings.Debug)
                 {
+                    //Logger.WriteDebug( "GuidInfo: {0}", unit.Guid.ToString());
+                    //Logger.WriteDebug("GuidInfo: {0:X4} {1:X4} {2:X4} {3:X4}", unit.Guid.Highest, unit.Guid.Higher, unit.Guid.Lower, unit.Guid.Lowest);
                     string info = "";
                     if (Styx.CommonBot.POI.BotPoi.Current.Guid == Me.CurrentTargetGuid)
                         info += string.Format(", IsBotPoi={0}", Styx.CommonBot.POI.BotPoi.Current.Type);

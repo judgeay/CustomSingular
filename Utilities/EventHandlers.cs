@@ -140,6 +140,7 @@ namespace Singular.Utilities
         public static Dictionary<WoWGuid, int> MobsThatEvaded = new Dictionary<WoWGuid, int>();
 
         public static WoWUnit AttackingEnemyPlayer { get; set; }
+        public static WoWSpellSchool AttackedWithSpellSchool { get; set; }
         private static DateTime TimeLastAttackedByEnemyPlayer { get; set; }
         public static TimeSpan TimeSinceAttackedByEnemyPlayer
         {
@@ -246,41 +247,17 @@ namespace Singular.Utilities
 
             // convert args to usable form
             var e = new CombatLogEventArgs(args.EventName, args.FireTimeStamp, args.Args);
+            bool itWasDamage = false;
 
-            if (e.DestGuid == StyxWoW.Me.Guid && e.SourceGuid != StyxWoW.Me.Guid)
+            if (TrackDamage || SingularRoutine.CurrentWoWContext == WoWContext.Normal)
             {
-                if (SingularRoutine.CurrentWoWContext == WoWContext.Normal)
-                {
-                    WoWUnit enemy = e.SourceUnit;
-                    if (Unit.ValidUnit(enemy) && enemy.IsPlayer)
-                    {
-                        Logger.WriteDiagnostic("GankDetect: received {0} src={1} dst={2}", args.EventName, e.SourceGuid, e.DestGuid);
-                        AttackingEnemyPlayer = enemy;
-                        TimeLastAttackedByEnemyPlayer = DateTime.UtcNow;
-
-                        // if (guidLastEnemy != enemy.Guid)
-                        {
-                            guidLastEnemy = enemy.Guid;
-                            string extra = "";
-                            if (e.Args.GetUpperBound(0) >= 12)
-                                extra = string.Format(" using {0}", e.SpellName);
-
-                            Logger.WriteDiagnostic("GankDetect: attacked by Level {0} {1}{2}", enemy.Level, enemy.SafeName(), extra);
-                            if (SingularSettings.Instance.TargetWorldPvpRegardless && (BotPoi.Current == null || BotPoi.Current.Guid != enemy.Guid))
-                            {
-                                Logger.Write(LogColor.Hilite, "GankDetect: setting {0} as BotPoi Kill Target", enemy.SafeName());
-                                BotPoi.Current = new BotPoi(enemy, PoiType.Kill);
-                            }
-                        }
-                    }
-                }
-
-                if (TrackDamage)
+                if (e.DestGuid == StyxWoW.Me.Guid && e.SourceGuid != StyxWoW.Me.Guid)
                 {
                     long damageAmount = 0;
                     switch (e.EventName)
                     {
                         case "SWING_DAMAGE":
+                            itWasDamage = true;
                             damageAmount = (long)e.Args[11];
                             Logger.WriteDebug("HandleCombatLog(Damage): {0} = {1}", e.EventName, damageAmount);
                             break;
@@ -288,18 +265,53 @@ namespace Singular.Utilities
                         case "SPELL_DAMAGE":
                         case "SPELL_PERIODIC_DAMAGE":
                         case "RANGE_DAMAGE":
+                            itWasDamage = true;
                             damageAmount = (long)e.Args[14];
-                            Logger.WriteDebug("HandleCombatLog(Damage): {0} = {1}", e.EventName, damageAmount);
-                            break;
-
-                        default:
-                            LogUndesirableEvent("On Character", e);
                             break;
                     }
 
-                    if (damageAmount > 0)
+                    if (TrackDamage)
                     {
-                        DamageHistory.Enqueue(new Damage(DateTime.UtcNow, damageAmount));
+                        if (itWasDamage)
+                            Logger.WriteDebug("HandleCombatLog(Damage): {0} = {1}", e.EventName, damageAmount);
+                        else 
+                            LogUndesirableEvent("On Character", e);
+
+                        if (damageAmount > 0)
+                        {
+                            DamageHistory.Enqueue(new Damage(DateTime.UtcNow, damageAmount));
+                        }
+                    }
+
+                    if (itWasDamage && SingularRoutine.CurrentWoWContext == WoWContext.Normal)
+                    {
+                        WoWUnit enemy = e.SourceUnit;
+                        if (Unit.ValidUnit(enemy) && enemy.IsPlayer)
+                        {
+                            Logger.WriteDiagnostic("GankDetect: received {0} src={1} dst={2}", args.EventName, e.SourceGuid, e.DestGuid);
+
+                            // if (guidLastEnemy != enemy.Guid || (TimeLastAttackedByEnemyPlayer - DateTime.UtcNow).TotalSeconds > 30)
+                            {
+                                guidLastEnemy = enemy.Guid;
+                                string extra = "";
+                                if (e.Args.GetUpperBound(0) >= 12)
+                                    extra = string.Format(" using {0}", e.SpellName);
+
+                                AttackedWithSpellSchool = WoWSpellSchool.None;
+                                if (e.Args.GetUpperBound(0) >= 12)
+                                    AttackedWithSpellSchool = e.SpellSchool;
+
+                                Logger.WriteDiagnostic("GankDetect: attacked by Level {0} {1}{2}", enemy.Level, enemy.SafeName(), extra);
+                                if (SingularSettings.Instance.TargetWorldPvpRegardless && (BotPoi.Current == null || BotPoi.Current.Guid != enemy.Guid))
+                                {
+                                    Logger.Write(LogColor.Hilite, "GankDetect: setting {0} as BotPoi Kill Target", enemy.SafeName());
+                                    BotPoi.Current = new BotPoi(enemy, PoiType.Kill);
+                                }
+                            }
+
+                            AttackingEnemyPlayer = enemy;
+                            TimeLastAttackedByEnemyPlayer = DateTime.UtcNow;
+                        }
                     }
                 }
 
@@ -381,16 +393,7 @@ namespace Singular.Utilities
                     {
                         if (e.Args[14].ToString() == LocalizedNoPocketsToPickFailure)
                         {
-                            // args on this event don't match standard SPELL_CAST_FAIL
-                            // -- so, Singular only casts on current target so use that assumption
-                            WoWUnit unit = StyxWoW.Me.CurrentTarget;
-                            if (unit == null)
-                                Logger.WriteFile("[CombatLog] has no pockets event did not have a valid unit");
-                            else
-                            {
-                                Logger.WriteDebug("[CombatLog] {0} has no pockets, blacklisting from pick pocket for 2 minutes", unit.SafeName());
-                                Blacklist.Add(unit.Guid, BlacklistFlags.Node, TimeSpan.FromMinutes(2), "Singular: has no pockets to pick");
-                            }
+                            HandleRogueNoPocketsError();
                         }
                     }
                     break;
@@ -485,6 +488,27 @@ namespace Singular.Utilities
                     {
                     }
                     break;
+            }
+        }
+
+        private static void HandleRogueNoPocketsError()
+        {
+            // args on this event don't match standard SPELL_CAST_FAIL
+            // -- so, Singular only casts on current target so use that assumption
+            WoWUnit unit = StyxWoW.Me.CurrentTarget;
+            if (unit == null)
+            {
+                Logger.WriteFile("[CombatLog] no pockets error but no current target");
+            }
+            else if (Singular.ClassSpecific.Rogue.Common.mobEntryWithNoPockets.Contains(unit.Entry))
+            {
+                Logger.WriteDiagnostic("[CombatLog] {0} has no pockets, blacklisting for Pick Pocket for 2 minutes", unit.SafeName());
+                Blacklist.Add(unit.Guid, BlacklistFlags.Node, TimeSpan.FromMinutes(2), "Singular: has no pockets to pick");
+            }
+            else
+            {
+                Logger.Write(LogColor.Hilite, "^No Pockets: {0} has no pockets, adding #{1} to Pick Pock Ignore list", unit.SafeName(), unit.Entry);
+                Singular.ClassSpecific.Rogue.Common.mobEntryWithNoPockets.Add(unit.Entry);
             }
         }
 
@@ -616,14 +640,21 @@ namespace Singular.Utilities
                 Logger.WriteDebug("[WoWRedError] {0}", args.Args[0].ToString());
             }
 
-            if (StyxWoW.Me.Class == WoWClass.Rogue && SingularSettings.Instance.Rogue().UsePickPocket && args.Args[0].ToString() == LocalizedAlreadyPickPocketedError)
+            if (StyxWoW.Me.Class == WoWClass.Rogue && SingularSettings.Instance.Rogue().UsePickPocket)
             {
-                if (StyxWoW.Me.GotTarget())
+                if (args.Args[0].ToString() == LocalizedAlreadyPickPocketedError)
                 {
-                    WoWUnit unit = StyxWoW.Me.CurrentTarget;
-                    Logger.WriteDebug("WowRedError Handler: already pick pocketed {0}, blacklisting from pick pocket for 2 minutes", unit.SafeName());
-                    Blacklist.Add(unit.Guid, BlacklistFlags.Node, TimeSpan.FromMinutes(2), "Singular: already pick pocketed mob");
-                    //handled = true;
+                    if (StyxWoW.Me.GotTarget())
+                    {
+                        WoWUnit unit = StyxWoW.Me.CurrentTarget;
+                        Logger.WriteDebug("WowRedError Handler: already pick pocketed {0}, blacklisting from pick pocket for 2 minutes", unit.SafeName());
+                        Blacklist.Add(unit.Guid, BlacklistFlags.Node, TimeSpan.FromMinutes(2), "Singular: already pick pocketed mob");
+                        //handled = true;
+                    }
+                }
+                else if (args.Args[0].ToString() == LocalizedNoPocketsToPickFailure)
+                {
+                    HandleRogueNoPocketsError();
                 }
             }
 

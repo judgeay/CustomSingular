@@ -217,6 +217,7 @@ namespace Singular.ClassSpecific.Druid
         [Behavior(BehaviorType.Heal, WoWClass.Druid, WoWSpec.DruidFeral)]
         [Behavior(BehaviorType.Heal, WoWClass.Druid, WoWSpec.DruidGuardian)]
         [Behavior(BehaviorType.Heal, WoWClass.Druid, WoWSpec.DruidBalance)]
+        [Behavior(BehaviorType.Heal, WoWClass.Druid, WoWSpec.DruidRestoration, WoWContext.Normal)]
         public static Composite CreateDpsDruidHealBehavior()
         {
             return new PrioritySelector(
@@ -1047,9 +1048,11 @@ namespace Singular.ClassSpecific.Druid
                         if (_CrowdControlTarget != null)
                         {
                             if (Spell.DoubleCastContainsAny(_CrowdControlTarget, "Incapacitating Roar", "Mighty Bash", "Cyclone"))
-                                ;
+                            {
+                            }
                             else if (_CrowdControlTarget.IsCrowdControlled())
-                                ;
+                            {
+                            }
                             else if (_CrowdControlTarget.IsMelee() && _CrowdControlTarget.SpellDistance() > 25)
                             {
                                 _CrowdControlGuid = WoWGuid.Empty;

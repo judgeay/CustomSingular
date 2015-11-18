@@ -66,6 +66,14 @@ namespace Singular.ClassSpecific.Warlock
             talent.demonic_servitude_enabled = Common.HasTalent(WarlockTalents.DemonicServitude);
             talent.charred_remains_enabled = Common.HasTalent(WarlockTalents.CharredRemains);
             talent.cataclysm_enabled = Common.HasTalent(WarlockTalents.Cataclysm);
+
+            if (SpellManager.HasSpell("Burning Rush"))
+            {
+                Logger.Write(LogColor.Init, "Burning Rush: cast if running and health above {0}%", WarlockSettings.BurningRushHealthCast);
+                Logger.Write(LogColor.Init, "Burning Rush: cancel if health drops below {0}% or stopped for {1} ms", WarlockSettings.BurningRushHealthCancel, WarlockSettings.BurningRushStopTimeCancel);
+                Logger.Write(LogColor.Init, "Burning Rush: cast suppressed for {0} to {1} milliseconds after cancel", WarlockSettings.BurningRushMinSuspend, WarlockSettings.BurningRushMaxSuspend);
+            }
+
             return null;
         }
 
@@ -100,6 +108,8 @@ namespace Singular.ClassSpecific.Warlock
                         new WaitContinue(TimeSpan.FromMilliseconds(450), canRun => !Me.HasAura("Metamorphosis"), new ActionAlwaysSucceed())
                         )
                     ),
+
+                CreateCancelBurningRushIfNeeded(),
 
                 new Decorator(
                     ret => TalentManager.CurrentSpec == WoWSpec.WarlockAffliction && Me.HasAura("Soulburn"),
@@ -198,7 +208,9 @@ namespace Singular.ClassSpecific.Warlock
                 Spell.BuffSelf("Soulstone", ret => NeedToSoulstoneMyself()),
                 PartyBuff.BuffGroup("Dark Intent"),
                 Spell.BuffSelf( "Grimoire of Sacrifice", ret => GetCurrentPet() != WarlockPet.None && GetCurrentPet() != WarlockPet.Other),
-                Spell.BuffSelf( "Unending Breath", req => Me.IsSwimming )
+                Spell.BuffSelf( "Unending Breath", req => Me.IsSwimming ),
+
+                CreateWarlockMovementBuff()
                 );
         }
 
@@ -250,16 +262,20 @@ namespace Singular.ClassSpecific.Warlock
                         // need combat healing?  check here since mix of buffs and abilities
                 // heal / shield self as needed
                         Spell.BuffSelf("Dark Regeneration", ret => Me.HealthPercent < 45),
-                        new Decorator(
-                            ret => StyxWoW.Me.HealthPercent < 60 || Me.HasAura("Dark Regeneration"),
-                            new PrioritySelector(
-                                ctx => Item.FindFirstUsableItemBySpell("Healthstone", "Healing Potion", "Life Spirit"),
-                                new Decorator(
-                                    ret => ret != null,
-                                    new Sequence(
-                                        new Action(ret => Logger.Write(String.Format("Using {0}", ((WoWItem)ret).Name))),
-                                        new Action(ret => ((WoWItem)ret).UseContainerItem()),
-                                        Helpers.Common.CreateWaitForLagDuration())
+
+                        new ThrottlePasses(
+                            TimeSpan.FromMilliseconds(250),
+                            new Decorator(
+                                ret => StyxWoW.Me.HealthPercent < 60 || Me.HasAura("Dark Regeneration"),
+                                new PrioritySelector(
+                                    ctx => Item.FindFirstUsableItemBySpell("Healthstone", "Healing Potion", "Life Spirit"),
+                                    new Decorator(
+                                        ret => ret != null,
+                                        new Sequence(
+                                            new Action(ret => Logger.Write(String.Format("Using {0}", ((WoWItem)ret).Name))),
+                                            new Action(ret => ((WoWItem)ret).UseContainerItem()),
+                                            Helpers.Common.CreateWaitForLagDuration())
+                                        )
                                     )
                                 )
                             ),
@@ -941,6 +957,187 @@ namespace Singular.ClassSpecific.Warlock
             {
                 _secondsBeforeBattle = value;
             }
+        }
+
+        public static Composite CreatePriestMovementBuff()
+        {
+            const string BURNING_RUSH = "Burning Rush";
+
+            if (!SpellManager.HasSpell(BURNING_RUSH))
+                return new ActionAlwaysFail();
+
+            return new Decorator(
+                ret => MovementManager.IsClassMovementAllowed
+                    && Me.IsAlive
+                    && Me.IsMoving
+                    && Me.HealthPercent >= SingularSettings.Instance.Warlock().BurningRushHealthCast
+                    && !Me.Mounted
+                    && !Me.IsSwimming
+                    && !Me.IsOnTransport
+                    && !Me.OnTaxi
+                    && !Me.HasAnyAura(BURNING_RUSH)
+                    && !Me.IsAboveTheGround(),
+
+                new PrioritySelector(
+                    Spell.WaitForCast(),
+                    new ThrottlePasses(3,
+                        new Decorator(
+                            ret => !Spell.IsGlobalCooldown() && !Spell.IsCastingOrChannelling(),
+                            new Sequence(
+                                new Action(r => Logger.Write(LogColor.Hilite, "^Burning Rush: life is short, move faster!")),
+                                Spell.BuffSelfAndWait("Burning Rush")
+                                )
+                            )
+                        )
+                    )
+                );
+        }
+
+        const string BURNING_RUSH = "Burning Rush";
+        private static DateTime timeNextBurningRush = DateTime.MinValue;
+        private static DateTime lastCancelBurningRush = DateTime.MinValue;
+        private static DateTime lastStopInitiated = DateTime.MaxValue;
+        private static string reasonCancelBurningRush;
+
+        public static Composite CreateWarlockMovementBuff()
+        {
+            if (!SpellManager.HasSpell(BURNING_RUSH))
+                return new ActionAlwaysFail();
+
+            return new Decorator(
+                ret => MovementManager.IsClassMovementAllowed
+                    && DateTime.UtcNow > timeNextBurningRush 
+                    && StyxWoW.Me.IsAlive
+                    && Me.IsMoving
+                    && Me.HealthPercent >= SingularSettings.Instance.Warlock().BurningRushHealthCast
+                    && !StyxWoW.Me.Mounted
+                    && !StyxWoW.Me.IsOnTransport
+                    && !StyxWoW.Me.OnTaxi
+                    && !StyxWoW.Me.HasAnyAura(BURNING_RUSH)
+                    && !StyxWoW.Me.IsAboveTheGround() 
+                    && !StyxWoW.Me.IsSwimming
+                    && !StyxWoW.Me.InVehicle
+                    && ContextSituationAllowsSpeedBuff()
+                    && !Spell.IsGlobalCooldown() 
+                    && !Spell.IsCastingOrChannelling(),
+                new ThrottlePasses( 3,
+                    new Sequence(
+                        new Action(r => Logger.Write(LogColor.Hilite, "^Burning Rush: life is short, move faster!")),
+                        Spell.BuffSelfAndWait("Burning Rush")
+                        )
+                    )
+                );
+        }
+
+        private static bool ContextSituationAllowsSpeedBuff()
+        {
+            if (SingularRoutine.CurrentWoWContext != WoWContext.Instances)
+                return true;
+
+            WoWUnit tank = HealerManager.TankToStayNear;
+            if (tank != null)
+            {
+                double distToAllow = SingularSettings.Instance.StayNearTankRangeCombat;
+                if (Dynamics.CompositeBuilder.CurrentBehaviorType == BehaviorType.Rest
+                    || Dynamics.CompositeBuilder.CurrentBehaviorType == BehaviorType.PreCombatBuffs)
+                    distToAllow = SingularSettings.Instance.StayNearTankRangeRest;
+
+                if (tank.SpellDistance() > distToAllow && tank.IsMovingAway())
+                {
+                    if (tank.SpellDistance() > (distToAllow * 2))
+                    {
+                        return true;
+                    }
+                    if (tank.MovementInfo.CurrentSpeed > Me.MovementInfo.CurrentSpeed)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        public static Composite CreateCancelBurningRushIfNeeded()
+        {
+            if (!SpellManager.HasSpell(BURNING_RUSH))
+                return new ActionAlwaysFail();
+
+            return new Decorator(
+                req => ShouldWeCancelBurningRush(),
+                new Sequence(
+                    new Action(r => CancelBurningRushIfNeeded()),
+                    new Wait(1, until => !Me.HasAura(BURNING_RUSH), new ActionAlwaysSucceed())
+                    )
+                );
+        }
+
+        public static bool CancelBurningRushIfNeeded( bool fromPulse = false)
+        {
+            if (ShouldWeCancelBurningRush())
+            {
+                if ((DateTime.UtcNow - lastCancelBurningRush).TotalSeconds > 1)
+                {
+                    lastCancelBurningRush = DateTime.UtcNow;
+                    int range = WarlockSettings.BurningRushMaxSuspend - WarlockSettings.BurningRushMinSuspend;
+                    TimeSpan delay = TimeSpan.FromMilliseconds( new Random().NextDouble() * range + WarlockSettings.BurningRushMinSuspend);
+                    timeNextBurningRush = DateTime.UtcNow + delay;
+
+                    Logger.Write(
+                        LogColor.Hilite,
+                        "^Burning Rush: cancel since {0}, suppress for {1:F3} seconds",
+                        reasonCancelBurningRush,
+                        delay.TotalSeconds
+                        );
+                    Me.CancelAura(BURNING_RUSH);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ShouldWeCancelBurningRush()
+        {
+            if (Me.HasAura(BURNING_RUSH))
+            {
+                if (Me.IsMoving)
+                {
+                    lastStopInitiated = DateTime.MaxValue;
+                }
+                else if (lastStopInitiated == DateTime.MaxValue)
+                {
+                    lastStopInitiated = DateTime.UtcNow;
+                }
+                else if ((DateTime.UtcNow - lastStopInitiated).TotalMilliseconds >= WarlockSettings.BurningRushStopTimeCancel)
+                {
+                    reasonCancelBurningRush = "Not Moving";
+                    return true;
+                }
+
+                if (Me.InVehicle)
+                {
+                    reasonCancelBurningRush = "in Quest Vehicle";
+                    return true;
+                }
+                if (Me.Mounted)
+                {
+                    reasonCancelBurningRush = "Mounted";
+                    return true;
+                }
+                if (Me.IsFlying)
+                {
+                    reasonCancelBurningRush = "Flying";
+                    return true;
+                }
+                if (Me.HealthPercent < WarlockSettings.BurningRushHealthCancel)
+                {
+                    reasonCancelBurningRush = string.Format("Health @ {0:F1}%", Me.HealthPercent);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static bool NeedSoulwellForThisContext
